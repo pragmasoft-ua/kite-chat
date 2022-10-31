@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>ua.com.pragmasoft</groupId>
   <artifactId>humane-chat-backend</artifactId>
@@ -14,6 +15,7 @@
     <quarkus.platform.version>2.12.2.Final</quarkus.platform.version>
     <skipITs>true</skipITs>
     <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
+    <org.mapstruct.version>1.5.3.Final</org.mapstruct.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -28,9 +30,29 @@
   </dependencyManagement>
   <dependencies>
     <dependency>
+      <groupId>com.aventrix.jnanoid</groupId>
+      <artifactId>jnanoid</artifactId>
+      <version>2.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>31.1-jre</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mapstruct</groupId>
+      <artifactId>mapstruct</artifactId>
+      <version>${org.mapstruct.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.msgpack</groupId>
       <artifactId>msgpack-core</artifactId>
       <version>0.9.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.pengrad</groupId>
+      <artifactId>java-telegram-bot-api</artifactId>
+      <version>6.2.0</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -42,7 +64,12 @@
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy-reactive</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit5</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -60,7 +87,6 @@
         </plugin>
       </plugins>
     </pluginManagement>
-
     <plugins>
       <plugin>
         <groupId>${quarkus.platform.group-id}</groupId>
@@ -84,7 +110,21 @@
           <release>${maven.compiler.release}</release>
           <compilerArgs>
             <arg>-parameters</arg>
+            <arg>
+              -Amapstruct.defaultComponentModel=cdi
+          </arg>
+            <arg>
+              -Amapstruct.verbose=true
+          </arg>
           </compilerArgs>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.mapstruct</groupId>
+              <artifactId>mapstruct-processor</artifactId>
+              <version>${org.mapstruct.version}</version>
+            </path>
+          </annotationProcessorPaths>
+          <showWarnings>true</showWarnings>
         </configuration>
       </plugin>
       <plugin>
@@ -119,10 +159,6 @@
       <plugin>
         <groupId>net.revelc.code.formatter</groupId>
         <artifactId>formatter-maven-plugin</artifactId>
-        <configuration>
-          <lineEnding>LF</lineEnding>
-          <configFile>${project.basedir}/eclipse-java-google-style.xml</configFile>
-        </configuration>
         <executions>
           <execution>
             <goals>
@@ -130,6 +166,10 @@
             </goals>
           </execution>
         </executions>
+        <configuration>
+          <lineEnding>LF</lineEnding>
+          <configFile>${project.basedir}/eclipse-java-google-style.xml</configFile>
+        </configuration>
       </plugin>
     </plugins>
   </build>
