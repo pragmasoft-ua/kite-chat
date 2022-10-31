@@ -3,8 +3,10 @@ package ua.com.pragmasoft.humane.controller;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Event;
+import javax.enterprise.event.ObserverException;
+import javax.inject.Inject;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
@@ -12,23 +14,29 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
-
 import io.quarkus.logging.Log;
 import ua.com.pragmasoft.humane.payload.ConnectedMsg;
 import ua.com.pragmasoft.humane.payload.DisconnectedMsg;
+import ua.com.pragmasoft.humane.payload.ErrorMsg;
 import ua.com.pragmasoft.humane.payload.HumaneMsg;
 import ua.com.pragmasoft.humane.payload.MsgPackHumaneDecoder;
 import ua.com.pragmasoft.humane.payload.MsgPackHumaneEncoder;
 import ua.com.pragmasoft.humane.payload.PlaintextMsg;
 
-@ServerEndpoint(value = "/api/{channel}", decoders = {MsgPackHumaneDecoder.class},
-    encoders = {MsgPackHumaneEncoder.class}, subprotocols = {"v1.k1te.chat"})
+@ServerEndpoint(value = HumaneChatSocket.CHATS + "{channel}",
+    decoders = {MsgPackHumaneDecoder.class}, encoders = {MsgPackHumaneEncoder.class},
+    subprotocols = {"v1.k1te.chat"})
 @ApplicationScoped
 public class HumaneChatSocket {
 
-  private static final String USER_ID = "k1te.userId";
+  public static final String CHATS = "/chats/";
+
+  private static final String CLIENT_ID = "k1te.clientId";
 
   Map<String, Session> sessions = new ConcurrentHashMap<>();
+
+  @Inject
+  Event<PlaintextMsg> eventSource;
 
   @OnOpen
   public void onOpen(Session session, @PathParam("channel") String channel) {
@@ -61,7 +69,7 @@ public class HumaneChatSocket {
     String userId = m.userId();
     Log.debugf("Connected %s", userId);
     this.sessions.put(userId, session);
-    session.getUserProperties().put(USER_ID, userId);
+    session.getUserProperties().put(CLIENT_ID, userId);
   }
 
   void onDisconnected(DisconnectedMsg m, Session session) {
@@ -78,8 +86,24 @@ public class HumaneChatSocket {
   }
 
   void onPlaintext(PlaintextMsg m, Session session) {
-    Log.debugf("Plaintext '%s'", m.payload());
-    var f = session.getAsyncRemote().sendObject(m);
-    Log.debug(f.getClass().getName());
+    new CompletableFutureSendHandler(
+        sendHandler -> session.getAsyncRemote().sendObject(m, sendHandler))
+            .thenRun(() -> Log.debugf("Plaintext '%s'", m.payload()))
+            .exceptionally((Throwable e) -> {
+              Log.error(e.getMessage(), e);
+              return null;
+            });
+    notifyPlaintextMessage(m, session);
   }
+
+  void notifyPlaintextMessage(PlaintextMsg m, Session s) {
+    try {
+      this.eventSource.fire(m);
+    } catch (ObserverException e) {
+      Log.warn(e.getLocalizedMessage(), e);
+      s.getAsyncRemote().sendObject(new ErrorMsg(e.getLocalizedMessage(), 1005));
+    }
+
+  }
+
 }
