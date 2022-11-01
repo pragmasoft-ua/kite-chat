@@ -3,7 +3,7 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>ua.com.pragmasoft</groupId>
-  <artifactId>humane-chat-backend</artifactId>
+  <artifactId>k1te-chat-backend</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <properties>
     <compiler-plugin.version>3.8.1</compiler-plugin.version>
@@ -33,16 +33,6 @@
       <groupId>com.aventrix.jnanoid</groupId>
       <artifactId>jnanoid</artifactId>
       <version>2.0.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>31.1-jre</version>
-    </dependency>
-    <dependency>
-      <groupId>org.mapstruct</groupId>
-      <artifactId>mapstruct</artifactId>
-      <version>${org.mapstruct.version}</version>
     </dependency>
     <dependency>
       <groupId>org.msgpack</groupId>
@@ -110,20 +100,7 @@
           <release>${maven.compiler.release}</release>
           <compilerArgs>
             <arg>-parameters</arg>
-            <arg>
-              -Amapstruct.defaultComponentModel=cdi
-          </arg>
-            <arg>
-              -Amapstruct.verbose=true
-          </arg>
           </compilerArgs>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>org.mapstruct</groupId>
-              <artifactId>mapstruct-processor</artifactId>
-              <version>${org.mapstruct.version}</version>
-            </path>
-          </annotationProcessorPaths>
           <showWarnings>true</showWarnings>
         </configuration>
       </plugin>
