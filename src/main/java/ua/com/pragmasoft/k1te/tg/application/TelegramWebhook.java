@@ -1,4 +1,4 @@
-package ua.com.pragmasoft.k1te.tg;
+package ua.com.pragmasoft.k1te.tg.application;
 
 import java.net.URI;
 import javax.enterprise.context.ApplicationScoped;
@@ -14,6 +14,7 @@ import com.pengrad.telegrambot.BotUtils;
 import com.pengrad.telegrambot.model.Update;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.StartupEvent;
+import ua.com.pragmasoft.k1te.tg.TelegramConnector;
 
 @ApplicationScoped
 @Path(TelegramWebhook.WEBHOOK_PATH)
@@ -47,10 +48,10 @@ public class TelegramWebhook {
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public String webhook(String requestBody) {
-    Log.debug(requestBody);
+    Log.debug(">> " + requestBody);
     Update update = BotUtils.parseUpdate(requestBody);
     var responseBody = this.connector.onUpdate(update);
-    Log.debug(responseBody);
+    Log.debug("<< " + responseBody);
     return responseBody;
   }
 

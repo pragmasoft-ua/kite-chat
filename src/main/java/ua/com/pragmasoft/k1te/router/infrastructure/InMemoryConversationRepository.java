@@ -14,7 +14,7 @@ import ua.com.pragmasoft.k1te.router.ConversationRepository;
 import ua.com.pragmasoft.k1te.router.IdGenerator;
 import ua.com.pragmasoft.k1te.router.Route;
 
-public class InMemoryConversationRepository implements ConversationRepository {
+class InMemoryConversationRepository implements ConversationRepository {
 
   final Map<ConversationId, Conversation> conversations = new HashMap<>();
   final Map<String, ConversationId> secondaryIndex = new HashMap<>();

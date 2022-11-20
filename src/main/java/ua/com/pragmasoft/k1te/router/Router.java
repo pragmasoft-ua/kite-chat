@@ -5,23 +5,21 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-public class Router {
+public class Router implements IRouter {
 
-  final Map<ConnectorId, Connector> connectors = new HashMap<>(8);
+  final Map<ConnectorId, IConnector> connectors = new HashMap<>(8);
   final ChatRepository chatRepository;
   final ConversationRepository conversationRepository;
-  final LastConversations lastConversations;
 
-  public Router(ChatRepository chatRepository, ConversationRepository conversationRepository,
-      LastConversations lastConversations) {
+  public Router(ChatRepository chatRepository, ConversationRepository conversationRepository) {
     this.chatRepository = chatRepository;
     this.conversationRepository = conversationRepository;
-    this.lastConversations = lastConversations;
   }
 
-  public Conversation findOrCreateConversation(Route clientRoute, ChatId chatId) {
+  @Override
+  public Conversation conversation(Route client, ChatId chatId) {
     return this.chatRepository.getChat(chatId)
-        .map(chat -> this.conversationRepository.findOrCreateForClient(clientRoute, chat))
+        .map(chat -> this.conversationRepository.findOrCreateForClient(client, chat))
         .orElseThrow(() -> new IllegalArgumentException("Unknown chat: " + chatId.raw()));
   }
 
@@ -51,33 +49,27 @@ public class Router {
 
   }
 
-  public synchronized Connector register(Connector connector) {
+  public synchronized IConnector register(IConnector connector) {
     this.connectors.put(connector.id(), connector);
     return connector;
   }
 
-  public CompletableFuture<MessageResponse> sendMessageAsync(final TextMessageRequest m) {
-    return m.conversationId()
-    // @formatter:off
-      .or(() -> this.lastConversations.get(m.origin()))
-      .flatMap(this.conversationRepository::getById)
-      .map(conversation -> this.route(m, conversation))
-      .orElseGet(()->CompletableFuture.failedFuture(new IllegalStateException("No route")));
-    // @formatter:on
+  @Override
+  public CompletableFuture<RoutingResponse> routeAsync(RoutingRequest routingRequest) {
+    final RoutingContext ctx = new RoutingContext(routingRequest);
+    ctx.conversation = this.conversationRepository.getById(routingRequest.conversationId())
+        .orElseThrow(() -> new IllegalStateException(
+            "No conversation found for id " + routingRequest.conversationId().raw()));
+    final var source = routingRequest.origin();
+    ctx.destination = ctx.conversation.client().equals(source) ? ctx.conversation.operator()
+        : ctx.conversation.client();
+    final var connector = this.connectors.get(ctx.destination.connectorId());
+    if (null == connector) {
+      return CompletableFuture.failedFuture(new IllegalStateException(
+          "No connector found for id " + ctx.destination.connectorId().raw()));
+    }
+    return connector.dispatchAsync(ctx).thenApply(RoutingContext::getRoutingResponse);
   }
 
-  protected <T extends Request<T, R>, R extends Response> CompletableFuture<R> route(T request,
-      Conversation conversation) {
-    final var source = request.origin();
-    final var destination =
-        conversation.client().equals(source) ? conversation.operator() : conversation.client();
-    final var connector = this.connectors.get(destination.connectorId());
-    if (null == connector) {
-      return CompletableFuture.failedFuture(
-          new IllegalStateException("Cannot find connector id " + destination.connectorId().raw()));
-    }
-    this.lastConversations.set(destination, conversation.id());
-    return connector.sendAsync(request, destination, conversation);
-  }
 
 }

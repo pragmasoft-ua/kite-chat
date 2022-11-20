@@ -5,8 +5,8 @@ import javax.enterprise.inject.Produces;
 import ua.com.pragmasoft.k1te.router.ChatRepository;
 import ua.com.pragmasoft.k1te.router.ConversationRepository;
 import ua.com.pragmasoft.k1te.router.IdGenerator;
-import ua.com.pragmasoft.k1te.router.LastConversations;
 import ua.com.pragmasoft.k1te.router.Router;
+import ua.com.pragmasoft.k1te.tg.LastConversations;
 
 public class RouterConfiguration {
 
@@ -24,15 +24,9 @@ public class RouterConfiguration {
 
   @Produces
   @ApplicationScoped
-  public LastConversations lastConversations() {
-    return new InMemoryLastConversations();
-  }
-
-  @Produces
-  @ApplicationScoped
   public Router router(ChatRepository chatRepository, ConversationRepository conversationRepository,
       LastConversations lastConversations) {
-    return new Router(chatRepository, conversationRepository, lastConversations);
+    return new Router(chatRepository, conversationRepository);
   }
 
   @Produces

@@ -9,8 +9,7 @@ public record ChatId(String raw) {
   public ChatId(String raw) {
     if (!PATTERN.matcher(raw).matches()) {
       throw new IllegalArgumentException(
-          "%s is invalid chat id. It must start with a letter, contain letter, digit, '_' '-' and be from 8 to 32 characters long"
-              .formatted(raw));
+          "Invalid chat id. Chat id must start with a letter, contain letters, digits, underscore '_' dash '-' and be from 8 to 32 characters long");
     }
     this.raw = raw;
   }

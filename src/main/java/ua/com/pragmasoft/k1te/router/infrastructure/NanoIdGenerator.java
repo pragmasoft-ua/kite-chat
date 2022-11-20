@@ -3,7 +3,7 @@ package ua.com.pragmasoft.k1te.router.infrastructure;
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import ua.com.pragmasoft.k1te.router.IdGenerator;
 
-public class NanoIdGenerator implements IdGenerator {
+class NanoIdGenerator implements IdGenerator {
 
   @Override
   public String randomStringId(int size) {

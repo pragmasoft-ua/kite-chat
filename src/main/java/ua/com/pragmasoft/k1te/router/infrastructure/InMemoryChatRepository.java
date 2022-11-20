@@ -7,7 +7,7 @@ import ua.com.pragmasoft.k1te.router.Chat;
 import ua.com.pragmasoft.k1te.router.ChatId;
 import ua.com.pragmasoft.k1te.router.ChatRepository;
 
-public class InMemoryChatRepository implements ChatRepository {
+class InMemoryChatRepository implements ChatRepository {
 
   final Map<ChatId, Chat> chats = new ConcurrentHashMap<>();
 
@@ -20,7 +20,7 @@ public class InMemoryChatRepository implements ChatRepository {
   public Chat createChat(Chat chat) {
     var existing = this.chats.putIfAbsent(chat.id(), chat);
     if (null != existing) {
-      throw new IllegalArgumentException("Chat %s already exists".formatted(chat.id()));
+      throw new IllegalArgumentException("Chat %s already exists".formatted(chat.id().raw()));
     }
     return chat;
   }

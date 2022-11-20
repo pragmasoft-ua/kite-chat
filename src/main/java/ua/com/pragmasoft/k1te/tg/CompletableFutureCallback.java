@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import com.pengrad.telegrambot.Callback;
 import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.TelegramException;
 import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.response.BaseResponse;
 import io.netty.util.concurrent.CompleteFuture;
@@ -23,7 +24,12 @@ public class CompletableFutureCallback<T extends BaseRequest<T, R>, R extends Ba
 
     @Override
     public void onResponse(T request, R response) {
-      CompletableFutureCallback.this.complete(response);
+      if (response.isOk()) {
+        CompletableFutureCallback.this.complete(response);
+      } else {
+        CompletableFutureCallback.this
+            .completeExceptionally(new TelegramException(response.description(), response));
+      }
     }
 
     @Override
