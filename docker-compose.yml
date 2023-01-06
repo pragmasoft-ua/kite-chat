@@ -1,3 +1,4 @@
+# aws dynamodb describe-table --table-name Chats  --endpoint-url http://localhost:8000 --region us-west-2
 version: '3.8'
 services:
   dynamodb-local:

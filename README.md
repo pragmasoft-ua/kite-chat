@@ -1,8 +1,11 @@
-# k1te-chat-backend Project
+# Kite Chat Backend
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+Kite chat allows to add live web chat widget to any web site and use Telegram channel as a support team's backend
+to reply live chat requests.
 
-If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
+Kite chat backend provides websocket endpoint for webchat widget and telegram bot webhook to forward messages to the Telegram channels.
+
+This project uses Quarkus. If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
 
 ## Running the application in dev mode
 
@@ -46,6 +49,8 @@ You can create a native executable using:
 ./mvnw package -Pnative
 ```
 
+On Windows, the command above needs to be launched from the "x64 native tools command prompt for VS 2019" which appears in the Windows start menu after the installation of Visual Studio Biold Tools 2019
+
 Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
 
 ```shell script
@@ -56,23 +61,22 @@ You can then execute your native executable with: `./target/k1te-chat-backend-1.
 
 If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.
 
-## Related Guides
-
-- WebSockets ([guide](https://quarkus.io/guides/websockets)): WebSocket communication channel support
-
-## Provided Code
-
-### WebSockets
-
-WebSocket communication channel starter code
-
-[Related guide section...](https://quarkus.io/guides/websockets)
-
 ### TODO
 
-Throttling
-Authentication
+stop exposing real chat ids and websocket ids as member ids
+https://quarkus.io/guides/smallrye-fault-tolerance (timeouts? circuit breaker?)
+suport of message editing
+instead of connections use secondary index
+get rid of duplicated dto classes in ws connector
+ttl
+Throttling (waf, api gw)
+Authentication - blockchain like message ids signing idea? keep hashed userid using site's domain name? read about telegrambot token signature protection
+For web - use js challenge - respond web client with random uri to which it can connect, rather than connecting always to the same uri
 Serverless
-CDK
+CDKTF
 AnsweringMachineConnector
 MessageRecorderConnector
+? GraalVM - Nanoid initialize random @runtime configuration (broken build)
+@nxrocks/nx-quarkus
+https://github.com/schnatterer/moby-names-generator-java
+initialize lambda based webhook - local-exec provisioner using curl
