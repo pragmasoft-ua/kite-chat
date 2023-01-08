@@ -9,8 +9,25 @@ This project uses Quarkus. If you want to learn more about Quarkus, please visit
 
 ## Running the application in dev mode
 
+### Public URL
+
 In order to test telegram webhooks, you need public url. One way to obtain it for local development is [ngrok](https://ngrok.com/download). Install it with `choco install ngrok` on Windows, `snap install ngrok` on Linux, `brew install ngrok/ngrok/ngrok` on Mac. Then run command `ngrok http 8080` from the command line. Ngrok writes public url to its output like
 `Forwarding https://71d6-185-235-173-207.eu.ngrok.io -> http://localhost:8080`. Copy the first url and add it as a value of the `%dev.webhook.host` property in the `.env` config file. If you don't have `.env` config file, first create it by copying from `.env.example.txt`
+
+### Local DynamoDb database
+
+Kite chat uses DynamoDB as its NoSQL database. For development purposes you need docker container running `amazon/dynamodb-local` image.
+
+`stack` folder contains CDKTF local stack which launches dynamodb-local container and initializes
+DynamoDB database schema in it. Shortly, you need switch to the `stack` folder and run
+
+`npm init` followed by `npm run deploy-local`.
+
+Then once you're done, you can shut down local dynamodb with `npm run destroy-local`
+
+For more details see README.md in the `stack` folder.
+
+### Run backend in dev mode
 
 Then you can run your application in dev mode that enables live coding using:
 
@@ -63,20 +80,19 @@ If you want to learn more about building native executables, please consult http
 
 ### TODO
 
-stop exposing real chat ids and websocket ids as member ids
-https://quarkus.io/guides/smallrye-fault-tolerance (timeouts? circuit breaker?)
-suport of message editing
-instead of connections use secondary index
-get rid of duplicated dto classes in ws connector
-ttl
-Throttling (waf, api gw)
-Authentication - blockchain like message ids signing idea? keep hashed userid using site's domain name? read about telegrambot token signature protection
-For web - use js challenge - respond web client with random uri to which it can connect, rather than connecting always to the same uri
-Serverless
-CDKTF
-AnsweringMachineConnector
-MessageRecorderConnector
-? GraalVM - Nanoid initialize random @runtime configuration (broken build)
-@nxrocks/nx-quarkus
-https://github.com/schnatterer/moby-names-generator-java
-initialize lambda based webhook - local-exec provisioner using curl
+- stop exposing real chat ids and websocket ids as member ids
+- https://quarkus.io/guides/smallrye-fault-tolerance (timeouts? circuit breaker?)
+- suport of message editing
+- +instead of connections use secondary index
+- +get rid of duplicated dto classes in ws connector
+- ttl
+- Throttling (waf, api gw)
+- Authentication - blockchain like message ids signing idea? keep hashed userid using site's domain name? read about telegrambot token signature protection
+- For web - use js challenge - respond web client with random uri to which it can connect, rather than connecting always to the same uri
+- Serverless
+- +CDKTF
+- AnsweringMachineConnector
+- MessageRecorderConnector
+- @nxrocks/nx-quarkus
+- https://github.com/schnatterer/moby-names-generator-java
+- initialize lambda based webhook - local-exec provisioner using curl
