@@ -3,13 +3,16 @@
   xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>ua.com.pragmasoft</groupId>
-  <artifactId>k1te-chat-backend</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <parent>
+    <groupId>ua.com.pragmasoft</groupId>
+    <artifactId>kite-chat</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>kite-chat-backend</artifactId>
   <properties>
     <compiler-plugin.version>3.8.1</compiler-plugin.version>
     <maven.compiler.release>17</maven.compiler.release>
-    <org.mapstruct.version>1.5.3.Final</org.mapstruct.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>

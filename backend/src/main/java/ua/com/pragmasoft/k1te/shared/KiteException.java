@@ -2,6 +2,7 @@ package ua.com.pragmasoft.k1te.shared;
 
 public class KiteException extends RuntimeException {
 
+  private static final long serialVersionUID = 1L;
   public static int SERVER_ERROR = 500;
 
   /**

@@ -2,6 +2,7 @@ package ua.com.pragmasoft.k1te.shared;
 
 public class ConflictException extends KiteException {
 
+  private static final long serialVersionUID = 1L;
   public static int CONFLICT_ERROR = 409;
 
   /**

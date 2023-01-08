@@ -1,0 +1,40 @@
+{
+  "name": "kite-stack",
+  "version": "1.0.0",
+  "main": "main.js",
+  "types": "main.ts",
+  "license": "MPL-2.0",
+  "private": true,
+  "scripts": {
+    "get": "cdktf get",
+    "build": "tsc",
+    "deploy-local": "cdktf deploy local --auto-approve:true",
+    "deploy-prod": "cdktf deploy kite --auto-approve:true",
+    "destroy-local": "cdktf destroy local --auto-approve:true",
+    "destroy-prod": "cdktf destroy kite --auto-approve:true",
+    "synth": "cdktf synth",
+    "compile": "tsc --pretty",
+    "watch": "tsc -w",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "upgrade": "npm i cdktf@latest cdktf-cli@latest",
+    "upgrade:next": "npm i cdktf@next cdktf-cli@next"
+  },
+  "engines": {
+    "node": ">=14.0"
+  },
+  "dependencies": {
+    "@cdktf/provider-aws": "11.0.8",
+    "@cdktf/provider-docker": "^4.0.2",
+    "cdktf": "^0.14.1",
+    "constructs": "^10.1.211"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.2.5",
+    "@types/node": "^18.11.18",
+    "jest": "^29.3.1",
+    "ts-jest": "^29.0.3",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.4"
+  }
+}

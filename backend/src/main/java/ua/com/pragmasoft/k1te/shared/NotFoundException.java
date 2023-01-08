@@ -2,6 +2,7 @@ package ua.com.pragmasoft.k1te.shared;
 
 public class NotFoundException extends KiteException {
 
+  private static final long serialVersionUID = 1L;
   private static final int NOT_FOUND = 404;
 
   /**

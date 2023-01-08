@@ -5,7 +5,6 @@ import java.util.Map;
 import ua.com.pragmasoft.k1te.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.router.domain.payload.MessagePayload;
 
-@SuppressWarnings("java:S1104")
 public final class RoutingContext {
 
   public String originConnection;

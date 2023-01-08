@@ -10,7 +10,7 @@ This project uses Quarkus. If you want to learn more about Quarkus, please visit
 ## Running the application in dev mode
 
 In order to test telegram webhooks, you need public url. One way to obtain it for local development is [ngrok](https://ngrok.com/download). Install it with `choco install ngrok` on Windows, `snap install ngrok` on Linux, `brew install ngrok/ngrok/ngrok` on Mac. Then run command `ngrok http 8080` from the command line. Ngrok writes public url to its output like
-`Forwarding https://71d6-185-235-173-207.eu.ngrok.io -> http://localhost:8080`. Copy the first url and add it as a value of the `webhook.host` property in the `application.properties` config file.
+`Forwarding https://71d6-185-235-173-207.eu.ngrok.io -> http://localhost:8080`. Copy the first url and add it as a value of the `%dev.webhook.host` property in the `.env` config file. If you don't have `.env` config file, first create it by copying from `.env.example.txt`
 
 Then you can run your application in dev mode that enables live coding using:
 
@@ -18,7 +18,7 @@ Then you can run your application in dev mode that enables live coding using:
 ./mvnw compile quarkus:dev
 ```
 
-> **_NOTE:_** Quarkus now ships with a Dev UI, which is available in dev mode only at http://localhost:8080/q/dev/.
+> **NOTE:** Quarkus now ships with a Dev UI, which is available in dev mode only at http://localhost:8080/q/dev/.
 
 ## Packaging and running the application
 

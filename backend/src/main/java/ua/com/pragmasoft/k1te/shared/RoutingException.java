@@ -2,6 +2,7 @@ package ua.com.pragmasoft.k1te.shared;
 
 public class RoutingException extends KiteException {
 
+  private static final long serialVersionUID = 1L;
   private static final int NO_ROUTE = 502;
 
   /**

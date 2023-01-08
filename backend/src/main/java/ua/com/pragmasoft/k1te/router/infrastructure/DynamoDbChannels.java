@@ -35,12 +35,9 @@ class DynamoDbChannels implements Channels {
   private final DynamoDbTable<DynamoDbMember> membersTable;
   private final DynamoDbIndex<DynamoDbMember> secondaryIndex;
 
-
   public DynamoDbChannels(DynamoDbEnhancedClient enhancedDynamo, String serverlessEnvironmentName) {
-    this.membersTableName =
-        null == serverlessEnvironmentName ? serverlessEnvironmentName + '.' + MEMBERS : MEMBERS;
-    this.channelsTableName =
-        null == serverlessEnvironmentName ? serverlessEnvironmentName + '.' + CHANNELS : CHANNELS;
+    this.membersTableName = null == serverlessEnvironmentName ? serverlessEnvironmentName + '.' + MEMBERS : MEMBERS;
+    this.channelsTableName = null == serverlessEnvironmentName ? serverlessEnvironmentName + '.' + CHANNELS : CHANNELS;
     this.enhancedDynamo = enhancedDynamo;
     this.channelsTable = this.enhancedDynamo.table(this.channelsTableName,
         TableSchema.fromClass(DynamoDbChannel.class));
@@ -59,12 +56,10 @@ class DynamoDbChannels implements Channels {
       title = channel;
     }
 
-    DynamoDbMember hostMember =
-        new DynamoDbMember(memberId, channel, title, ownerConnection, true, null);
+    DynamoDbMember hostMember = new DynamoDbMember(memberId, channel, title, ownerConnection, true, null);
 
     DynamoDbChannel newChannel = new DynamoDbChannel(channel, memberId);
-    DynamoDbChannel reverseChannel =
-        new DynamoDbChannel(REVERSE_CHANNEL_KEY_PREFIX + memberId, channel);
+    DynamoDbChannel reverseChannel = new DynamoDbChannel(REVERSE_CHANNEL_KEY_PREFIX + memberId, channel);
 
     try {
       this.enhancedDynamo.transactWriteItems(tx -> tx
@@ -99,8 +94,7 @@ class DynamoDbChannels implements Channels {
     String channelName = member.getChannelName();
 
     Key channelKey = Key.builder().partitionValue(channelName).build();
-    Key reverseChannelKey =
-        Key.builder().partitionValue(REVERSE_CHANNEL_KEY_PREFIX + member.getId()).build();
+    Key reverseChannelKey = Key.builder().partitionValue(REVERSE_CHANNEL_KEY_PREFIX + member.getId()).build();
 
     this.enhancedDynamo.transactWriteItems(
         TransactWriteItemsEnhancedRequest.builder()
@@ -111,7 +105,6 @@ class DynamoDbChannels implements Channels {
 
     return member;
   }
-
 
   @Override
   public Member joinChannel(String channelName, String memberId, String memberConnection,
@@ -128,9 +121,8 @@ class DynamoDbChannels implements Channels {
       throw new NotFoundException("Channel not found");
     }
     final String hostId = channel.getHost();
-    DynamoDbMember clientMember =
-        new DynamoDbMember(memberId, channelName, userName, memberConnection, false,
-            hostId);
+    DynamoDbMember clientMember = new DynamoDbMember(memberId, channelName, userName, memberConnection, false,
+        hostId);
 
     try {
       this.membersTable.putItem(clientMember);
@@ -162,8 +154,13 @@ class DynamoDbChannels implements Channels {
 
   @Override
   public void updatePeer(Member myMember, String peerMember) {
+    Objects.requireNonNull(peerMember, "peer Member");
+    if (myMember.getPeerMemberId().equals(peerMember)) {
+      return;
+    }
     try {
       DynamoDbMember member = (DynamoDbMember) myMember;
+
       member.setPeerMemberId(peerMember);
       this.membersTable.updateItem(member);
     } catch (Exception e) {
