@@ -25,6 +25,7 @@ import ua.com.pragmasoft.k1te.router.domain.payload.MessagePayload;
 import ua.com.pragmasoft.k1te.router.domain.payload.PlaintextMessage;
 import ua.com.pragmasoft.k1te.shared.RoutingException;
 import ua.com.pragmasoft.k1te.shared.ValidationException;
+import ua.com.pragmasoft.k1te.ws.WsConnector;
 
 public class TelegramConnector implements Connector, Closeable {
 
@@ -62,7 +63,8 @@ public class TelegramConnector implements Connector, Closeable {
     this.router = router;
     this.router.registerConnector(this);
     this.channels = channels;
-    this.base = base;
+    this.base = base.resolve(WsConnector.CHANNELS_PATH);
+    Log.info(base);
   }
 
   public void setWebhook(String webhookPath) {

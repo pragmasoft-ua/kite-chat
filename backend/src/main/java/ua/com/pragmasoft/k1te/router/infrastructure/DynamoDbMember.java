@@ -12,14 +12,14 @@ public class DynamoDbMember implements Member {
 
   static final String BY_CONNECTION = "ByConnection";
 
-  String id;
-  String channelName;
-  String connectionUri;
-  String userName;
-  boolean host;
-  String peerMemberId;
+  private String id;
+  private String channelName;
+  private String connectionUri;
+  private String userName;
+  private boolean host;
+  private String peerMemberId;
 
-  DynamoDbMember(String id, String channelName, String userName, String connectionUri, boolean host,
+  public DynamoDbMember(String id, String channelName, String userName, String connectionUri, boolean host,
       String peerMemberId) {
     super();
     this.id = id;
@@ -40,7 +40,7 @@ public class DynamoDbMember implements Member {
     return id;
   }
 
-  void setId(String id) {
+  public void setId(String id) {
     this.id = id;
   }
 
@@ -50,7 +50,7 @@ public class DynamoDbMember implements Member {
     return channelName;
   }
 
-  void setChannelName(String channel) {
+  public void setChannelName(String channel) {
     this.channelName = channel;
   }
 
@@ -59,7 +59,7 @@ public class DynamoDbMember implements Member {
     return userName;
   }
 
-  void setUserName(String userName) {
+  public void setUserName(String userName) {
     this.userName = userName;
   }
 
@@ -68,7 +68,7 @@ public class DynamoDbMember implements Member {
     return host;
   }
 
-  void setHost(boolean host) {
+  public void setHost(boolean host) {
     this.host = host;
   }
 
@@ -78,7 +78,7 @@ public class DynamoDbMember implements Member {
     return peerMemberId;
   }
 
-  void setPeerMemberId(String peerConnectionId) {
+  public void setPeerMemberId(String peerConnectionId) {
     this.peerMemberId = peerConnectionId;
   }
 
@@ -89,7 +89,7 @@ public class DynamoDbMember implements Member {
     return this.connectionUri;
   }
 
-  void setConnectionUri(String connection) {
+  public void setConnectionUri(String connection) {
     this.connectionUri = connection;
   }
 

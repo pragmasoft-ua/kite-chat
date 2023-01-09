@@ -7,6 +7,7 @@
   "configurations": [
     {
       "preLaunchTask": "quarkus:dev (backend)",
+      "projectName": "kite-chat-backend",
       "type": "java",
       "request": "attach",
       "hostName": "localhost",

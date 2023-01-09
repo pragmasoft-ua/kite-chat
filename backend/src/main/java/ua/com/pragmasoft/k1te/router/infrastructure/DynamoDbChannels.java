@@ -10,7 +10,9 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
+import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 import ua.com.pragmasoft.k1te.router.domain.Channels;
 import ua.com.pragmasoft.k1te.router.domain.Id;
 import ua.com.pragmasoft.k1te.router.domain.Member;
@@ -24,9 +26,11 @@ class DynamoDbChannels implements Channels {
   public static final String MEMBERS = "Members";
   public static final String CHANNELS = "Channels";
   public static final String REVERSE_CHANNEL_KEY_PREFIX = "host:";
+  static final String CONDITION_FAILED = "ConditionalCheckFailed";
 
   private static Expression nameNotExistsCondition = Expression.builder()
-      .expression("attribute_not_exists(name)")
+      .expression("attribute_not_exists(#attr)")
+      .putExpressionName("#attr", "name") // name is a dynamodb keyword
       .build();
 
   private final String channelsTableName;
@@ -54,7 +58,7 @@ class DynamoDbChannels implements Channels {
   public Member hostChannel(String channel, String memberId, String ownerConnection, String title) {
 
     Id.validate(channel, "channel name");
-    Id.validate(memberId, "member id");
+    Objects.requireNonNull(memberId, "member id");
     Objects.requireNonNull(ownerConnection, "owner connection");
     if (null == title) {
       title = channel;
@@ -63,24 +67,35 @@ class DynamoDbChannels implements Channels {
     DynamoDbMember hostMember = new DynamoDbMember(memberId, channel, title, ownerConnection, true, null);
 
     DynamoDbChannel newChannel = new DynamoDbChannel(channel, memberId);
+
+    var putChannel = TransactPutItemEnhancedRequest
+        .builder(DynamoDbChannel.class)
+        .item(newChannel)
+        .conditionExpression(nameNotExistsCondition)
+        .build();
+
     DynamoDbChannel reverseChannel = new DynamoDbChannel(REVERSE_CHANNEL_KEY_PREFIX + memberId, channel);
+
+    var putReverseChannel = TransactPutItemEnhancedRequest
+        .builder(DynamoDbChannel.class)
+        .item(reverseChannel)
+        .conditionExpression(nameNotExistsCondition)
+        .build();
 
     try {
       this.enhancedDynamo.transactWriteItems(tx -> tx
-          .addConditionCheck(this.channelsTable,
-              check -> check
-                  .key(this.channelsTable.keyFrom(newChannel))
-                  .conditionExpression(nameNotExistsCondition))
-          .addConditionCheck(this.channelsTable,
-              check -> check
-                  .key(this.channelsTable.keyFrom(reverseChannel))
-                  .conditionExpression(nameNotExistsCondition))
-          .addPutItem(this.channelsTable, newChannel)
-          .addPutItem(this.channelsTable, reverseChannel)
+          .addPutItem(this.channelsTable, putChannel)
+          .addPutItem(this.channelsTable, putReverseChannel)
           .addPutItem(this.membersTable, hostMember));
       return hostMember;
-    } catch (Exception e) { // TransactionCanceledException
-      throw new ConflictException(e.getMessage(), e);
+    } catch (TransactionCanceledException e) {
+      var reasons = e.cancellationReasons();
+      var reason = reasons.get(0).code().equals(CONDITION_FAILED)
+          ? "Channel name is already taken"
+          : reasons.get(1).code().equals(CONDITION_FAILED)
+              ? "You cannot host more than one channel"
+              : reasons.get(2).message();
+      throw new ConflictException(reason, e);
     }
 
   }
@@ -115,7 +130,7 @@ class DynamoDbChannels implements Channels {
       String userName) {
 
     Id.validate(channelName, "channel name");
-    Id.validate(memberId, "member id");
+    Objects.requireNonNull(memberId, "member id");
     Objects.requireNonNull(memberConnection, "connection");
     Objects.requireNonNull(userName, "user name");
 
