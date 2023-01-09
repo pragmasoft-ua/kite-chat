@@ -30,11 +30,8 @@ import ua.com.pragmasoft.k1te.router.domain.payload.PlaintextMessage;
 import ua.com.pragmasoft.k1te.shared.KiteException;
 import ua.com.pragmasoft.k1te.shared.RoutingException;
 
-@ServerEndpoint(
-    value = WsConnector.CHANNELS_PATH + "{channelName}",
-    decoders = {PayloadDecoder.class},
-    encoders = {PayloadEncoder.class},
-    subprotocols = {"v1.k1te.chat"})
+@ServerEndpoint(value = WsConnector.CHANNELS_PATH + "{channelName}", decoders = { PayloadDecoder.class }, encoders = {
+    PayloadEncoder.class }, subprotocols = { "v1.k1te.chat" })
 @ApplicationScoped
 public class WsConnector implements Connector {
 
@@ -71,8 +68,7 @@ public class WsConnector implements Connector {
               .create()
               .withOriginConnection(connectionUri)
               .withRequest(new PlaintextMessage(
-                  "#%s%n✅ %s left channel %s".formatted(client.getId(), client.getUserName(),
-                      client.getChannelName()))));
+                  "✅ %s left channel %s".formatted(client.getUserName(), client.getChannelName()))));
     } finally {
       this.sessions.remove(session.getId());
     }
@@ -112,18 +108,17 @@ public class WsConnector implements Connector {
     Log.debugf("Join member %s to channel %s", joinChannel.memberId, joinChannel.channelName);
     try {
       String originConnection = this.connectionUriOf(session);
-      Member client =
-          this.channels.joinChannel(joinChannel.channelName, joinChannel.memberId, originConnection,
-              joinChannel.memberName);
+      Member client = this.channels.joinChannel(joinChannel.channelName, joinChannel.memberId, originConnection,
+          joinChannel.memberName);
       var ctx = RoutingContext.create()
           .withOriginConnection(originConnection)
           .withFrom(client)
           .withRequest(new PlaintextMessage(
-              "#%s%n✅ %s joined channel %s".formatted(client.getId(), client.getUserName(),
-                  client.getChannelName())));
+              "✅ %s joined channel %s".formatted(client.getUserName(), client.getChannelName())));
       this.router.dispatch(ctx);
       session.getBasicRemote().sendObject(
-          new PlaintextMessage("✅ You joined channel %s".formatted(joinChannel.channelName)));
+          new PlaintextMessage(
+              "✅ You joined channel %s".formatted(joinChannel.channelName)));
       this.sessions.put(session.getId(), session);
     } catch (Exception e) {
       this.onError(session, joinChannel.channelName, e);

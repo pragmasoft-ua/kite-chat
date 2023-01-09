@@ -83,16 +83,18 @@ If you want to learn more about building native executables, please consult http
 - stop exposing real chat ids and websocket ids as member ids
 - https://quarkus.io/guides/smallrye-fault-tolerance (timeouts? circuit breaker?)
 - suport of message editing
-- +instead of connections use secondary index
-- +get rid of duplicated dto classes in ws connector
 - ttl
 - Throttling (waf, api gw)
 - Authentication - blockchain like message ids signing idea? keep hashed userid using site's domain name? read about telegrambot token signature protection
 - For web - use js challenge - respond web client with random uri to which it can connect, rather than connecting always to the same uri
 - Serverless
-- +CDKTF
 - AnsweringMachineConnector
 - MessageRecorderConnector
 - @nxrocks/nx-quarkus
 - https://github.com/schnatterer/moby-names-generator-java
 - initialize lambda based webhook - local-exec provisioner using curl
+- snapstart
+- /info command - am I joined or hosted ?
+- /join alias of /start
+- when channel is dropped by host, all client have to leave as well
+- NotFoundException - catch and wrap into RouteException

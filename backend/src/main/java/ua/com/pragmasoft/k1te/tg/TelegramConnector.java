@@ -145,10 +145,15 @@ public class TelegramConnector implements Connector, Closeable {
 
     if ("/start".equals(command)) {
       String channel = Id.validate(cmd.args);
-      String memberName = msg.from().username();
+      String memberName = msg.from().firstName() + ' ' + msg.from().lastName();
       Member client = this.channels.joinChannel(channel, memberId, originConnection, memberName);
-      response = "#%s%n✅ %s joined channel %s".formatted(client.getId(), memberName, channel);
-
+      var ctx = RoutingContext.create()
+          .withOriginConnection(originConnection)
+          .withFrom(client)
+          .withRequest(new PlaintextMessage(
+              "✅ %s joined channel %s".formatted(memberName, channel)));
+      this.router.dispatch(ctx);
+      response = "✅ You joined channel %s".formatted(channel);
     } else if ("/host".equals(command)) {
       String channelName = Id.validate(cmd.args);
       String title = msg.chat().title();
@@ -159,12 +164,17 @@ public class TelegramConnector implements Connector, Closeable {
 
     } else if ("/leave".equals(command)) {
       Member client = this.channels.leaveChannel(originConnection);
-      response = "#%s%n✅ %s left channel %s".formatted(client.getId(), client.getUserName(),
-          client.getChannelName());
+      this.router.dispatch(
+          RoutingContext
+              .create()
+              .withOriginConnection(originConnection)
+              .withRequest(new PlaintextMessage(
+                  "✅ %s left channel %s".formatted(client.getUserName(), client.getChannelName()))));
+      response = "✅ You left channel %s".formatted(client.getChannelName());
 
     } else if ("/drop".equals(command)) {
       Member client = this.channels.dropChannel(originConnection);
-      response = "✅ Dropped channel %s".formatted(client.getChannelName());
+      response = "✅ You dropped channel %s".formatted(client.getChannelName());
 
     } else {
       throw new ValidationException("Unsupported command " + command);
@@ -243,7 +253,7 @@ public class TelegramConnector implements Connector, Closeable {
   }
 
   private static Long toLong(String id) {
-    return Long.valueOf(id, Character.MAX_RADIX);
+    return Long.parseUnsignedLong(id, Character.MAX_RADIX);
   }
 
   private record CommandWithArgs(String command, String args) {

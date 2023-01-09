@@ -1,5 +1,7 @@
 package ua.com.pragmasoft.k1te.router.domain.payload;
 
+import java.util.Objects;
+
 import ua.com.pragmasoft.k1te.router.domain.Id;
 
 public final class JoinChannel implements CommandPayload {
@@ -10,7 +12,8 @@ public final class JoinChannel implements CommandPayload {
   public String channelName;
 
   public JoinChannel(String memberId, String memberName, String channelName) {
-    this.memberId = Id.validate(memberId);
+    Objects.requireNonNull(memberId, "memberId");
+    this.memberId = memberId;
     this.memberName = memberName;
     this.channelName = Id.validate(channelName);
   }

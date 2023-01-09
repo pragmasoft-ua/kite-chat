@@ -2,7 +2,6 @@ package ua.com.pragmasoft.k1te.router.domain.payload;
 
 import java.time.Instant;
 import java.util.Objects;
-import ua.com.pragmasoft.k1te.router.domain.Id;
 
 public record PlaintextMessage(String text, String messageId, Instant created)
     implements MessagePayload {
@@ -10,8 +9,8 @@ public record PlaintextMessage(String text, String messageId, Instant created)
   public PlaintextMessage(String text, String messageId, Instant created) {
     Objects.requireNonNull(text, "text");
     this.text = text;
-    this.messageId = Id.validate(messageId);
-    Objects.requireNonNull(text, "text");
+    Objects.requireNonNull(messageId, "messageId");
+    this.messageId = messageId;
     this.created = created;
   }
 

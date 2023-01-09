@@ -1,14 +1,16 @@
 package ua.com.pragmasoft.k1te.router.domain.payload;
 
 import java.time.Instant;
-import ua.com.pragmasoft.k1te.router.domain.Id;
+import java.util.Objects;
 
 public record MessageAck(String messageId, String destiationMessageId, Instant delivered)
     implements Payload {
 
   public MessageAck(String messageId, String destiationMessageId, Instant delivered) {
-    this.messageId = Id.validate(messageId);
-    this.destiationMessageId = Id.validate(destiationMessageId);
+    Objects.requireNonNull(messageId, "messageId");
+    this.messageId = messageId;
+    Objects.requireNonNull(destiationMessageId, "destiationMessageId");
+    this.destiationMessageId = destiationMessageId;
     this.delivered = delivered;
   }
 

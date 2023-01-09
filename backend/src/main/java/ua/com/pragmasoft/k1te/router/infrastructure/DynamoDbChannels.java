@@ -174,7 +174,7 @@ class DynamoDbChannels implements Channels {
   @Override
   public void updatePeer(Member myMember, String peerMember) {
     Objects.requireNonNull(peerMember, "peer Member");
-    if (myMember.getPeerMemberId().equals(peerMember)) {
+    if (peerMember.equals(myMember.getPeerMemberId())) {
       return;
     }
     try {
