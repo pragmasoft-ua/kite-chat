@@ -31,27 +31,25 @@ public class TelegramConnector implements Connector, Closeable {
   private static final String UNSUPPORTED_PAYLOAD = "Unsupported payload ";
   private static final String TG = "tg";
   private static final String OK = "ok";
-  private static final String HELP =
-      """
-          This bot allows to set up support channel in the current chat as a host
-          or call existing support channel as a client.
+  private static final String HELP = """
+      This bot allows to set up support channel in the current chat as a host
+      or call existing support channel as a client.
 
-          /host *channel* set up current chat as a support channel named *channel*
-          /drop unregister current support channel
+      /host *channel* set up current chat as a support channel named *channel*
+      /drop unregister current support channel
 
-          /start *channel* start conversation with support channel named *channel*
-          /leave leave current support channel
+      /start *channel* start conversation with support channel named *channel*
+      /leave leave current support channel
 
-          *channel* name should contain only alphanumeric letters, .(dot) , -(minus), \\_(underline), ~(tilde)
-          and be 8..32 characters long.
+      *channel* name should contain only alphanumeric letters, .(dot) , -(minus), \\_(underline), ~(tilde)
+      and be 8..32 characters long.
 
-          Once conversation is established, bot will forward messages from client to host and vice versa.
+      Once conversation is established, bot will forward messages from client to host and vice versa.
 
-          Host messages will be forwarded to the client who sent the last incoming message.
+      Host messages will be forwarded to the client who sent the last incoming message.
 
-          Use ↰ (Reply To) to respond to other messages.
-          """;
-
+      Use ↰ (Reply To) to respond to other messages.
+      """;
 
   private final TelegramBot bot;
   private final Router router;
@@ -102,6 +100,7 @@ public class TelegramConnector implements Connector, Closeable {
         return this.onEditedMessage(message);
       }
     } catch (Exception e) {
+      Log.error("onUpdate", e);
       return new SendMessage(message.chat().id(), "⛔ " + e.getMessage()).toWebhookResponse();
     }
   }
@@ -171,7 +170,6 @@ public class TelegramConnector implements Connector, Closeable {
     return new SendMessage(rawChatId, response).toWebhookResponse();
   }
 
-
   private String onOutgoingMessage(final Message msg) {
     Long rawChatId = msg.chat().id();
     String originConnection = this.connectionUri(fromLong(rawChatId));
@@ -182,8 +180,7 @@ public class TelegramConnector implements Connector, Closeable {
         .orElseThrow(RoutingException::new);
     Member to = this.channels.find(from.getChannelName(), toMemberId);
     String msgId = fromLong(msg.messageId().longValue());
-    MessagePayload request =
-        new PlaintextMessage(msg.text(), msgId, Instant.ofEpochSecond(msg.date()));
+    MessagePayload request = new PlaintextMessage(msg.text(), msgId, Instant.ofEpochSecond(msg.date()));
     var ctx = RoutingContext
         .create()
         .withOriginConnection(originConnection)
@@ -198,7 +195,7 @@ public class TelegramConnector implements Connector, Closeable {
   }
 
   private String onEditedMessage(Message message) {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("Message editing is currently not supported");
   }
 
   private String onUnhandledUpdate(final Update u) {

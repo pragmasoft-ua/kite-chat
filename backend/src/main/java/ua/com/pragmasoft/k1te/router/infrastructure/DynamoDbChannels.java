@@ -1,8 +1,9 @@
 package ua.com.pragmasoft.k1te.router.infrastructure;
 
 import java.util.Objects;
+
+import io.quarkus.logging.Log;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbIndex;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -33,17 +34,20 @@ class DynamoDbChannels implements Channels {
   private final DynamoDbEnhancedClient enhancedDynamo;
   private final DynamoDbTable<DynamoDbChannel> channelsTable;
   private final DynamoDbTable<DynamoDbMember> membersTable;
-  private final DynamoDbIndex<DynamoDbMember> secondaryIndex;
 
   public DynamoDbChannels(DynamoDbEnhancedClient enhancedDynamo, String serverlessEnvironmentName) {
-    this.membersTableName = null == serverlessEnvironmentName ? serverlessEnvironmentName + '.' + MEMBERS : MEMBERS;
-    this.channelsTableName = null == serverlessEnvironmentName ? serverlessEnvironmentName + '.' + CHANNELS : CHANNELS;
+    this.membersTableName = null != serverlessEnvironmentName
+        ? serverlessEnvironmentName + '.' + MEMBERS
+        : MEMBERS;
+    this.channelsTableName = null != serverlessEnvironmentName
+        ? serverlessEnvironmentName + '.' + CHANNELS
+        : CHANNELS;
+    Log.info("Created on serverlessEnvironmentName: " + serverlessEnvironmentName);
     this.enhancedDynamo = enhancedDynamo;
     this.channelsTable = this.enhancedDynamo.table(this.channelsTableName,
         TableSchema.fromClass(DynamoDbChannel.class));
     this.membersTable = this.enhancedDynamo.table(this.membersTableName,
         TableSchema.fromClass(DynamoDbMember.class));
-    this.secondaryIndex = this.membersTable.index(DynamoDbMember.BY_CONNECTION);
   }
 
   @Override
@@ -176,7 +180,8 @@ class DynamoDbChannels implements Channels {
         .queryConditional(qc)
         .limit(1)
         .build();
-    var response = this.secondaryIndex.query(q);
+    var secondaryIndex = this.membersTable.index(DynamoDbMember.BY_CONNECTION);
+    var response = secondaryIndex.query(q);
     if (!response.iterator().hasNext()) {
       throw new NotFoundException();
     }

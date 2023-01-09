@@ -8,7 +8,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortK
 import ua.com.pragmasoft.k1te.router.domain.Member;
 
 @DynamoDbBean
-final class DynamoDbMember implements Member {
+public class DynamoDbMember implements Member {
 
   static final String BY_CONNECTION = "ByConnection";
 
@@ -30,7 +30,7 @@ final class DynamoDbMember implements Member {
     this.peerMemberId = peerMemberId;
   }
 
-  DynamoDbMember() {
+  public DynamoDbMember() {
     super();
   }
 
@@ -82,7 +82,7 @@ final class DynamoDbMember implements Member {
     this.peerMemberId = peerConnectionId;
   }
 
-  @DynamoDbSecondaryPartitionKey(indexNames = {BY_CONNECTION})
+  @DynamoDbSecondaryPartitionKey(indexNames = BY_CONNECTION)
   @DynamoDbIgnoreNulls
   @Override
   public String getConnectionUri() {

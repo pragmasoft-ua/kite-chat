@@ -3,13 +3,12 @@ package ua.com.pragmasoft.k1te.router.infrastructure;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.regex.Pattern;
+
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
-import ua.com.pragmasoft.k1te.shared.ValidationException;
 
 @DynamoDbBean
-final class DynamoDbChannel {
+public class DynamoDbChannel {
 
   public static final Duration DEFAULT_TIMEOUT = Duration.ofDays(92);
 
@@ -17,21 +16,12 @@ final class DynamoDbChannel {
   private String host;
   private long ttl;
 
-  static final Pattern NAME_PATTERN = Pattern.compile("[A-Za-z0-9_-]{8,32}");
-
-  DynamoDbChannel() {
+  public DynamoDbChannel() {
     super();
   }
 
   DynamoDbChannel(String name, String host, long ttl) {
     super();
-    Objects.requireNonNull(name, "Channel name is required");
-    Objects.requireNonNull(host, "Channel operator route is required");
-    Objects.requireNonNull(ttl);
-    if (!NAME_PATTERN.matcher(name).matches()) {
-      throw new ValidationException(
-          "Invalid Channel name. Channel name must start with a letter, may contain letters, digits, underscore '_' dash '-' and be from 8 to 32 characters long");
-    }
     this.name = name;
     this.host = host;
     this.ttl = ttl;
