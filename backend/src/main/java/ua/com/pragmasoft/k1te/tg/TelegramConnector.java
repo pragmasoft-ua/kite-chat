@@ -16,7 +16,6 @@ import com.pengrad.telegrambot.request.SetWebhook;
 import io.quarkus.logging.Log;
 import ua.com.pragmasoft.k1te.router.domain.Channels;
 import ua.com.pragmasoft.k1te.router.domain.Connector;
-import ua.com.pragmasoft.k1te.router.domain.Id;
 import ua.com.pragmasoft.k1te.router.domain.Member;
 import ua.com.pragmasoft.k1te.router.domain.Router;
 import ua.com.pragmasoft.k1te.router.domain.RoutingContext;
@@ -124,7 +123,6 @@ public class TelegramConnector implements Connector, Closeable {
       }
       var sendMessage = new SendMessage(destinationChatId, text);
       var sendResponse = this.bot.execute(sendMessage);
-      this.channels.updatePeer(to, from.getId());
       ctx.response = new MessageAck(plaintext.messageId(),
           fromLong(sendResponse.message().messageId().longValue()),
           Instant.ofEpochSecond(sendResponse.message().date()));
@@ -144,7 +142,7 @@ public class TelegramConnector implements Connector, Closeable {
     String response;
 
     if ("/start".equals(command)) {
-      String channel = Id.validate(cmd.args);
+      String channel = cmd.args;
       String memberName = msg.from().firstName() + ' ' + msg.from().lastName();
       Member client = this.channels.joinChannel(channel, memberId, originConnection, memberName);
       var ctx = RoutingContext.create()
@@ -155,10 +153,10 @@ public class TelegramConnector implements Connector, Closeable {
       this.router.dispatch(ctx);
       response = "✅ You joined channel %s".formatted(channel);
     } else if ("/host".equals(command)) {
-      String channelName = Id.validate(cmd.args);
+      String channelName = cmd.args;
       String title = msg.chat().title();
       this.channels.hostChannel(channelName, memberId, originConnection, title);
-      String channelPublicUrl = this.base.resolve(channelName).toASCIIString();
+      String channelPublicUrl = this.base.resolve(channelName).toASCIIString().replace("http", "ws");
       response = "✅ Created channel %s. Use URL %s to configure k1te chat frontend"
           .formatted(channelName, channelPublicUrl);
 
@@ -239,10 +237,13 @@ public class TelegramConnector implements Connector, Closeable {
   }
 
   private static Optional<String> memberIdFromHashTag(final Message replyTo) {
-    for (var e : replyTo.entities()) {
-      if (e.type() == Type.hashtag) {
-        final var hashTagString = replyTo.text().substring(e.offset() + 1, e.offset() + e.length());
-        return Optional.of(Id.validate(hashTagString));
+    var entities = replyTo.entities();
+    if (null != entities) {
+      for (var e : entities) {
+        if (e.type() == Type.hashtag) {
+          final var hashTagString = replyTo.text().substring(e.offset() + 1, e.offset() + e.length());
+          return Optional.of(hashTagString);
+        }
       }
     }
     return Optional.empty();

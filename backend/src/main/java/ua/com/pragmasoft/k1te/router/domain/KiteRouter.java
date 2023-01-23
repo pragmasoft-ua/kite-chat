@@ -3,6 +3,8 @@ package ua.com.pragmasoft.k1te.router.domain;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+
+import io.quarkus.logging.Log;
 import ua.com.pragmasoft.k1te.shared.KiteException;
 import ua.com.pragmasoft.k1te.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.shared.RoutingException;
@@ -40,11 +42,16 @@ public class KiteRouter implements Router {
     if (null == ctx.originConnection) {
       throw new RoutingException("unknown origin");
     }
-    if (null == ctx.from) {
-      ctx.from = this.channels.find(ctx.originConnection);
-    }
-    if (null == ctx.to) {
-      ctx.to = this.channels.find(ctx.from.getChannelName(), ctx.from.getPeerMemberId());
+    try {
+      if (null == ctx.from) {
+        ctx.from = this.channels.find(ctx.originConnection);
+      }
+      if (null == ctx.to) {
+        ctx.to = this.channels.find(ctx.from.getChannelName(), ctx.from.getPeerMemberId());
+      }
+    } catch (NotFoundException notFound) {
+      Log.warn(notFound.getMessage());
+      throw new RoutingException();
     }
     if (null == ctx.destinationConnection) {
       ctx.destinationConnection = ctx.to.getConnectionUri();
@@ -54,6 +61,8 @@ public class KiteRouter implements Router {
     if (null == ctx.response) {
       throw new RoutingException("missing response from connector " + connector.id());
     }
+    this.channels.updatePeer(ctx.to, ctx.from.getId());
+    this.channels.updatePeer(ctx.from, ctx.to.getId());
   }
 
   private synchronized Connector requiredConnector(String connectorId) throws NotFoundException {

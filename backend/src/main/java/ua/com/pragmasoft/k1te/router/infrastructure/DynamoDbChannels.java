@@ -14,7 +14,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedReq
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 import ua.com.pragmasoft.k1te.router.domain.Channels;
-import ua.com.pragmasoft.k1te.router.domain.Id;
+import ua.com.pragmasoft.k1te.router.domain.ChannelName;
 import ua.com.pragmasoft.k1te.router.domain.Member;
 import ua.com.pragmasoft.k1te.shared.ConflictException;
 import ua.com.pragmasoft.k1te.shared.KiteException;
@@ -57,7 +57,7 @@ class DynamoDbChannels implements Channels {
   @Override
   public Member hostChannel(String channel, String memberId, String ownerConnection, String title) {
 
-    Id.validate(channel, "channel name");
+    ChannelName.validate(channel);
     Objects.requireNonNull(memberId, "member id");
     Objects.requireNonNull(ownerConnection, "owner connection");
     if (null == title) {
@@ -129,7 +129,7 @@ class DynamoDbChannels implements Channels {
   public Member joinChannel(String channelName, String memberId, String memberConnection,
       String userName) {
 
-    Id.validate(channelName, "channel name");
+    ChannelName.validate(channelName);
     Objects.requireNonNull(memberId, "member id");
     Objects.requireNonNull(memberConnection, "connection");
     Objects.requireNonNull(userName, "user name");

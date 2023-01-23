@@ -1,3 +1,14 @@
+```
+ █████   ████  ███   █████                         █████                 █████
+░░███   ███░  ░░░   ░░███                         ░░███                 ░░███
+ ░███  ███    ████  ███████    ██████      ██████  ░███████    ██████   ███████
+ ░███████    ░░███ ░░░███░    ███░░███    ███░░███ ░███░░███  ░░░░░███ ░░░███░
+ ░███░░███    ░███   ░███    ░███████    ░███ ░░░  ░███ ░███   ███████   ░███
+ ░███ ░░███   ░███   ░███ ███░███░░░     ░███  ███ ░███ ░███  ███░░███   ░███ ███
+ █████ ░░████ █████  ░░█████ ░░██████    ░░██████  ████ █████░░████████  ░░█████
+░░░░░   ░░░░ ░░░░░    ░░░░░   ░░░░░░      ░░░░░░  ░░░░ ░░░░░  ░░░░░░░░    ░░░░░
+```
+
 # Kite Chat Backend
 
 Kite chat allows to add live web chat widget to any web site and use Telegram channel as a support team's backend
@@ -94,7 +105,12 @@ If you want to learn more about building native executables, please consult http
 - https://github.com/schnatterer/moby-names-generator-java
 - initialize lambda based webhook - local-exec provisioner using curl
 - snapstart
-- /info command - am I joined or hosted ?
+- /info command - am I joined or hosted ? or amend /help
 - /join alias of /start
 - when channel is dropped by host, all client have to leave as well
-- NotFoundException - catch and wrap into RouteException
+- pin unanswered messages? Maybe make this configurable.
+- telegram throttling sometimes will be a concern. Consider using dedicated bot tokens for commercial clients. Also, research aws lambda retry mechanism as a solution to tg throttling for other clients.
+- proxy or vpn may cause ws connection closed after a minute of inactivity. Send ping from server every 30s or so and await for pong.
+- API Gateway supports message payloads up to 128 KB with a maximum frame size of 32 KB. If a message exceeds 32 KB, you must split it into multiple frames, each 32 KB or smaller. If a larger message is received, the connection is closed with code 1009.
+- tg api largest text message is 4kb. Larger ones need to be split.
+- it is better to send files with http put/post rather than websocket. Presigned s3 for large files. Only send url over websocket.

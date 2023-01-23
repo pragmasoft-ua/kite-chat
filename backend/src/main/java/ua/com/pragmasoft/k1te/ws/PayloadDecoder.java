@@ -10,6 +10,8 @@ import javax.json.JsonArray;
 import javax.websocket.DecodeException;
 import javax.websocket.Decoder;
 import javax.websocket.EndpointConfig;
+
+import io.quarkus.logging.Log;
 import ua.com.pragmasoft.k1te.router.domain.payload.JoinChannel;
 import ua.com.pragmasoft.k1te.router.domain.payload.Payload;
 import ua.com.pragmasoft.k1te.router.domain.payload.Payload.Type;
@@ -17,8 +19,7 @@ import ua.com.pragmasoft.k1te.router.domain.payload.PlaintextMessage;
 
 public class PayloadDecoder implements Decoder.Text<Payload> {
 
-  static final EnumMap<Type, Function<JsonArray, Payload>> DECODERS =
-      new EnumMap<>(Type.class);
+  static final EnumMap<Type, Function<JsonArray, Payload>> DECODERS = new EnumMap<>(Type.class);
 
   static {
     DECODERS.put(Type.JOIN, PayloadDecoder::decodeJoinChannel);
@@ -38,6 +39,8 @@ public class PayloadDecoder implements Decoder.Text<Payload> {
   @Override
   public Payload decode(String text) throws DecodeException {
 
+    Log.debug("decode " + text);
+
     try (var reader = Json.createReader(new StringReader(text))) {
       var array = reader.readArray();
       int typeOrdinal = array.getInt(0);
@@ -54,19 +57,15 @@ public class PayloadDecoder implements Decoder.Text<Payload> {
 
   private static Payload decodeJoinChannel(JsonArray array) {
     String memberId = array.getString(1);
-    if (array.size() < 3) {
-      return new JoinChannel(memberId);
-    } else {
-      String memberName = array.getString(2);
-      return new JoinChannel(memberId, memberName);
-    }
+    String memberName = array.getString(2, memberId);
+    return new JoinChannel(memberId, memberName);
   }
 
   private static Payload decodePlaintextMessage(JsonArray array) {
     Objects.checkIndex(3, array.size());
     String text = array.getString(1);
     String messageId = array.getString(2);
-    Instant created = Instant.ofEpochSecond(array.getJsonNumber(3).longValue());
+    Instant created = Instant.parse(array.getString(3));
     return new PlaintextMessage(
         text,
         messageId,

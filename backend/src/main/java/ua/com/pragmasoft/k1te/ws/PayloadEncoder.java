@@ -16,8 +16,7 @@ import ua.com.pragmasoft.k1te.router.domain.payload.PlaintextMessage;
 
 public class PayloadEncoder implements Encoder.Text<Payload> {
 
-  static final EnumMap<Payload.Type, BiConsumer<Payload, JsonWriter>> ENCODERS =
-      new EnumMap<>(Payload.Type.class);
+  static final EnumMap<Payload.Type, BiConsumer<Payload, JsonWriter>> ENCODERS = new EnumMap<>(Payload.Type.class);
 
   static {
     ENCODERS.put(Payload.Type.ACK, PayloadEncoder::encodeAck);
@@ -54,7 +53,7 @@ public class PayloadEncoder implements Encoder.Text<Payload> {
         .add(Payload.Type.ACK.ordinal())
         .add(ack.messageId())
         .add(ack.destiationMessageId())
-        .add(ack.delivered().getEpochSecond())
+        .add(ack.delivered().toString())
         .build();
     jw.writeArray(array);
   }
@@ -77,7 +76,7 @@ public class PayloadEncoder implements Encoder.Text<Payload> {
         .add(Payload.Type.PLAINTEXT.ordinal())
         .add(message.text())
         .add(message.messageId())
-        .add(message.created().getEpochSecond())
+        .add(message.created().toString())
         .build();
     jw.writeArray(array);
   }

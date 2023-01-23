@@ -21,6 +21,9 @@ export class DynamoDbSchema extends Construct {
     const channels = new DynamodbTable(scope, "Channels", {
       name: `${id}.Channels`,
       dependsOn,
+      lifecycle: {
+        preventDestroy: true,
+      },
       billingMode,
       pointInTimeRecovery: {
         enabled: pointInTimeRecovery,
@@ -36,6 +39,9 @@ export class DynamoDbSchema extends Construct {
     new DynamodbTable(scope, "Members", {
       name: `${id}.Members`,
       dependsOn: [channels],
+      lifecycle: {
+        preventDestroy: true,
+      },
       billingMode,
       pointInTimeRecovery: {
         enabled: pointInTimeRecovery,

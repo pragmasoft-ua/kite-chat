@@ -1,23 +1,33 @@
 package ua.com.pragmasoft.k1te.ws;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.websocket.CloseReason;
 import javax.websocket.CloseReason.CloseCodes;
 import javax.websocket.EncodeException;
+import javax.websocket.EndpointConfig;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.PongMessage;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
+
 import io.quarkus.logging.Log;
 import ua.com.pragmasoft.k1te.router.domain.Channels;
 import ua.com.pragmasoft.k1te.router.domain.Connector;
-import ua.com.pragmasoft.k1te.router.domain.Id;
 import ua.com.pragmasoft.k1te.router.domain.Member;
 import ua.com.pragmasoft.k1te.router.domain.Router;
 import ua.com.pragmasoft.k1te.router.domain.RoutingContext;
@@ -45,6 +55,12 @@ public class WsConnector implements Connector {
 
   private final Channels channels;
 
+  private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+  private static final String PING = "kite.ping";
+
+  private static final ByteBuffer PING_BYTES = ByteBuffer.wrap(PING.getBytes(StandardCharsets.UTF_8));
+
   @Inject
   public WsConnector(final Router router, final Channels channels) {
     this.router = router;
@@ -57,18 +73,36 @@ public class WsConnector implements Connector {
     return WS;
   }
 
+  @OnOpen
+  public void onOpen(Session session, EndpointConfig config) {
+    session.setMaxIdleTimeout(60L * 1000L);
+    var handle = this.scheduler.scheduleAtFixedRate(new Pinger(session),
+        30, 30, TimeUnit.SECONDS);
+    session.getUserProperties().put(PING, handle);
+  }
+
+  @OnMessage
+  public void onPong(Session session, PongMessage pong) {
+    var data = StandardCharsets.UTF_8.decode(pong.getApplicationData()).toString();
+    Log.debugf("Pong %s %s ", data, session.getId());
+  }
+
   @OnClose
-  public void onClose(Session session, @PathParam("channelName") String channelName) {
+  public void onClose(Session session, @PathParam("channelName") String channelName, CloseReason closeReason) {
     final String connectionUri = this.connectionUriOf(session);
-    Log.debugf("Member disconnected from channel %s on %s", channelName, connectionUri);
+    Log.debugf("Member disconnected from channel %s on %s. Reason %s", channelName, connectionUri,
+        closeReason.getCloseCode().toString());
     try {
-      Member client = this.channels.leaveChannel(connectionUri);
+      ScheduledFuture<?> handle = (ScheduledFuture<?>) session.getUserProperties().get(PING);
+      handle.cancel(true);
+      Member client = this.channels.find(connectionUri);
       this.router.dispatch(
           RoutingContext
               .create()
               .withOriginConnection(connectionUri)
               .withRequest(new PlaintextMessage(
                   "✅ %s left channel %s".formatted(client.getUserName(), client.getChannelName()))));
+      this.channels.leaveChannel(connectionUri);
     } finally {
       this.sessions.remove(session.getId());
     }
@@ -118,11 +152,11 @@ public class WsConnector implements Connector {
       this.router.dispatch(ctx);
       session.getBasicRemote().sendObject(
           new PlaintextMessage(
-              "✅ You joined channel %s".formatted(joinChannel.channelName)));
+              "✅ You joined channel %s as %s".formatted(joinChannel.channelName, client.getUserName())));
       this.sessions.put(session.getId(), session);
     } catch (Exception e) {
       this.onError(session, joinChannel.channelName, e);
-      session.close(new CloseReason(CloseCodes.VIOLATED_POLICY, e.getMessage()));
+      session.close(new CloseReason(CloseCodes.VIOLATED_POLICY, "Protocol error"));
     }
   }
 
@@ -150,7 +184,7 @@ public class WsConnector implements Connector {
   }
 
   private String connectionUriOf(Session s) {
-    return this.connectionUri(Id.validate(s.getId()));
+    return this.connectionUri(s.getId());
   }
 
   private Session requiredSession(String uri) {
@@ -159,6 +193,25 @@ public class WsConnector implements Connector {
       throw new RoutingException("Web client disconnected");
     }
     return session;
+  }
+
+  private record Pinger(Session session) implements Runnable {
+
+    @Override
+    public void run() {
+      try {
+        Log.debugf("Ping %s %s ", PING, session.getId());
+        session.getBasicRemote().sendPing(PING_BYTES);
+      } catch (IOException io) {
+        Log.debug("Ping error, close session " + session.getId(), io);
+        try {
+          session.close();
+        } catch (IOException e) {
+          // Ignore
+        }
+      }
+    }
+
   }
 
 }
