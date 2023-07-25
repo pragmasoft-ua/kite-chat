@@ -37,6 +37,7 @@ class LocalStack extends TerraformStack {
 
     new DynamoDbSchema(this, id, {
       dependsOn: [dynamoDbLocalContainer.container],
+      preventDestroy: false,
     });
   }
 }

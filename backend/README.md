@@ -89,6 +89,10 @@ You can then execute your native executable with: `./target/k1te-chat-backend-1.
 
 If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.
 
+### Upgrade dependencies
+
+First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade quarkus` (on Linux), then use `quarkus upgrade` to upgrade Quarkus BOM in the pom, then upgrade other dependencies `./mvnw versions:use-latest-releases`
+
 ### TODO
 
 - stop exposing real chat ids and websocket ids as member ids
@@ -114,3 +118,5 @@ If you want to learn more about building native executables, please consult http
 - API Gateway supports message payloads up to 128 KB with a maximum frame size of 32 KB. If a message exceeds 32 KB, you must split it into multiple frames, each 32 KB or smaller. If a larger message is received, the connection is closed with code 1009.
 - tg api largest text message is 4kb. Larger ones need to be split.
 - it is better to send files with http put/post rather than websocket. Presigned s3 for large files. Only send url over websocket.
+- trunk based development, feature flags
+- CraC, native image

@@ -1,6 +1,8 @@
 import { DynamodbTable } from "@cdktf/provider-aws/lib/dynamodb-table";
 import { ITerraformDependable } from "cdktf";
 import { Construct } from "constructs";
+import { Dynamodb } from "iam-floyd/lib/generated";
+import { Grantable } from "./grantable";
 
 const billingMode = "PAY_PER_REQUEST";
 const STRING = "S";
@@ -8,13 +10,19 @@ const STRING = "S";
 export type DynamoDbSchemaProps = {
   dependsOn?: ITerraformDependable[];
   pointInTimeRecovery?: boolean;
+  preventDestroy?: boolean;
 };
 
 export class DynamoDbSchema extends Construct {
+  readonly tables: DynamodbTable[];
   constructor(
     scope: Construct,
     id: string,
-    { dependsOn, pointInTimeRecovery = false }: DynamoDbSchemaProps = {}
+    {
+      dependsOn,
+      pointInTimeRecovery = false,
+      preventDestroy = true,
+    }: DynamoDbSchemaProps = {}
   ) {
     super(scope, id);
 
@@ -22,7 +30,7 @@ export class DynamoDbSchema extends Construct {
       name: `${id}.Channels`,
       dependsOn,
       lifecycle: {
-        preventDestroy: true,
+        preventDestroy,
       },
       billingMode,
       pointInTimeRecovery: {
@@ -36,11 +44,11 @@ export class DynamoDbSchema extends Construct {
       attribute: [{ name: "name", type: STRING }],
     });
 
-    new DynamodbTable(scope, "Members", {
+    const members = new DynamodbTable(scope, "Members", {
       name: `${id}.Members`,
       dependsOn: [channels],
       lifecycle: {
-        preventDestroy: true,
+        preventDestroy,
       },
       billingMode,
       pointInTimeRecovery: {
@@ -61,5 +69,16 @@ export class DynamoDbSchema extends Construct {
         },
       ],
     });
+
+    this.tables = [channels, members];
+  }
+
+  public allowAllWrite(to: Grantable) {
+    const policyStatement = new Dynamodb()
+      .allow()
+      .allWriteActions()
+      .on(...this.tables.map((t) => t.arn));
+    to.grant(policyStatement);
+    return this;
   }
 }

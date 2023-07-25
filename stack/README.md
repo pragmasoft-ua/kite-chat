@@ -11,7 +11,7 @@ CDK TF requires:
 - node v16+ and npm
 - terraform cli
 - cdktf cli `npm install --global cdktf-cli@latest`
-- aws cli with configured credentials (for production stack only)
+- aws cli with configured credentials (for production stack only) `aws sts get-caller-identity`
 - docker runtime (for local stack only)
 
 More details can be found here: [CDK TF Installation](https://developer.hashicorp.com/terraform/tutorials/cdktf/cdktf-install)

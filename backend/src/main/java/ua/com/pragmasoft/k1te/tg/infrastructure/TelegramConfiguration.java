@@ -1,8 +1,8 @@
 package ua.com.pragmasoft.k1te.tg.infrastructure;
 
 import java.net.URI;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import com.pengrad.telegrambot.TelegramBot;
 import ua.com.pragmasoft.k1te.router.domain.Channels;

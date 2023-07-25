@@ -5,11 +5,11 @@ import java.time.Instant;
 import java.util.EnumMap;
 import java.util.Objects;
 import java.util.function.Function;
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.websocket.DecodeException;
-import javax.websocket.Decoder;
-import javax.websocket.EndpointConfig;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.websocket.DecodeException;
+import jakarta.websocket.Decoder;
+import jakarta.websocket.EndpointConfig;
 
 import io.quarkus.logging.Log;
 import ua.com.pragmasoft.k1te.router.domain.payload.JoinChannel;

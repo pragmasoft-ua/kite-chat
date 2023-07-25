@@ -2,8 +2,6 @@ package ua.com.pragmasoft.k1te.router.domain.payload;
 
 import java.util.Objects;
 
-import ua.com.pragmasoft.k1te.router.domain.ChannelName;
-
 public final class JoinChannel implements CommandPayload {
 
   private static final long serialVersionUID = 1L;
