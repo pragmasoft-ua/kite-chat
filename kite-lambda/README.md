@@ -19,7 +19,7 @@ and notice its **Arn** in the output like `arn:aws:iam::763507571005:role/lambda
 ### Create function
 
 ```bash
- aws lambda create-function --function-name TestLambda --zip-file fileb://./target/function.zip --handler "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest" --runtime java17 --role "arn:aws:iam::763507571005:role/lambda-execution" --timeout 15 --memory-size 256 --environment "Variables={DISABLE_SIGNAL_HANDLERS=true}"
+ aws lambda create-function --function-name TestLambda --zip-file fileb://./target/function.zip --handler "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest" --runtime java17 --role "arn:aws:iam::763507571005:role/lambda-execution" --timeout 15 --memory-size 128
 ```
 
 ### Invoke function

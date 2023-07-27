@@ -111,7 +111,7 @@ First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade
 - snapstart
 - /info command - am I joined or hosted ? or amend /help
 - /join alias of /start
-- when channel is dropped by host, all client have to leave as well
+- when channel is dropped by host, all clients have to leave as well
 - pin unanswered messages? Maybe make this configurable.
 - telegram throttling sometimes will be a concern. Consider using dedicated bot tokens for commercial clients. Also, research aws lambda retry mechanism as a solution to tg throttling for other clients.
 - proxy or vpn may cause ws connection closed after a minute of inactivity. Send ping from server every 30s or so and await for pong.
