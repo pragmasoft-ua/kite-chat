@@ -49,7 +49,7 @@ export class Role extends Construct implements Grantable {
   }
 
   grant(policyStatement: iam.PolicyStatement): this {
-    const statement = policyStatement.for(this.role.arn).toJSON();
+    const statement = policyStatement.toJSON();
     const policy = JSON.stringify({
       Version: "2012-10-17",
       Statement: [statement],

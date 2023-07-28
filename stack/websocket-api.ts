@@ -1,10 +1,12 @@
 import { Apigatewayv2Api } from "@cdktf/provider-aws/lib/apigatewayv2-api";
 import { TerraformOutput } from "cdktf";
 
+import { LambdaFunction } from "@cdktf/provider-aws/lib/lambda-function";
+import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
+import { Construct } from "constructs";
+import { Apigatewayv2Stage } from "@cdktf/provider-aws/lib/apigatewayv2-stage";
 import { Apigatewayv2Integration } from "@cdktf/provider-aws/lib/apigatewayv2-integration";
 import { Apigatewayv2Route } from "@cdktf/provider-aws/lib/apigatewayv2-route";
-import { LambdaFunction } from "@cdktf/provider-aws/lib/lambda-function";
-import { Construct } from "constructs";
 
 export type WebsocketApiProps = {
   handler: LambdaFunction;
@@ -12,8 +14,6 @@ export type WebsocketApiProps = {
 
 export class WebsocketApi extends Construct {
   readonly gw: Apigatewayv2Api;
-  readonly integration: Apigatewayv2Integration;
-  readonly route: Apigatewayv2Route;
 
   constructor(
     scope: Construct,
@@ -24,32 +24,50 @@ export class WebsocketApi extends Construct {
 
     const { handler } = props;
 
-    let name = this.node.id;
+    let name = id;
 
     this.gw = new Apigatewayv2Api(this, name, {
       name,
       protocolType: "WEBSOCKET",
+      routeSelectionExpression: "$request.body.action",
     });
 
-    name = `${this.node.id}-ws-lambda-integration`;
+    name = id + "-stage";
 
-    this.integration = new Apigatewayv2Integration(this, name, {
+    const defaultStage = new Apigatewayv2Stage(this, name, {
+      apiId: this.gw.id,
+      name: "prod",
+      autoDeploy: true,
+    });
+
+    name = "default-integration";
+
+    const integration = new Apigatewayv2Integration(this, name, {
       apiId: this.gw.id,
       integrationType: "AWS_PROXY",
       integrationUri: handler.arn,
     });
 
-    name = `${this.node.id}-ws-default-route`;
+    name = "default-route";
 
-    this.route = new Apigatewayv2Route(this, name, {
+    new Apigatewayv2Route(this, name, {
       apiId: this.gw.id,
       routeKey: "$default",
-      target: "integrations/" + this.integration.id,
+      target: "integrations/" + integration.id,
+    });
+
+    name = `${id}-lambda-permission`;
+
+    new LambdaPermission(this, name, {
+      functionName: handler.functionName,
+      action: "lambda:InvokeFunction",
+      principal: "apigateway.amazonaws.com",
+      sourceArn: `${this.gw.executionArn}/*/*`,
     });
 
     // Outputs the WebSocket URL
-    new TerraformOutput(this, "WebSocketURL", {
-      value: this.gw.apiEndpoint,
+    new TerraformOutput(this, "url", {
+      value: defaultStage.invokeUrl,
     });
   }
 }

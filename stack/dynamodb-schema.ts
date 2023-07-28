@@ -76,7 +76,7 @@ export class DynamoDbSchema extends Construct {
   public allowAllWrite(to: Grantable) {
     const policyStatement = new Dynamodb()
       .allow()
-      .allWriteActions()
+      .allActions()
       .on(...this.tables.map((t) => t.arn));
     to.grant(policyStatement);
     return this;

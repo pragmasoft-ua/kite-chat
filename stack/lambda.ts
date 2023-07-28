@@ -49,14 +49,17 @@ export class Lambda extends Construct {
       props
     );
 
-    this.role = role || this.defaultRole();
+    this.role = role ?? this.defaultRole();
 
-    this.fn = new LambdaFunction(scope, "fn", {
+    this.fn = new LambdaFunction(scope, this.node.id + "-" + this.node.addr, {
       functionName: this.node.id,
       role: this.role.arn,
       memorySize,
       timeout,
-      environment,
+      environment: {
+        variables: environment,
+      },
+      architectures: ["arm64"],
       filename: asset.path,
       sourceCodeHash: asset.hash,
       runtime: asset.runtime,

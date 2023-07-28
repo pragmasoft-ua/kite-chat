@@ -9,6 +9,7 @@ import { QuarkusLambdaAsset } from "./asset";
 import { Lambda } from "./lambda";
 import { WebsocketApi } from "./websocket-api";
 import { RestApi } from "./rest-api";
+import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "kite-chat" });
 class KiteStack extends TerraformStack {
@@ -17,7 +18,10 @@ class KiteStack extends TerraformStack {
 
     new AwsProvider(this, "AWS");
 
-    const schema = new DynamoDbSchema(this, id, { pointInTimeRecovery: true });
+    const schema = new DynamoDbSchema(this, id, {
+      pointInTimeRecovery: false,
+      preventDestroy: false,
+    });
 
     const role = new Role(this, "kite-lambda-execution-role");
 
@@ -35,6 +39,7 @@ class KiteStack extends TerraformStack {
       role,
       asset,
       environment: { QUARKUS_LAMBDA_HANDLER: "ws" },
+      memorySize: 128,
     });
 
     new WebsocketApi(this, "kite-ws-api", { handler: wsHandler.fn });
@@ -43,17 +48,28 @@ class KiteStack extends TerraformStack {
       role,
       asset,
       environment: { QUARKUS_LAMBDA_HANDLER: "test" },
+      memorySize: 128,
     });
 
     const tgHandler = new Lambda(this, "tg-handler", {
       role,
       asset,
       environment: { QUARKUS_LAMBDA_HANDLER: "tg" },
+      memorySize: 128,
     });
 
-    new RestApi(this, "kite-rest-api")
-      .addHandler("/tg", "ANY", tgHandler)
-      .addHandler("/test", "ANY", testHandler);
+    new RestApi(this, "kite-rest-api").addHandler("/tg", "ANY", tgHandler);
+
+    const testEvent = {
+      name: "Dmytro",
+      greeting: "Hi From Terraform,",
+    };
+
+    new LambdaInvocation(this, "test-invocation", {
+      functionName: testHandler.fn.functionName,
+      input: JSON.stringify(testEvent),
+      lifecycleScope: "CRUD",
+    });
 
     Aspects.of(this).add(TAGGING_ASPECT);
   }

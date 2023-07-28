@@ -90,3 +90,12 @@ You can also install these providers directly through npm:
 `npm install @cdktf/provider-null`
 
 You can also build any module or provider locally. Learn more https://cdk.tf/modules-and-providers
+
+## TODO
+
+- Custom DNS
+- Maven Build (null resource, local-exec provisioner)
+- Log retention - explicit log groups
+- Add access logs to both rest and ws stages
+- JSON logs
+- Cloudfront? read..

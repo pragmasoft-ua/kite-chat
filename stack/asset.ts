@@ -1,4 +1,4 @@
-import { AssetType, TerraformAsset } from "cdktf";
+import { AssetType, TerraformAsset, TerraformOutput } from "cdktf";
 
 import { Construct } from "constructs";
 import path = require("node:path");
@@ -14,7 +14,7 @@ export type QuarkusLambdaAssetProps = {
 
 const DEFAULT_PROPS: Partial<QuarkusLambdaAssetProps> = {
   runtime: "java17",
-  assetType: AssetType.ARCHIVE,
+  assetType: AssetType.FILE,
   handler:
     "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest",
 };
@@ -31,11 +31,12 @@ export class QuarkusLambdaAsset extends Construct {
   ) {
     super(scope, id);
 
-    const { relativeProjectPath, runtime, assetType, handler } = Object.assign(
-      {},
-      DEFAULT_PROPS,
-      props
-    );
+    const {
+      relativeProjectPath,
+      runtime,
+      assetType: type,
+      handler,
+    } = Object.assign({}, DEFAULT_PROPS, props);
 
     const absoluteAssetPath = path.resolve(
       __dirname,
@@ -47,12 +48,16 @@ export class QuarkusLambdaAsset extends Construct {
 
     this.asset = new TerraformAsset(this, this.node.id, {
       path: absoluteAssetPath,
-      type: assetType,
+      type,
     });
 
     this.runtime = runtime as Runtime;
 
     this.handler = handler as string;
+
+    new TerraformOutput(this, "path", {
+      value: this.asset.path,
+    });
   }
 
   get path() {
