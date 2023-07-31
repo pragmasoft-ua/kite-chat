@@ -152,9 +152,7 @@ export class WebsocketApi extends Construct {
       routeResponseKey: "$default",
     });
 
-    name = `${id}-lambda-permission`;
-
-    new LambdaPermission(this, name, {
+    new LambdaPermission(this, `${id}-lambda-permission`, {
       functionName: handler.fn.functionName,
       action: "lambda:InvokeFunction",
       principal: API_GATEWAY_SERVICE_PRINCIPAL,
