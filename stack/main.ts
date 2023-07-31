@@ -6,7 +6,7 @@ import { DynamodbLocalContainer } from "./local-dynamodb";
 import { Role } from "./iam";
 import { TagsAddingAspect } from "./tags";
 import { QuarkusLambdaAsset } from "./asset";
-import { Lambda } from "./lambda";
+import { LAMBDA_SERVICE_PRINCIPAL, Lambda } from "./lambda";
 import { WebsocketApi } from "./websocket-api";
 import { RestApi } from "./rest-api";
 import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
@@ -23,7 +23,9 @@ class KiteStack extends TerraformStack {
       preventDestroy: false,
     });
 
-    const role = new Role(this, "kite-lambda-execution-role");
+    const role = new Role(this, "kite-lambda-execution-role", {
+      forService: LAMBDA_SERVICE_PRINCIPAL,
+    });
 
     role.attachManagedPolicyArn(
       "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -42,7 +44,7 @@ class KiteStack extends TerraformStack {
       memorySize: 128,
     });
 
-    new WebsocketApi(this, "kite-ws-api", { handler: wsHandler.fn });
+    new WebsocketApi(this, "kite-ws-api", { handler: wsHandler });
 
     const testHandler = new Lambda(this, "test-handler", {
       role,

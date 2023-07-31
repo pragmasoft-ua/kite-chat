@@ -3,6 +3,11 @@ import { LambdaFunction } from "@cdktf/provider-aws/lib/lambda-function";
 import { Construct } from "constructs";
 import { QuarkusLambdaAsset } from "./asset";
 import { Role } from "./iam";
+import { Grantable } from "./grantable";
+import { Lambda as LambdaPolicy } from "iam-floyd/lib/generated";
+import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group";
+
+export const LAMBDA_SERVICE_PRINCIPAL = "lambda.amazonaws.com";
 
 export type LambdaProps = {
   asset: QuarkusLambdaAsset;
@@ -52,7 +57,7 @@ export class Lambda extends Construct {
     this.role = role ?? this.defaultRole();
 
     this.fn = new LambdaFunction(scope, this.node.id + "-" + this.node.addr, {
-      functionName: this.node.id,
+      functionName: id,
       role: this.role.arn,
       memorySize,
       timeout,
@@ -65,14 +70,27 @@ export class Lambda extends Construct {
       runtime: asset.runtime,
       handler: asset.handler,
     });
+
+    new CloudwatchLogGroup(this, `${id}-logs`, {
+      name: `/aws/lambda/${id}`,
+      retentionInDays: 7,
+    });
   }
 
-  defaultRole(): Role {
-    return new Role(
-      this,
-      `${this.node.id}-execution-role`
-    ).attachManagedPolicyArn(
+  private defaultRole(): Role {
+    return new Role(this, `${this.node.id}-execution-role`, {
+      forService: LAMBDA_SERVICE_PRINCIPAL,
+    }).attachManagedPolicyArn(
       "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
     );
+  }
+
+  public allowToInvoke(to: Grantable) {
+    const policyStatement = new LambdaPolicy()
+      .allow()
+      .toInvokeFunction()
+      .on(this.fn.arn);
+    to.grant(policyStatement);
+    return this;
   }
 }

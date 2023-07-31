@@ -7,16 +7,16 @@ import { Sts } from "iam-floyd/lib/generated";
 import { Grantable } from "./grantable";
 
 export type RoleProps = {
-  forService?: string;
+  forService: string;
 };
 
 export class Role extends Construct implements Grantable {
   readonly role: IamRole;
 
-  constructor(scope: Construct, id: string, props: Readonly<RoleProps> = {}) {
+  constructor(scope: Construct, id: string, props: Readonly<RoleProps>) {
     super(scope, id);
 
-    const { forService = "lambda.amazonaws.com" } = props;
+    const { forService } = props;
 
     const assumeRoleStatement = new Sts()
       .allow()
