@@ -72,13 +72,15 @@ export class DynamoDbSchema extends Construct {
 
     this.tables = [channels, members];
   }
-
-  public allowAllWrite(to: Grantable) {
+  public allowAll(to: Grantable) {
     const policyStatement = new Dynamodb()
       .allow()
       .allActions()
       .on(...this.tables.map((t) => t.arn));
-    to.grant(policyStatement);
+    to.grant(
+      `allow-all-${this.tables.map((t) => t.name).join(",")}`,
+      policyStatement
+    );
     return this;
   }
 }

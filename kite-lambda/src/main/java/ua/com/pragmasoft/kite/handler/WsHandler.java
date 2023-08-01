@@ -30,7 +30,7 @@ public class WsHandler implements RequestHandler<APIGatewayV2WebSocketEvent, API
       case "$disconnect":
         break;
       default:
-        response.setBody("{\"message\":\"OK\"}");
+        response.setBody("OK");
     }
     response.setStatusCode(200);
     Log.infof("ws %s -> %s (%s)", input, response, context);

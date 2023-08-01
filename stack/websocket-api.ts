@@ -31,23 +31,24 @@ export class WebsocketApi extends Construct {
 
     const { handler, stage = "prod" } = props;
 
-    const apiGatewayRole = new Role(this, `${id}-role`, {
+    const wsApiGatewayRole = new Role(this, `${id}-execution-role`, {
       forService: API_GATEWAY_SERVICE_PRINCIPAL,
     });
 
-    handler.allowToInvoke(apiGatewayRole);
+    handler.allowToInvoke(wsApiGatewayRole);
 
-    apiGatewayRole.attachManagedPolicyArn(
+    wsApiGatewayRole.attachManagedPolicyArn(
       "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
     );
 
     const account = new ApiGatewayAccount(this, `${id}-account`, {
-      cloudwatchRoleArn: apiGatewayRole.arn,
+      cloudwatchRoleArn: wsApiGatewayRole.arn,
     });
 
     this.gw = new Apigatewayv2Api(this, id, {
       name: id,
       protocolType: "WEBSOCKET",
+      routeSelectionExpression: "\\$default",
       dependsOn: [account],
     });
 
@@ -104,7 +105,7 @@ export class WebsocketApi extends Construct {
         apiId: this.gw.id,
         integrationType: "AWS_PROXY",
         integrationUri: handler.fn.arn,
-        credentialsArn: apiGatewayRole.arn,
+        credentialsArn: wsApiGatewayRole.arn,
         contentHandlingStrategy: "CONVERT_TO_TEXT",
         passthroughBehavior: "WHEN_NO_MATCH",
       }

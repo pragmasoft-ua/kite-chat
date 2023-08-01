@@ -31,7 +31,7 @@ class KiteStack extends TerraformStack {
       "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
     );
 
-    schema.allowAllWrite(role);
+    schema.allowAll(role);
 
     const asset = new QuarkusLambdaAsset(this, "kite-lambda-code", {
       relativeProjectPath: "../kite-lambda",

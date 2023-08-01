@@ -30,6 +30,7 @@ export class Role extends Construct implements Grantable {
     });
 
     this.role = new IamRole(this, this.node.id, {
+      name: id,
       assumeRolePolicy,
     });
   }
@@ -48,13 +49,13 @@ export class Role extends Construct implements Grantable {
     return this;
   }
 
-  grant(policyStatement: iam.PolicyStatement): this {
+  grant(name: string, policyStatement: iam.PolicyStatement): this {
     const statement = policyStatement.toJSON();
     const policy = JSON.stringify({
       Version: "2012-10-17",
       Statement: [statement],
     });
-    this.role.putInlinePolicy([{ policy }]);
+    this.role.putInlinePolicy([{ policy, name }]);
     return this;
   }
 

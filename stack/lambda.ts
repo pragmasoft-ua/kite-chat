@@ -90,7 +90,7 @@ export class Lambda extends Construct {
       .allow()
       .toInvokeFunction()
       .on(this.fn.arn);
-    to.grant(policyStatement);
+    to.grant(`allow-invoke-${this.fn.functionName}`, policyStatement);
     return this;
   }
 }
