@@ -5,11 +5,11 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>ua.com.pragmasoft</groupId>
-  <artifactId>kite-chat</artifactId>
-  <version>2023.7.1</version>
+  <artifactId>k1te-chat-parent</artifactId>
+  <version>2023.8.1</version>
   <packaging>pom</packaging>
 
-  <name>kite-chat-parent</name>
+  <name>k1te-chat-parent</name>
   <url>https://github.com/pragmasoft-ua/kite-chat</url>
 
   <properties>
@@ -17,7 +17,7 @@
   </properties>
 
   <modules>
-    <module>backend</module>
-    <module>kite-lambda</module>
+    <module>k1te-backend</module>
+    <module>k1te-serverless</module>
   </modules>
 </project>

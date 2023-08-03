@@ -48,7 +48,7 @@ export class WebsocketApi extends Construct {
     this.gw = new Apigatewayv2Api(this, id, {
       name: id,
       protocolType: "WEBSOCKET",
-      routeSelectionExpression: "\\$default",
+      routeSelectionExpression: "$request.body.[0]", // "\\$default",
       dependsOn: [account],
     });
 

@@ -97,7 +97,7 @@ You can also build any module or provider locally. Learn more https://cdk.tf/mod
 - Maven Build (null resource, local-exec provisioner)
 - ✅Log retention - explicit log groups
 - Add access logs to both rest and ws stages
-- JSON logs
+- ✅JSON logs
 - Cloudfront? read..
 - s3 terraform backend as in https://awstip.com/websocket-api-gateway-with-terraform-8a509585121d
 - ping ws route (mock integration) as in https://www.obytes.com/blog/aws-websocket-api

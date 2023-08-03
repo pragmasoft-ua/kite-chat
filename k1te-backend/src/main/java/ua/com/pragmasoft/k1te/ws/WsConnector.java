@@ -41,11 +41,13 @@ import ua.com.pragmasoft.k1te.shared.KiteException;
 import ua.com.pragmasoft.k1te.shared.RoutingException;
 
 @ServerEndpoint(value = WsConnector.CHANNELS_PATH + "{channelName}", decoders = { PayloadDecoder.class }, encoders = {
-    PayloadEncoder.class }, subprotocols = { "v1.k1te.chat" })
+    PayloadEncoder.class }, subprotocols = { WsConnector.SUBPROTOCOL })
 @ApplicationScoped
 public class WsConnector implements Connector {
 
   public static final String CHANNELS_PATH = "/channels/";
+
+  public static final String SUBPROTOCOL = "k1te.chat/v1";
 
   private static final String WS = "ws";
 
