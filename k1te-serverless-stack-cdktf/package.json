@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@cdktf/provider-aws": "^16.0.4",
+    "@cdktf/provider-cloudflare": "^8.0.2",
     "@cdktf/provider-docker": "^8.0.0",
     "cdktf": "^0.17.2",
     "constructs": "^10.1.211",

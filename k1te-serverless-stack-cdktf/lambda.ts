@@ -6,6 +6,7 @@ import { Role } from "./iam";
 import { Grantable } from "./grantable";
 import { Lambda as LambdaPolicy } from "iam-floyd/lib/generated";
 import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group";
+import { Lazy } from "cdktf";
 
 export const LAMBDA_SERVICE_PRINCIPAL = "lambda.amazonaws.com";
 
@@ -38,12 +39,12 @@ const DEFAULT_PROPS: Partial<LambdaProps> = {
   logRetentionInDays: 7,
   timeout: 15,
   memorySize: 256,
-  environment: {},
 };
 
 export class Lambda extends Construct {
   readonly fn: LambdaFunction;
   readonly role: Role;
+  readonly environment: { [key: string]: string };
 
   constructor(scope: Construct, id: string, props: Readonly<LambdaProps>) {
     super(scope, id);
@@ -54,6 +55,8 @@ export class Lambda extends Construct {
       props
     );
 
+    this.environment = environment ?? {};
+
     this.role = role ?? this.defaultRole();
 
     this.fn = new LambdaFunction(scope, this.node.id + "-" + this.node.addr, {
@@ -62,7 +65,11 @@ export class Lambda extends Construct {
       memorySize,
       timeout,
       environment: {
-        variables: environment,
+        variables: Lazy.anyValue({
+          produce: () => {
+            return this.environment;
+          },
+        }) as unknown as Record<string, string>,
       },
       architectures: ["arm64"],
       filename: asset.path,

@@ -93,11 +93,16 @@ You can also build any module or provider locally. Learn more https://cdk.tf/mod
 
 ## TODO
 
-- Custom DNS
-- Maven Build (null resource, local-exec provisioner)
+- Set up DNS name k1te.chat (Cloudflare + )
+- ❌Maven Build (null resource, local-exec provisioner) (replace with CI instead, see below)
 - ✅Log retention - explicit log groups
 - Add access logs to both rest and ws stages
 - ✅JSON logs
 - Cloudfront? read..
-- s3 terraform backend as in https://awstip.com/websocket-api-gateway-with-terraform-8a509585121d
-- ping ws route (mock integration) as in https://www.obytes.com/blog/aws-websocket-api
+- ✅s3 terraform backend as in https://awstip.com/websocket-api-gateway-with-terraform-8a509585121d
+- ✅ping ws route (mock integration) as in https://www.obytes.com/blog/aws-websocket-api
+- consider sqs integration between ws api gw and lambda?
+- CI as in https://www.obytes.com/blog/aws-lambda-ci
+- Logging and telemetry to S3 as in https://lumigo.io/blog/lambda-telemetry-api-a-new-way-to-process-lambda-telemetry-data-in-real-time/
+- Query logs above with Athena (S3 select only queries one file) or OpenSearch
+- dev and prod stages
