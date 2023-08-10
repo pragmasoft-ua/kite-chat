@@ -2,6 +2,7 @@ import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
 import { App, Aspects, S3Backend, TerraformStack } from "cdktf";
 import { Construct } from "constructs";
+import "dotenv/config";
 import { QuarkusLambdaAsset } from "./asset";
 import { DynamoDbSchema } from "./dynamodb-schema";
 import { Role } from "./iam";
@@ -45,7 +46,7 @@ class KiteStack extends TerraformStack {
       relativeProjectPath: "../k1te-serverless",
     });
 
-    const wsApi = new WebsocketApi(this, "kite-ws-api");
+    const wsApi = new WebsocketApi(this, "kite-ws-api", "k1te.chat");
 
     const wsHandler = new Lambda(this, "ws-handler", {
       role,
@@ -134,6 +135,6 @@ class LocalStack extends TerraformStack {
 }
 
 const app = new App();
-new KiteStack(app, "k1te");
+new KiteStack(app, "kite");
 new LocalStack(app, "local");
 app.synth();

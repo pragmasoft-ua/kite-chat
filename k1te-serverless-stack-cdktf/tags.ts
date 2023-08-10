@@ -8,7 +8,7 @@ type TaggableConstruct = IConstruct & {
 };
 
 function isTaggableConstruct(x: IConstruct): x is TaggableConstruct {
-  return "tags" in x && "tagsInput" in x;
+  return "tags" in x && "tagsInput" in x && !x["tags"];
 }
 
 export class TagsAddingAspect implements IAspect {

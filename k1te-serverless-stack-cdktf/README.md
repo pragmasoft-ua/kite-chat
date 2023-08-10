@@ -20,6 +20,22 @@ For node installation it's recommended to use `nvm`
 
 On Windows you can use `choco` to install most dependencies
 
+### Cloudflare hosted custom domain dependencies
+
+Currently, custom api domains are optional, but when requested, they require Cloudflare api token configured, because only Cloudflare hosted domain is supported for now.
+
+To configure Cloudflare api token:
+
+- go to the https://dash.cloudflare.com/profile/api-tokens
+- use **Edit zone DNS** as a template
+- create the token and copy it to the clipboard.
+
+Then, create `.env` file in the cdktf project root with the content:
+
+`CLOUDFLARE_API_TOKEN="your cloudflare api token"`
+
+Alternatively, copy `.env.example.txt`, rename it to `.env` and add your token there.
+
 ## Structure
 
 This application consists of two CDKTF stacks:
@@ -91,9 +107,27 @@ You can also install these providers directly through npm:
 
 You can also build any module or provider locally. Learn more https://cdk.tf/modules-and-providers
 
+## Testing websocket connection
+
+```bash
+npx wscat -s "v1.k1te.chat" -c wss://ws.k1te.chat/prod
+Connected (press CTRL+C to quit)
+> Hi
+< OK
+> ['PING']
+< ["PONG","Jdw43eh1Ai0CFrg="]
+>
+```
+
+## Cloudflare API snippet
+
+```bash
+curl --request POST --url "https://api.cloudflare.com/client/v4/zones/ee68495b7c3238f5b738f1aaa49ac569/dns_records" -H "Content-Type: application/json" -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" --data '{"content": "_7d6f6f19acae3e1bed4c89035c765ba6.dflhkvdxlx.acm-validations.aws.","name": "_2ba4fa11bc3015df1ab70e82a4680300.k1te.chat.","proxied": false,"type": "CNAME","tags":[],"ttl":1}'
+```
+
 ## TODO
 
-- Set up DNS name k1te.chat (Cloudflare + )
+- ✅ Set up DNS name k1te.chat ()
 - ❌Maven Build (null resource, local-exec provisioner) (replace with CI instead, see below)
 - ✅Log retention - explicit log groups
 - Add access logs to both rest and ws stages
@@ -101,8 +135,9 @@ You can also build any module or provider locally. Learn more https://cdk.tf/mod
 - Cloudfront? read..
 - ✅s3 terraform backend as in https://awstip.com/websocket-api-gateway-with-terraform-8a509585121d
 - ✅ping ws route (mock integration) as in https://www.obytes.com/blog/aws-websocket-api
+- Refactor DNS part, add custom DNS name to REST API as well
+- dev and prod stages
 - consider sqs integration between ws api gw and lambda?
 - CI as in https://www.obytes.com/blog/aws-lambda-ci
 - Logging and telemetry to S3 as in https://lumigo.io/blog/lambda-telemetry-api-a-new-way-to-process-lambda-telemetry-data-in-real-time/
 - Query logs above with Athena (S3 select only queries one file) or OpenSearch
-- dev and prod stages

@@ -3,6 +3,7 @@ import { AssetType, TerraformAsset, TerraformOutput } from "cdktf";
 import { Construct } from "constructs";
 import path = require("node:path");
 import fs = require("node:fs");
+import assert = require("node:assert");
 
 type Runtime = "java11" | "java17";
 
@@ -45,14 +46,12 @@ export class QuarkusLambdaAsset extends Construct {
       "target/function.zip"
     );
 
-    if (!fs.existsSync(absoluteAssetPath)) {
-      throw new Error(
-        `Lambda asset does not exist: "${absoluteAssetPath}".
-         Go to the asset's project directory and build asset with the command
-         "./mvnw package -DskipTests" then redeploy this stack.
-        `
-      );
-    }
+    assert(
+      fs.existsSync(absoluteAssetPath),
+      `Lambda asset does not exist: "${absoluteAssetPath}".
+       Go to the asset's project directory and build asset with the command
+       "./mvnw package -DskipTests" then redeploy this stack.`
+    );
 
     this.asset = new TerraformAsset(this, this.node.id, {
       path: absoluteAssetPath,
