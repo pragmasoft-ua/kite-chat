@@ -127,7 +127,7 @@ curl --request POST --url "https://api.cloudflare.com/client/v4/zones/ee68495b7c
 
 ## TODO
 
-- ✅ Set up DNS name k1te.chat ()
+- ✅ Set up DNS name k1te.chat
 - ❌Maven Build (null resource, local-exec provisioner) (replace with CI instead, see below)
 - ✅Log retention - explicit log groups
 - Add access logs to both rest and ws stages
@@ -136,6 +136,7 @@ curl --request POST --url "https://api.cloudflare.com/client/v4/zones/ee68495b7c
 - ✅s3 terraform backend as in https://awstip.com/websocket-api-gateway-with-terraform-8a509585121d
 - ✅ping ws route (mock integration) as in https://www.obytes.com/blog/aws-websocket-api
 - Refactor DNS part, add custom DNS name to REST API as well
+- Move this TODO section items to **doc/adr** (architecture decision records)
 - dev and prod stages
 - consider sqs integration between ws api gw and lambda?
 - CI as in https://www.obytes.com/blog/aws-lambda-ci

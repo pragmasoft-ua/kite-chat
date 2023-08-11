@@ -7,6 +7,8 @@ import { Construct } from "constructs";
 import { Lambda } from "./lambda";
 import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
 import { Apigatewayv2Stage } from "@cdktf/provider-aws/lib/apigatewayv2-stage";
+import { ApiProps } from "./websocket-api";
+import { Apigatewayv2DomainName } from "@cdktf/provider-aws/lib/apigatewayv2-domain-name";
 
 export type RestApiHandlerProps = {
   route: string;
@@ -56,8 +58,9 @@ class RestApiHandler extends Construct {
 
 export class RestApi extends Construct {
   readonly gw: Apigatewayv2Api;
+  readonly domainName?: Apigatewayv2DomainName;
 
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, props?: ApiProps) {
     super(scope, id);
 
     this.gw = new Apigatewayv2Api(this, id, {
@@ -72,6 +75,19 @@ export class RestApi extends Construct {
       name: "$default",
       autoDeploy: true,
     });
+
+    if (props) {
+      const { domainName, certificateArn } = props;
+
+      this.domainName = new Apigatewayv2DomainName(this, `${id}-domain-name`, {
+        domainName,
+        domainNameConfiguration: {
+          certificateArn,
+          endpointType: "REGIONAL",
+          securityPolicy: "TLS_1_2",
+        },
+      });
+    }
 
     new TerraformOutput(this, "url", {
       value: defaultStage.invokeUrl,
