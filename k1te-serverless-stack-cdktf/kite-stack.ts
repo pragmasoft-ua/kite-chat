@@ -12,6 +12,7 @@ import { TagsAddingAspect } from "./tags";
 import { WebsocketApi } from "./websocket-api";
 import { CloudflareDnsZone } from "./dns-zone";
 import { TlsCertificate } from "./tls-certificate";
+import { ApiGatewayPrincipal } from "./apigateway-principal";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 
@@ -35,7 +36,7 @@ export class KiteStack extends TerraformStack {
 
     const cert = new TlsCertificate(this, `${DOMAIN_NAME}-cert`, dnsZone);
 
-    const schema = new DynamoDbSchema(this, id, {
+    const schema = new DynamoDbSchema(this, `${id}-database`, {
       pointInTimeRecovery: false,
       preventDestroy: false,
     });
@@ -56,7 +57,12 @@ export class KiteStack extends TerraformStack {
 
     const wsApiDomainName = `ws.${DOMAIN_NAME}`;
 
-    const wsApi = new WebsocketApi(this, "kite-ws-api", {
+    const apiGatewayPrincipal = new ApiGatewayPrincipal(
+      this,
+      `${id}-apigateway`
+    );
+
+    const wsApi = new WebsocketApi(this, `${id}-ws-api`, {
       domainName: wsApiDomainName,
       certificateArn: cert.cert.arn,
     });
@@ -71,22 +77,29 @@ export class KiteStack extends TerraformStack {
 
     const stage = "prod";
 
-    const stageEndpoint = `https://${wsApi.api.id}.execute-api.${currentRegion.name}.amazonaws.com/${stage}`;
+    const prodWsEndpoint = `https://${wsApi.api.id}.execute-api.${currentRegion.name}.amazonaws.com/${stage}`;
+
+    const prodEnvironment = {
+      SERVERLESS_ENVIRONMENT: id,
+      WS_API_EXECUTION_ENDPOINT: prodWsEndpoint,
+    };
+
+    const memorySize = 128;
 
     const wsHandler = new Lambda(this, "ws-handler", {
       role,
       asset,
       environment: {
         QUARKUS_LAMBDA_HANDLER: "ws",
-        SERVERLESS_ENVIRONMENT: id,
-        WS_API_EXECUTION_ENDPOINT: stageEndpoint,
+        ...prodEnvironment,
       },
-      memorySize: 128,
+      memorySize,
     });
 
     wsApi.addStage({
       stage,
       handler: wsHandler,
+      principal: apiGatewayPrincipal,
     });
 
     const testHandler = new Lambda(this, "test-handler", {
@@ -94,10 +107,9 @@ export class KiteStack extends TerraformStack {
       asset,
       environment: {
         QUARKUS_LAMBDA_HANDLER: "test",
-        SERVERLESS_ENVIRONMENT: id,
-        WS_API_EXECUTION_ENDPOINT: stageEndpoint,
+        ...prodEnvironment,
       },
-      memorySize: 128,
+      memorySize,
     });
 
     const tgHandler = new Lambda(this, "tg-handler", {
@@ -105,10 +117,9 @@ export class KiteStack extends TerraformStack {
       asset,
       environment: {
         QUARKUS_LAMBDA_HANDLER: "tg",
-        SERVERLESS_ENVIRONMENT: id,
-        WS_API_EXECUTION_ENDPOINT: stageEndpoint,
+        ...prodEnvironment,
       },
-      memorySize: 128,
+      memorySize,
     });
 
     new RestApi(this, "kite-rest-api").addHandler("/tg", "ANY", tgHandler);

@@ -2,7 +2,6 @@ import { Apigatewayv2Api } from "@cdktf/provider-aws/lib/apigatewayv2-api";
 import { TerraformOutput } from "cdktf";
 
 import { AcmCertificate } from "@cdktf/provider-aws/lib/acm-certificate";
-import { ApiGatewayAccount } from "@cdktf/provider-aws/lib/api-gateway-account";
 import { Apigatewayv2ApiMapping } from "@cdktf/provider-aws/lib/apigatewayv2-api-mapping";
 import { Apigatewayv2DomainName } from "@cdktf/provider-aws/lib/apigatewayv2-domain-name";
 import { Apigatewayv2Integration } from "@cdktf/provider-aws/lib/apigatewayv2-integration";
@@ -14,7 +13,10 @@ import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group
 import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
 import { Construct } from "constructs";
 import { ExecuteApi } from "iam-floyd";
-import { Role } from "./iam";
+import {
+  API_GATEWAY_SERVICE_PRINCIPAL,
+  ApiGatewayPrincipal,
+} from "./apigateway-principal";
 import { Lambda } from "./lambda";
 
 const PING_REQUEST_TEMPLATE = JSON.stringify({ statusCode: 200 });
@@ -23,6 +25,7 @@ const PONG_RESPONSE_TEMPLATE = JSON.stringify(["PONG"]);
 
 export type WebsocketApiStageProps = {
   handler: Lambda;
+  principal: ApiGatewayPrincipal;
   stage?: string;
   logRetentionDays?: number;
 };
@@ -32,38 +35,19 @@ export type ApiProps = {
   certificateArn: string;
 };
 
-export const API_GATEWAY_SERVICE_PRINCIPAL = "apigateway.amazonaws.com";
 export class WebsocketApi extends Construct {
   readonly api: Apigatewayv2Api;
-  readonly role: Role;
   readonly cert?: AcmCertificate;
   readonly domainName?: Apigatewayv2DomainName;
 
   constructor(scope: Construct, id: string, props?: ApiProps) {
     super(scope, id);
 
-    this.role = new Role(this, `${id}-execution-role`, {
-      forService: API_GATEWAY_SERVICE_PRINCIPAL,
-    });
-
-    this.role.attachManagedPolicyArn(
-      "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
-    );
-
-    const account = new ApiGatewayAccount(this, `${id}-account`, {
-      cloudwatchRoleArn: this.role.arn,
-    });
-
     this.api = new Apigatewayv2Api(this, id, {
       name: id,
       protocolType: "WEBSOCKET",
       routeSelectionExpression: "$request.body.[0]", // "\\$default",
-      dependsOn: [account],
-    });
-
-    new CloudwatchLogGroup(this, `${id}-welcome-logs`, {
-      name: "/aws/apigateway/welcome",
-      retentionInDays: 1,
+      // dependsOn: [account],
     });
 
     if (props) {
@@ -85,6 +69,7 @@ export class WebsocketApi extends Construct {
       handler,
       stage: name = "prod",
       logRetentionDays: retentionInDays = 7,
+      principal,
     } = props;
 
     const id = this.node.id;
@@ -137,7 +122,7 @@ export class WebsocketApi extends Construct {
         apiId: this.api.id,
         integrationType: "AWS_PROXY",
         integrationUri: handler.fn.arn,
-        credentialsArn: this.role.arn,
+        credentialsArn: principal.role.arn,
         contentHandlingStrategy: "CONVERT_TO_TEXT",
         passthroughBehavior: "WHEN_NO_MATCH",
       }
@@ -255,7 +240,7 @@ export class WebsocketApi extends Construct {
       routeResponseKey: "$default",
     });
 
-    handler.allowToInvoke(this.role);
+    handler.allowToInvoke(principal.role);
 
     /*
      * We cannot use token to define policy resource, like
