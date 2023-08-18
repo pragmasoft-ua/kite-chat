@@ -5,7 +5,7 @@
     "experimentalDecorators": true,
     "inlineSourceMap": true,
     "inlineSources": true,
-    "lib": ["es2018"],
+    "lib": ["ESNext"],
     "module": "CommonJS",
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,

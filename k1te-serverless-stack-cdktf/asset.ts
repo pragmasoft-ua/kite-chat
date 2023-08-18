@@ -53,7 +53,7 @@ export class QuarkusLambdaAsset extends Construct {
        "./mvnw package -DskipTests" then redeploy this stack.`
     );
 
-    this.asset = new TerraformAsset(this, this.node.id, {
+    this.asset = new TerraformAsset(this, "asset", {
       path: absoluteAssetPath,
       type,
     });

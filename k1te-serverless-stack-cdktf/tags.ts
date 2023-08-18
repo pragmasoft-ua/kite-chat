@@ -7,8 +7,10 @@ type TaggableConstruct = IConstruct & {
   tagsInput?: { [key: string]: string };
 };
 
+export const ALLOW_TAGS = "allowTags";
+
 function isTaggableConstruct(x: IConstruct): x is TaggableConstruct {
-  return "tags" in x && "tagsInput" in x && !x["tags"];
+  return "tags" in x && "tagsInput" in x && x.node.getContext(ALLOW_TAGS);
 }
 
 export class TagsAddingAspect implements IAspect {

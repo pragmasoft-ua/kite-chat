@@ -1,12 +1,14 @@
 import { LambdaFunction } from "@cdktf/provider-aws/lib/lambda-function";
+import { Lambda as LambdaPolicy } from "iam-floyd/lib/generated";
 
+import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group";
+import { LambdaAlias } from "@cdktf/provider-aws/lib/lambda-alias";
+import { Lazy } from "cdktf";
 import { Construct } from "constructs";
 import { QuarkusLambdaAsset } from "./asset";
+import { Grantable, ServicePrincipal } from "./grantable";
 import { Role } from "./iam";
-import { Grantable } from "./grantable";
-import { Lambda as LambdaPolicy } from "iam-floyd/lib/generated";
-import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group";
-import { Lazy } from "cdktf";
+import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
 
 export const LAMBDA_SERVICE_PRINCIPAL = "lambda.amazonaws.com";
 
@@ -42,7 +44,8 @@ const DEFAULT_PROPS: Partial<LambdaProps> = {
 };
 
 export class Lambda extends Construct {
-  readonly fn: LambdaFunction;
+  private fn: LambdaFunction;
+  readonly alias: LambdaAlias;
   readonly role: Role;
   readonly environment: { [key: string]: string };
 
@@ -59,7 +62,7 @@ export class Lambda extends Construct {
 
     this.role = role ?? this.defaultRole();
 
-    this.fn = new LambdaFunction(scope, this.node.id + "-" + this.node.addr, {
+    this.fn = new LambdaFunction(this, "fn", {
       functionName: id,
       role: this.role.arn,
       memorySize,
@@ -78,26 +81,58 @@ export class Lambda extends Construct {
       handler: asset.handler,
     });
 
-    new CloudwatchLogGroup(this, `${id}-logs`, {
+    this.alias = new LambdaAlias(this, "alias", {
+      name: `${this.fn.functionName}-alias`,
+      functionName: this.fn.functionName,
+      functionVersion: this.fn.version,
+      lifecycle: {
+        ignoreChanges: ["function_version"],
+      },
+    });
+
+    new CloudwatchLogGroup(this, "logs", {
       name: `/aws/lambda/${id}`,
       retentionInDays: 7,
     });
   }
 
   private defaultRole(): Role {
-    return new Role(this, `${this.node.id}-execution-role`, {
+    return new Role(this, "default-role", {
       forService: LAMBDA_SERVICE_PRINCIPAL,
     }).attachManagedPolicyArn(
       "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
     );
   }
 
-  public allowToInvoke(to: Grantable) {
+  allowToInvoke(to: Grantable) {
     const policyStatement = new LambdaPolicy()
       .allow()
       .toInvokeFunction()
-      .on(this.fn.arn);
+      .on(this.alias.arn);
     to.grant(`allow-invoke-${this.fn.functionName}`, policyStatement);
     return this;
+  }
+
+  allowInvocationForService(service: ServicePrincipal) {
+    const { principal, sourceArn } = service;
+    const serviceName = principal.replaceAll(".", "-");
+    const statementId = `allow-invocation-for-${serviceName}`;
+    new LambdaPermission(this, statementId, {
+      statementId,
+      functionName: this.fn.functionName,
+      qualifier: this.alias.name,
+      action: "lambda:InvokeFunction",
+      principal,
+      sourceArn,
+    });
+    return this;
+  }
+
+  get arn() {
+    return this.alias.arn;
+  }
+
+  get functionName() {
+    return this.fn.functionName;
   }
 }

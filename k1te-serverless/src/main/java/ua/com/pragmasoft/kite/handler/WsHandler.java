@@ -1,8 +1,5 @@
 package ua.com.pragmasoft.kite.handler;
 
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-
 import java.util.Map;
 
 import com.amazonaws.services.lambda.runtime.Context;
@@ -11,12 +8,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
 
 import io.quarkus.logging.Log;
+import jakarta.inject.Named;
 
 @Named("ws")
 public class WsHandler implements RequestHandler<APIGatewayV2WebSocketEvent, APIGatewayV2WebSocketResponse> {
-
-  @Inject
-  ProcessingService service;
 
   @Override
   public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent input, Context context) {

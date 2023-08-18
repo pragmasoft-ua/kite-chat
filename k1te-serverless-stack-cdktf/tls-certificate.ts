@@ -15,7 +15,7 @@ export class TlsCertificate extends Construct {
     const { domainName } = dnsZone;
     const wildcardDomain = "*." + domainName;
 
-    this.cert = new AcmCertificate(this, id, {
+    this.cert = new AcmCertificate(this, "certificate", {
       domainName,
       subjectAlternativeNames: [wildcardDomain],
       validationMethod: "DNS",
@@ -28,7 +28,7 @@ export class TlsCertificate extends Construct {
     If cert is requested only for apex and wildcard domains, both validation records 
     appear to be identical. There exists an error related to that:
     https://github.com/hashicorp/terraform-provider-aws/issues/16913
-    As a workaround, we only create one of them.
+    As a workaround, we only create one of them (second).
     */
 
     const validationOption = this.cert.domainValidationOptions.get(1);
@@ -39,34 +39,9 @@ export class TlsCertificate extends Construct {
       value: validationOption.resourceRecordValue,
     });
 
-    // Iterators currently fail for sets: https://github.com/hashicorp/terraform-cdk/issues/2001
-    // const validationOptions: ListTerraformIterator = TerraformIterator.fromList(
-    //   this.cert.domainValidationOptions
-    // );
-    // Workaround was taken from https://github.com/hashicorp/terraform-cdk/issues/430#issuecomment-1288006312
-    // and slightly modified
-    // But it still does not work due to the bug with duplicated validation records mentioned above.
-    // I decided to keep workaround here commented out in the case we will need to add domain names
-    // To the certificate sometimes.
-    // NOSONAR
-    // validationRecord.addOverride(
-    //   "for_each",
-    //   `\${{for dvo in ${this.cert.fqn}.domain_validation_options : dvo.domain_name => {
-    //   name=dvo.resource_record_name
-    //   type=dvo.resource_record_type
-    //   value=dvo.resource_record_value
-    //   }}}`
-    // );
-
-    this.validation = new AcmCertificateValidation(this, `${id}-validation`, {
+    this.validation = new AcmCertificateValidation(this, "validation", {
       certificateArn: this.cert.arn,
       dependsOn: [validationRecord],
     });
-
-    // Part of commented out workaround explained above
-    // certValidation.addOverride(
-    //   "validation_record_fqdns",
-    //   `\${[for record in ${validationRecords.fqn} : record.hostname]}`
-    // );
   }
 }

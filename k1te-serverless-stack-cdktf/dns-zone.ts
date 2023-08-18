@@ -4,6 +4,7 @@ import { Record } from "@cdktf/provider-cloudflare/lib/record";
 import { ITerraformDependable } from "cdktf";
 import { Construct, IDependable } from "constructs";
 import assert = require("node:assert");
+import { ALLOW_TAGS } from "./tags";
 
 export interface DnsRecord extends ITerraformDependable {}
 
@@ -25,13 +26,16 @@ class CloudflareDnsRecord extends Construct implements DnsRecord {
   constructor(scope: Construct, id: string, props: DnsRecordProps) {
     super(scope, id);
 
-    this.cloudflareRecord = new Record(this, id, {
+    //Cloudflare free tier does not allow tags
+    this.node.setContext(ALLOW_TAGS, false);
+
+    this.cloudflareRecord = new Record(this, "record", {
       ...props,
       zoneId: (scope as CloudflareDnsZone).zoneId,
       proxied: false, // CNAME records cannot be proxied
       ttl: 1, // 1 means Auto
       /* 
-        Cloudflare free tier does not allow tags, but we need empty array to prevent the 
+        Cloudflare free tier does not allow tags, so we need empty array to prevent the 
         tagging aspect from adding invalid tag. 
          
         In the case tags will be added sometimes, keep in mind, that unlike AWS, 
@@ -65,7 +69,7 @@ export class CloudflareDnsZone extends Construct implements DnsZone {
       apiToken,
     });
 
-    this.cloudflareZone = new DataCloudflareZone(this, `${domainName}-zone`, {
+    this.cloudflareZone = new DataCloudflareZone(this, "zone", {
       name: domainName,
     });
   }

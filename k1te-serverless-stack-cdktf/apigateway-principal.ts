@@ -11,7 +11,7 @@ export class ApiGatewayPrincipal extends Construct {
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
-    this.role = new Role(this, `${id}-execution-role`, {
+    this.role = new Role(this, "api-gateway-execution-role", {
       forService: API_GATEWAY_SERVICE_PRINCIPAL,
     });
 
@@ -19,11 +19,11 @@ export class ApiGatewayPrincipal extends Construct {
       "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
     );
 
-    new ApiGatewayAccount(this, `${id}-account`, {
+    new ApiGatewayAccount(this, "account", {
       cloudwatchRoleArn: this.role.arn,
     });
 
-    new CloudwatchLogGroup(this, `${id}-welcome-logs`, {
+    new CloudwatchLogGroup(this, "welcome-logs", {
       name: "/aws/apigateway/welcome",
       retentionInDays: 1,
     });

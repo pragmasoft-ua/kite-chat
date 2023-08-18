@@ -8,7 +8,7 @@ import { DynamoDbSchema } from "./dynamodb-schema";
 import { Role } from "./iam";
 import { LAMBDA_SERVICE_PRINCIPAL, Lambda } from "./lambda";
 import { RestApi } from "./rest-api";
-import { TagsAddingAspect } from "./tags";
+import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
 import { WebsocketApi } from "./websocket-api";
 import { CloudflareDnsZone } from "./dns-zone";
 import { TlsCertificate } from "./tls-certificate";
@@ -16,11 +16,10 @@ import { ApiGatewayPrincipal } from "./apigateway-principal";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 
-const DOMAIN_NAME = "k1te.chat";
-
 export class KiteStack extends TerraformStack {
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, domainName?: string) {
     super(scope, id);
+    this.node.setContext(ALLOW_TAGS, true);
 
     new AwsProvider(this, "AWS");
 
@@ -32,16 +31,21 @@ export class KiteStack extends TerraformStack {
       region: "eu-north-1",
     });
 
-    const dnsZone = new CloudflareDnsZone(this, DOMAIN_NAME);
+    const dnsZone = domainName
+      ? new CloudflareDnsZone(this, domainName)
+      : undefined;
 
-    const cert = new TlsCertificate(this, `${DOMAIN_NAME}-cert`, dnsZone);
+    const certificate =
+      dnsZone && new TlsCertificate(this, `${domainName}-cert`, dnsZone);
 
-    const schema = new DynamoDbSchema(this, `${id}-database`, {
+    const prod = "prod";
+
+    const schema = new DynamoDbSchema(this, prod, {
       pointInTimeRecovery: false,
       preventDestroy: false,
     });
 
-    const role = new Role(this, "kite-lambda-execution-role", {
+    const role = new Role(this, "lambda-execution-role", {
       forService: LAMBDA_SERVICE_PRINCIPAL,
     });
 
@@ -51,65 +55,55 @@ export class KiteStack extends TerraformStack {
 
     schema.allowAll(role);
 
-    const asset = new QuarkusLambdaAsset(this, "kite-lambda-code", {
-      relativeProjectPath: "../k1te-serverless",
-    });
-
-    const wsApiDomainName = `ws.${DOMAIN_NAME}`;
-
     const apiGatewayPrincipal = new ApiGatewayPrincipal(
       this,
-      `${id}-apigateway`
+      "apigateway-principal"
     );
 
-    const wsApi = new WebsocketApi(this, `${id}-ws-api`, {
+    const wsApiDomainName = `ws.${domainName}`;
+
+    const wsApiProps = certificate && {
       domainName: wsApiDomainName,
-      certificateArn: cert.cert.arn,
-    });
-    wsApi.node.addDependency(cert); // we need to await certificate validation
+      certificate,
+    };
+
+    const wsApi = new WebsocketApi(this, "ws-api", wsApiProps);
 
     wsApi.domainName &&
+      dnsZone &&
       dnsZone.createRecord(wsApiDomainName, {
         type: "CNAME",
         name: wsApiDomainName,
         value: wsApi.domainName.domainNameConfiguration.targetDomainName,
       });
 
-    const stage = "prod";
+    const PROD_WS_API_EXECUTION_ENDPOINT = `https://${wsApi.api.id}.execute-api.${currentRegion.name}.amazonaws.com/${prod}`;
 
-    const prodWsEndpoint = `https://${wsApi.api.id}.execute-api.${currentRegion.name}.amazonaws.com/${stage}`;
-
-    const prodEnvironment = {
-      SERVERLESS_ENVIRONMENT: id,
-      WS_API_EXECUTION_ENDPOINT: prodWsEndpoint,
+    const PROD_ENV = {
+      SERVERLESS_ENVIRONMENT: prod,
+      WS_API_EXECUTION_ENDPOINT: PROD_WS_API_EXECUTION_ENDPOINT,
     };
 
     const memorySize = 128;
+
+    const asset = new QuarkusLambdaAsset(this, "k1te-serverless", {
+      relativeProjectPath: "../k1te-serverless",
+    });
 
     const wsHandler = new Lambda(this, "ws-handler", {
       role,
       asset,
       environment: {
         QUARKUS_LAMBDA_HANDLER: "ws",
-        ...prodEnvironment,
+        ...PROD_ENV,
       },
       memorySize,
     });
 
     wsApi.addStage({
-      stage,
+      stage: prod,
       handler: wsHandler,
       principal: apiGatewayPrincipal,
-    });
-
-    const testHandler = new Lambda(this, "test-handler", {
-      role,
-      asset,
-      environment: {
-        QUARKUS_LAMBDA_HANDLER: "test",
-        ...prodEnvironment,
-      },
-      memorySize,
     });
 
     const tgHandler = new Lambda(this, "tg-handler", {
@@ -117,21 +111,44 @@ export class KiteStack extends TerraformStack {
       asset,
       environment: {
         QUARKUS_LAMBDA_HANDLER: "tg",
-        ...prodEnvironment,
+        ...PROD_ENV,
       },
       memorySize,
     });
 
-    new RestApi(this, "kite-rest-api").addHandler("/tg", "ANY", tgHandler);
+    const restApiDomainName = `api.${domainName}`;
 
-    const testEvent = {
-      name: "Dmytro",
-      greeting: "Hi From Terraform,",
+    const restApiProps = certificate && {
+      domainName: restApiDomainName,
+      certificate,
     };
 
-    new LambdaInvocation(this, "test-invocation", {
-      functionName: testHandler.fn.functionName,
-      input: JSON.stringify(testEvent),
+    const restApi = new RestApi(this, "http-api", restApiProps)
+      .addStage("prod")
+      .addHandler("/tg", "ANY", tgHandler)
+      .done();
+
+    restApi.domainName &&
+      dnsZone &&
+      dnsZone.createRecord(restApiDomainName, {
+        type: "CNAME",
+        name: restApiDomainName,
+        value: restApi.domainName.domainNameConfiguration.targetDomainName,
+      });
+
+    const lifecycleHandler = new Lambda(this, "lifecycle-handler", {
+      role,
+      asset,
+      environment: {
+        QUARKUS_LAMBDA_HANDLER: "lifecycle",
+        ...PROD_ENV,
+      },
+      memorySize,
+    });
+
+    new LambdaInvocation(this, "lifecycle-invocation", {
+      functionName: lifecycleHandler.functionName,
+      input: JSON.stringify({}),
       lifecycleScope: "CRUD",
     });
 

@@ -26,7 +26,7 @@ export class DynamoDbSchema extends Construct {
   ) {
     super(scope, id);
 
-    const channels = new DynamodbTable(scope, "Channels", {
+    const channels = new DynamodbTable(this, "Channels", {
       name: `${id}.Channels`,
       dependsOn,
       lifecycle: {
@@ -44,7 +44,7 @@ export class DynamoDbSchema extends Construct {
       attribute: [{ name: "name", type: STRING }],
     });
 
-    const members = new DynamodbTable(scope, "Members", {
+    const members = new DynamodbTable(this, "Members", {
       name: `${id}.Members`,
       dependsOn: [channels],
       lifecycle: {
