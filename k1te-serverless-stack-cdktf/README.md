@@ -137,6 +137,8 @@ curl --request POST --url "https://api.cloudflare.com/client/v4/zones/ee68495b7c
 - ✅Refactor DNS part, add custom DNS name to REST API as well
 - ✅Add access logs to both rest and ws stages
 - WAF rule, budget alarm?
+- replace http-api with function url?
+- aws split charges (per customer) ?
 - Move this TODO section items to **doc/adr** (architecture decision records)
 - dev and prod stages
 - consider sqs integration between ws api gw and lambda?

@@ -1,6 +1,6 @@
 {
   "name": "k1te-serverless",
-  "version": "2023.8.1",
+  "version": "2023.9.1",
   "scripts": {
     "start": "mvnw quarkus:dev",
     "build": "mvnw quarkus:build -DskipTests",
