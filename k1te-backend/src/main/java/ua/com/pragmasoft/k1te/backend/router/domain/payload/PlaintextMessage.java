@@ -24,12 +24,12 @@ public record PlaintextMessage(String text, String messageId, Instant created)
 
   @Override
   public Type type() {
-    return Type.PLAINTEXT;
+    return Type.TXT;
   }
 
   @Override
   public String toString() {
-    return "PlaintextMessage [text=" + text + ", messageId=" + messageId + ", created=" + created
+    return type().label + " [text=" + text + ", messageId=" + messageId + ", created=" + created
         + "]";
   }
 

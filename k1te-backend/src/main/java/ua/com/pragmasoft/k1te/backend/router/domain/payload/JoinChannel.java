@@ -5,8 +5,8 @@ import java.util.Objects;
 public final class JoinChannel implements Payload {
 
   private static final long serialVersionUID = 1L;
-  public String memberId;
-  public String memberName;
+  public final String memberId;
+  public final String memberName;
   public String channelName;
 
   public JoinChannel(String memberId, String memberName, String channelName) {
@@ -32,7 +32,7 @@ public final class JoinChannel implements Payload {
 
   @Override
   public String toString() {
-    return "JoinChannel [memberId=" + memberId + ", memberName=" + memberName + ", channelName="
+    return type().label + " [memberId=" + memberId + ", memberName=" + memberName + ", channelName="
         + channelName + "]";
   }
 

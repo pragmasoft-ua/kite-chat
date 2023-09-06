@@ -24,7 +24,7 @@ public class PayloadDecoder implements Function<String, Payload> {
 
   static {
     DECODERS.put(Type.JOIN, PayloadDecoder::decodeJoinChannel);
-    DECODERS.put(Type.PLAINTEXT, PayloadDecoder::decodePlaintextMessage);
+    DECODERS.put(Type.TXT, PayloadDecoder::decodePlaintextMessage);
   }
 
   @Override
@@ -34,14 +34,17 @@ public class PayloadDecoder implements Function<String, Payload> {
 
     try (var reader = Json.createReader(new StringReader(text))) {
       var array = reader.readArray();
-      int typeOrdinal = array.getInt(0);
-      Type type = Type.values()[typeOrdinal];
-      return DECODERS.get(type).apply(array);
+      String typeLabel = array.getString(0);
+      Type type = Type.valueOf(typeLabel);
+      var decoder = DECODERS.get(type);
+      Objects.requireNonNull(decoder, "No decoder for " + type);
+      return decoder.apply(array);
     }
 
   }
 
   private static Payload decodeJoinChannel(JsonArray array) {
+    Objects.checkIndex(2, array.size());
     String memberId = array.getString(1);
     String memberName = array.getString(2, memberId);
     return new JoinChannel(memberId, memberName);

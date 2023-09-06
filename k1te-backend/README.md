@@ -95,6 +95,8 @@ First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade
 
 ### TODO
 
+- update documentation
+- improve exception handling
 - stop exposing real chat ids and websocket ids as member ids
 - https://quarkus.io/guides/smallrye-fault-tolerance (timeouts? circuit breaker?)
 - suport of message editing

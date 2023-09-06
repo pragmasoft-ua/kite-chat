@@ -19,8 +19,8 @@ public class PayloadEncoder implements Function<Payload, String> {
 
   static {
     ENCODERS.put(Payload.Type.ACK, PayloadEncoder::encodeAck);
-    ENCODERS.put(Payload.Type.ERROR, PayloadEncoder::encodeError);
-    ENCODERS.put(Payload.Type.PLAINTEXT, PayloadEncoder::encodePlaintext);
+    ENCODERS.put(Payload.Type.ERR, PayloadEncoder::encodeError);
+    ENCODERS.put(Payload.Type.TXT, PayloadEncoder::encodePlaintext);
   }
 
   @Override
@@ -39,7 +39,7 @@ public class PayloadEncoder implements Function<Payload, String> {
     var ack = (MessageAck) payload;
     var array = Json
         .createArrayBuilder()
-        .add(Payload.Type.ACK.ordinal())
+        .add(payload.type().name())
         .add(ack.messageId())
         .add(ack.destiationMessageId())
         .add(ack.delivered().toString())
@@ -51,7 +51,7 @@ public class PayloadEncoder implements Function<Payload, String> {
     var error = (ErrorResponse) payload;
     var array = Json
         .createArrayBuilder()
-        .add(Payload.Type.ERROR.ordinal())
+        .add(payload.type().name())
         .add(error.reason())
         .add(error.code())
         .build();
@@ -62,7 +62,7 @@ public class PayloadEncoder implements Function<Payload, String> {
     var message = (PlaintextMessage) payload;
     var array = Json
         .createArrayBuilder()
-        .add(Payload.Type.PLAINTEXT.ordinal())
+        .add(payload.type().name())
         .add(message.text())
         .add(message.messageId())
         .add(message.created().toString())

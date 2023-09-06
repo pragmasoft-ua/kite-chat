@@ -9,7 +9,7 @@
 ░░░░░   ░░░░ ░░░░░    ░░░░░   ░░░░░░      ░░░░░░  ░░░░ ░░░░░  ░░░░░░░░    ░░░░░
 ```
 
-# Kite Chat Backend
+# Kite Chat Server
 
 Kite chat allows to add live web chat widget to any web site and use Telegram channel as a support team's backend
 to reply live chat requests.
@@ -29,14 +29,14 @@ In order to test telegram webhooks, you need public url. One way to obtain it fo
 
 Kite chat uses DynamoDB as its NoSQL database. For development purposes you need docker container running `amazon/dynamodb-local` image.
 
-`stack` folder contains CDKTF local stack which launches dynamodb-local container and initializes
-DynamoDB database schema in it. Shortly, you need switch to the `stack` folder and run
+`k1te-serverless-stack-cdktf` folder contains CDKTF local stack which launches dynamodb-local container and initializes
+DynamoDB database schema in it. Shortly, you need switch to the `k1te-serverless-stack-cdktf` folder and run
 
 `npm init` followed by `npm run deploy-local`.
 
 Then once you're done, you can shut down local dynamodb with `npm run destroy-local`
 
-For more details see README.md in the `stack` folder.
+For more details see README.md in the `k1te-serverless-stack-cdktf` folder.
 
 ### Run backend in dev mode
 

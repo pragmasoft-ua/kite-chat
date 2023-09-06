@@ -8,7 +8,22 @@ public sealed interface Payload
   Type type();
 
   public enum Type {
-    JOIN, PLAINTEXT, ACK, ERROR, PING, PONG
+
+    JOIN("Join request"),
+    ACK("Acknowledge"),
+    ERR("Error"),
+    TXT("Plaintext message"),
+    BIN("Binary message"),
+    UPL("Upload"),
+    PING("Ping"),
+    PONG("Pong");
+
+    public final String label;
+
+    Type(String label) {
+      this.label = label;
+    }
+
   }
 
 }
