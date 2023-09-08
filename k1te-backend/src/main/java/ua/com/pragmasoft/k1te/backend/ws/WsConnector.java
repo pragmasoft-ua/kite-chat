@@ -26,7 +26,7 @@ public class WsConnector implements Connector {
 
   private static final Logger log = LoggerFactory.getLogger(WsConnector.class);
 
-  public static final String SUBPROTOCOL = "k1te.chat/v1";
+  public static final String SUBPROTOCOL = "k1te.chat.v1";
 
   private static final String WS = "ws";
 

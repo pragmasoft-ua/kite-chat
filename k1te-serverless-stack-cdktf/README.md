@@ -110,13 +110,20 @@ You can also build any module or provider locally. Learn more https://cdk.tf/mod
 ## Testing websocket connection
 
 ```bash
-npx wscat -s "v1.k1te.chat" -c wss://ws.k1te.chat/prod
+npx wscat -s "k1te.chat.v1" -c wss://ws.k1te.chat/prod?param=test
 Connected (press CTRL+C to quit)
 > Hi
 < OK
-> ['PING']
-< ["PONG","Jdw43eh1Ai0CFrg="]
+> ["PING"]
+< ["PONG"]
 >
+```
+
+## Testing REST connection
+
+```bash
+curl https://api.k1te.chat/prod/tg
+OK
 ```
 
 ## Cloudflare API snippet
