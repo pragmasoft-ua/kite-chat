@@ -5,26 +5,24 @@ import java.io.IOException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.websocket.CloseReason;
-import jakarta.websocket.EncodeException;
 import jakarta.websocket.EndpointConfig;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
 import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
-import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 import ua.com.pragmasoft.k1te.server.ws.application.JakartaWebsocketConnectionRegistry.JakartaWebsocketConnection;
 
-@ServerEndpoint(value = JakartaWebsocketAdapter.CHANNELS_PATH + "{channelName}", decoders = {
+@ServerEndpoint(value = JakartaWebsocketAdapter.CHANNELS_PATH, decoders = {
     PayloadDecoderAdapter.class }, encoders = {
         PayloadEncoderAdapter.class }, subprotocols = { WsConnector.SUBPROTOCOL })
 @ApplicationScoped
 public class JakartaWebsocketAdapter {
 
-  public static final String CHANNELS_PATH = "/channels/";
+  public static final String CHANNELS_PATH = "/channels";
 
   private final JakartaWebsocketConnectionRegistry connectionRegistry;
 
@@ -37,34 +35,46 @@ public class JakartaWebsocketAdapter {
   }
 
   @OnOpen
-  public void onOpen(Session session, EndpointConfig config) {
+  public void onOpen(Session session, EndpointConfig config) throws IOException {
     session.setMaxIdleTimeout(60L * 1000L);
     JakartaWebsocketConnection connection = this.connectionRegistry.createConnection(session);
     this.connectionRegistry.registerConnection(connection);
-    wsConnector.onOpen(connection);
+    var response = wsConnector.onOpen(connection);
+    if (null != response) {
+      connection.sendObject(response);
+    }
   }
 
   @OnClose
-  public void onClose(Session session, @PathParam("channelName") String channelName, CloseReason closeReason) {
+  public void onClose(Session session, CloseReason closeReason) throws IOException {
     var connection = this.connectionRegistry.createConnection(session);
     try {
-      this.wsConnector.onClose(connection);
+      var response = this.wsConnector.onClose(connection);
+      if (null != response) {
+        connection.sendObject(response);
+      }
     } finally {
       this.connectionRegistry.unregisterConnection(connection);
     }
   }
 
   @OnError
-  public void onError(Session session, Throwable t) {
+  public void onError(Session session, Throwable t) throws IOException {
     var connection = this.connectionRegistry.createConnection(session);
-    this.wsConnector.onError(connection, t);
+    var response = this.wsConnector.onError(connection, t);
+    if (null != response) {
+      connection.sendObject(response);
+    }
   }
 
   @OnMessage
-  public void onPayload(Payload payload, @PathParam("channelName") String channelName,
-      Session session) throws IOException, EncodeException {
+  public void onPayload(Payload payload, Session session) throws IOException {
     var connection = this.connectionRegistry.createConnection(session);
-    this.wsConnector.onPayload(payload, connection, channelName);
+    var channelName = session.getRequestParameterMap().get("c").get(0);
+    var response = this.wsConnector.onPayload(payload, connection, channelName);
+    if (null != response) {
+      connection.sendObject(response);
+    }
   }
 
 }

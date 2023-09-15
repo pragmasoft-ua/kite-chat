@@ -1,4 +1,4 @@
-package ua.com.pragmasoft.kite.handler;
+package ua.com.pragmasoft.k1te.serverless.handler;
 
 import io.quarkus.test.junit.QuarkusIntegrationTest;
 

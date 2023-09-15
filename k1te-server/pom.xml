@@ -7,7 +7,7 @@
   <parent>
     <groupId>ua.com.pragmasoft</groupId>
     <artifactId>k1te-chat-parent</artifactId>
-    <version>2023.9.1</version>
+    <version>2023.10.1</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -21,11 +21,6 @@
       <groupId>${project.groupId}</groupId>
       <version>${project.version}</version>
       <artifactId>k1te-backend</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.github.pengrad</groupId>
-      <artifactId>java-telegram-bot-api</artifactId>
-      <version>6.7.0</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -48,12 +43,12 @@
       <artifactId>url-connection-client</artifactId>
     </dependency>
     <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>netty-nio-client</artifactId>
-    </dependency>
-    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-logging-json</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.slf4j</groupId>
+      <artifactId>slf4j-jboss-logmanager</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>

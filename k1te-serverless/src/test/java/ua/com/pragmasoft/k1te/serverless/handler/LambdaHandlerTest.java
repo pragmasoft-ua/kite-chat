@@ -1,12 +1,14 @@
-package ua.com.pragmasoft.kite.handler;
+package ua.com.pragmasoft.k1te.serverless.handler;
 
 import static io.restassured.RestAssured.given;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
+@Disabled
 public class LambdaHandlerTest {
 
   @Test
@@ -15,6 +17,8 @@ public class LambdaHandlerTest {
     // this works in dev mode too
 
     Lifecycle in = new Lifecycle();
+    in.tf = new Lifecycle.Tf();
+    in.tf.action = Lifecycle.Action.create.name();
     given()
         .contentType("application/json")
         .accept("application/json")

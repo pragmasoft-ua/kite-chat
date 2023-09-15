@@ -52,12 +52,10 @@ export class Lambda extends Construct {
   constructor(scope: Construct, id: string, props: Readonly<LambdaProps>) {
     super(scope, id);
 
-    const { role, asset, memorySize, timeout, environment } = Object.assign(
-      {},
-      DEFAULT_PROPS,
-      props
-    );
-
+    const { role, asset, memorySize, timeout, environment } = {
+      ...DEFAULT_PROPS,
+      ...props,
+    };
     this.environment = environment ?? {};
 
     this.role = role ?? this.defaultRole();
@@ -79,6 +77,9 @@ export class Lambda extends Construct {
       sourceCodeHash: asset.hash,
       runtime: asset.runtime,
       handler: asset.handler,
+      lifecycle: {
+        ignoreChanges: ["s3_key", "s3_bucket", "layers"], //, "filename"],
+      },
     });
 
     this.alias = new LambdaAlias(this, "alias", {
@@ -86,7 +87,7 @@ export class Lambda extends Construct {
       functionName: this.fn.functionName,
       functionVersion: this.fn.version,
       lifecycle: {
-        ignoreChanges: ["function_version"],
+        ignoreChanges: ["function_version", "description", "routing_config"],
       },
     });
 

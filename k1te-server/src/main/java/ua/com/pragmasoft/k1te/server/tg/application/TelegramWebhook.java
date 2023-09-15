@@ -1,6 +1,14 @@
 package ua.com.pragmasoft.k1te.server.tg.application;
 
 import java.time.temporal.ChronoUnit;
+
+import com.pengrad.telegrambot.BotUtils;
+import com.pengrad.telegrambot.model.Update;
+
+import io.quarkus.logging.Log;
+import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.runtime.StartupEvent;
+import io.smallrye.faulttolerance.api.RateLimit;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
@@ -10,13 +18,6 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
-
-import com.pengrad.telegrambot.BotUtils;
-import com.pengrad.telegrambot.model.Update;
-import io.quarkus.logging.Log;
-import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.runtime.StartupEvent;
-import io.smallrye.faulttolerance.api.RateLimit;
 
 @ApplicationScoped
 @Path(TelegramWebhook.WEBHOOK_PATH)
@@ -39,7 +40,7 @@ public class TelegramWebhook {
    * @param event
    */
   void startup(@Observes StartupEvent event) {
-    connector.setWebhook(WEBHOOK_PATH);
+    connector.setWebhook();
   }
 
   /**

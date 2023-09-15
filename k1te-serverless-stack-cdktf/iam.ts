@@ -1,4 +1,4 @@
-import { IamRole } from "@cdktf/provider-aws/lib/iam-role";
+import { IamRole, IamRoleInlinePolicy } from "@cdktf/provider-aws/lib/iam-role";
 import * as iam from "iam-floyd";
 
 import { IamRolePolicyAttachment } from "@cdktf/provider-aws/lib/iam-role-policy-attachment";
@@ -12,6 +12,7 @@ export type RoleProps = {
 
 export class Role extends Construct implements Grantable {
   readonly role: IamRole;
+  readonly inlinePolicies: IamRoleInlinePolicy[];
 
   constructor(scope: Construct, id: string, props: Readonly<RoleProps>) {
     super(scope, id);
@@ -29,9 +30,12 @@ export class Role extends Construct implements Grantable {
       Statement: [assumeRoleStatement],
     });
 
+    this.inlinePolicies = [];
+
     this.role = new IamRole(this, this.node.id, {
       name: id,
       assumeRolePolicy,
+      inlinePolicy: this.inlinePolicies,
     });
   }
 
@@ -55,7 +59,7 @@ export class Role extends Construct implements Grantable {
       Version: "2012-10-17",
       Statement: [statement],
     });
-    this.role.putInlinePolicy([{ policy, name }]);
+    this.inlinePolicies.push({ policy, name });
     return this;
   }
 

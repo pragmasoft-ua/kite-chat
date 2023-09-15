@@ -1,4 +1,4 @@
-package ua.com.pragmasoft.k1te.server.tg.application;
+package ua.com.pragmasoft.k1te.serverless.tg.application;
 
 import java.net.URI;
 import jakarta.enterprise.context.ApplicationScoped;

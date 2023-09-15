@@ -2,6 +2,8 @@ package ua.com.pragmasoft.k1te.backend.tg;
 
 import java.io.Closeable;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -33,8 +35,6 @@ public class TelegramConnector implements Connector, Closeable {
 
   private static final Logger log = LoggerFactory.getLogger(TelegramConnector.class);
 
-  private static final String CHANNELS_PATH = "/channels/";
-
   private static final String UNSUPPORTED_PAYLOAD = "Unsupported payload ";
   private static final String TG = "tg";
   private static final String OK = "ok";
@@ -60,23 +60,24 @@ public class TelegramConnector implements Connector, Closeable {
 
   private final TelegramBot bot;
   private final Router router;
-  private Channels channels;
-  private URI base;
+  private final Channels channels;
+  private final URI base;
+  private final URI wsApi;
 
   public TelegramConnector(final TelegramBot bot, final Router router, final Channels channels,
-      final URI base) {
+      final URI base, URI wsApi) {
     this.bot = bot;
     this.router = router;
     this.router.registerConnector(this);
     this.channels = channels;
-    this.base = base.resolve(CHANNELS_PATH);
-    log.info("URL {}", base);
+    this.base = base;
+    this.wsApi = wsApi;
+    log.info("Base {}, wsApi {}", this.base, this.wsApi);
   }
 
-  public void setWebhook(String webhookPath) {
-    var webhookUrl = this.base.resolve(webhookPath);
-    log.info("Register telegram webhook {}", webhookUrl);
-    var request = new SetWebhook().url(webhookUrl.toASCIIString());
+  public void setWebhook() {
+    log.info("Register telegram webhook {}", this.base);
+    var request = new SetWebhook().url(this.base.toASCIIString());
     var response = this.bot.execute(request);
     if (log.isDebugEnabled()) {
       log.debug(response.toString());
@@ -165,7 +166,7 @@ public class TelegramConnector implements Connector, Closeable {
       String channelName = cmd.args;
       String title = msg.chat().title();
       this.channels.hostChannel(channelName, memberId, originConnection, title);
-      String channelPublicUrl = this.base.resolve(channelName).toASCIIString().replace("http", "ws");
+      String channelPublicUrl = this.wsApi.toString() + "?c=" + URLEncoder.encode(channelName, StandardCharsets.UTF_8);
       response = "✅ Created channel %s. Use URL %s to configure k1te chat frontend"
           .formatted(channelName, channelPublicUrl);
 

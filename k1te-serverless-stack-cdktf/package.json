@@ -1,6 +1,6 @@
 {
   "name": "k1te-serverless-stack-cdktf",
-  "version": "2023.9.1",
+  "version": "2023.10.1",
   "main": "main.js",
   "types": "main.ts",
   "license": "MPL-2.0",
@@ -8,10 +8,10 @@
   "scripts": {
     "get": "cdktf get",
     "build": "tsc",
-    "deploy-local": "cdktf deploy local --auto-approve true",
-    "deploy-prod": "cdktf deploy kite --auto-approve true",
-    "destroy-local": "cdktf destroy local --auto-approve true",
-    "destroy-prod": "cdktf destroy kite --auto-approve true",
+    "deploy-local": "cdktf deploy local --auto-approve=true",
+    "deploy-prod": "cdktf deploy kite --auto-approve=true --var-file=.env",
+    "destroy-local": "cdktf destroy local --auto-approve=true",
+    "destroy-prod": "cdktf destroy kite --auto-approve=true",
     "synth": "cdktf synth",
     "compile": "tsc --pretty",
     "watch": "tsc -w",

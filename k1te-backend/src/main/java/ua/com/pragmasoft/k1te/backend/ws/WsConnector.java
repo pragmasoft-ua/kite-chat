@@ -48,14 +48,15 @@ public class WsConnector implements Connector {
     return WS;
   }
 
-  public void onOpen(WsConnection connection) {
+  public Payload onOpen(WsConnection connection) {
     if (log.isDebugEnabled()) {
       final var connectionUri = this.connectionUriOf(connection);
       log.debug("Member connected to channel on {}", connectionUri);
     }
+    return null;
   }
 
-  public void onClose(WsConnection connection) {
+  public Payload onClose(WsConnection connection) {
     final var connectionUri = this.connectionUriOf(connection);
     log.debug("Member disconnected from channel on {}", connectionUri);
     Member client = this.channels.find(connectionUri);
@@ -66,9 +67,10 @@ public class WsConnector implements Connector {
             .withRequest(new PlaintextMessage(
                 "✅ %s left channel %s".formatted(client.getUserName(), client.getChannelName()))));
     this.channels.leaveChannel(connectionUri);
+    return null;
   }
 
-  public void onError(WsConnection connection, Throwable t) {
+  public Payload onError(WsConnection connection, Throwable t) {
     if (log.isErrorEnabled()) {
       log.error("Error on connection %s".formatted(connection.connectionUri()), t);
     }
@@ -78,38 +80,24 @@ public class WsConnector implements Connector {
     } else {
       errorResponse = new ErrorResponse("⛔" + t.getMessage(), KiteException.SERVER_ERROR);
     }
-    try {
-      connection.sendObject(errorResponse);
-    } catch (Exception e) {
-      if (log.isErrorEnabled()) {
-        log.error("Cannot notify connection %s about an error".formatted(connection.connectionUri()), t);
-      }
-    }
+    return errorResponse;
   }
 
-  public void onPayload(Payload payload, WsConnection connection, String channelName) {
+  public Payload onPayload(Payload payload, WsConnection connection, String channelName) {
     if (payload instanceof MessagePayload message) {
-      this.onMessage(message, connection);
+      return this.onMessage(message, connection);
     } else if (payload instanceof Ping) {
-      this.onPing(connection);
+      return new Pong();
     } else if (payload instanceof JoinChannel joinCommand) {
       joinCommand.channelName = channelName;
-      this.onJoinChannel(joinCommand, connection);
+      return this.onJoinChannel(joinCommand, connection);
     } else {
       throw new IllegalStateException(
           "Unsupported payload type %s".formatted(payload.getClass().getSimpleName()));
     }
   }
 
-  private void onPing(WsConnection connection) {
-    try {
-      connection.sendObject(new Pong());
-    } catch (IOException e) {
-      throw new RoutingException(e.getMessage(), e);
-    }
-  }
-
-  private void onJoinChannel(JoinChannel joinChannel, WsConnection connection) {
+  private Payload onJoinChannel(JoinChannel joinChannel, WsConnection connection) {
     log.debug("Join member {} to channel {}", joinChannel.memberId, joinChannel.channelName);
     String originConnection = this.connectionUriOf(connection);
     Member client = this.channels.joinChannel(joinChannel.channelName, joinChannel.memberId, originConnection,
@@ -120,27 +108,18 @@ public class WsConnector implements Connector {
         .withRequest(new PlaintextMessage(
             "✅ %s joined channel %s".formatted(client.getUserName(), client.getChannelName())));
     this.router.dispatch(ctx);
-    try {
-      connection.sendObject(
-          new PlaintextMessage(
-              "✅ You joined channel %s as %s".formatted(joinChannel.channelName, client.getUserName())));
-    } catch (IOException e) {
-      throw new RoutingException(e.getMessage(), e);
-    }
+    return new PlaintextMessage(
+        "✅ You joined channel %s as %s".formatted(joinChannel.channelName, client.getUserName()));
   }
 
-  private void onMessage(MessagePayload message, WsConnection connection) {
+  private Payload onMessage(MessagePayload message, WsConnection connection) {
     log.debug("Message {}", message);
     var originConnection = this.connectionUriOf(connection);
     var ctx = RoutingContext.create()
         .withOriginConnection(originConnection)
         .withRequest(message);
     this.router.dispatch(ctx);
-    try {
-      connection.sendObject(ctx.response);
-    } catch (IOException e) {
-      throw new RoutingException(e.getMessage(), e);
-    }
+    return ctx.response;
   }
 
   @Override

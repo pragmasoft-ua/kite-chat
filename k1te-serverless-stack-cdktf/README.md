@@ -145,8 +145,10 @@ curl --request POST --url "https://api.cloudflare.com/client/v4/zones/ee68495b7c
 - ✅Add access logs to both rest and ws stages
 - WAF rule, budget alarm?
 - replace http-api with function url?
+- SnapStart
 - aws split charges (per customer) ?
 - Move this TODO section items to **doc/adr** (architecture decision records)
+- bot token in SSM store (requires lambda extension) - https://docs.aws.amazon.com/systems-manager/latest/userguide/ps-integration-lambda-extensions.html
 - dev and prod stages
 - consider sqs integration between ws api gw and lambda?
 - CI as in https://www.obytes.com/blog/aws-lambda-ci

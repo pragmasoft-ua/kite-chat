@@ -1,18 +1,23 @@
-import { DataAwsRegion } from "@cdktf/provider-aws/lib/data-aws-region";
 import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
-import { Aspects, S3Backend, TerraformStack } from "cdktf";
+import {
+  Aspects,
+  S3Backend,
+  TerraformOutput,
+  TerraformStack,
+  TerraformVariable,
+} from "cdktf";
 import { Construct } from "constructs";
+import { ApiGatewayPrincipal } from "./apigateway-principal";
 import { QuarkusLambdaAsset } from "./asset";
+import { CloudflareDnsZone } from "./dns-zone";
 import { DynamoDbSchema } from "./dynamodb-schema";
 import { Role } from "./iam";
 import { LAMBDA_SERVICE_PRINCIPAL, Lambda } from "./lambda";
 import { RestApi } from "./rest-api";
 import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
-import { WebsocketApi } from "./websocket-api";
-import { CloudflareDnsZone } from "./dns-zone";
 import { TlsCertificate } from "./tls-certificate";
-import { ApiGatewayPrincipal } from "./apigateway-principal";
+import { WebsocketApi } from "./websocket-api";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 
@@ -22,8 +27,6 @@ export class KiteStack extends TerraformStack {
     this.node.setContext(ALLOW_TAGS, true);
 
     new AwsProvider(this, "AWS");
-
-    const currentRegion = new DataAwsRegion(this, "current-region");
 
     new S3Backend(this, {
       bucket: "k1te-chat-tfstate",
@@ -61,6 +64,8 @@ export class KiteStack extends TerraformStack {
     );
 
     const wsApiDomainName = `ws.${domainName}`;
+    const restApiDomainName = `api.${domainName}`;
+    const telegramRoute = "/tg";
 
     const wsApiProps = certificate && {
       domainName: wsApiDomainName,
@@ -77,14 +82,24 @@ export class KiteStack extends TerraformStack {
         value: wsApi.domainName.domainNameConfiguration.targetDomainName,
       });
 
-    const PROD_WS_API_EXECUTION_ENDPOINT = `https://${wsApi.api.id}.execute-api.${currentRegion.name}.amazonaws.com/${prod}`;
+    const PROD_WS_API_EXECUTION_ENDPOINT = `https://${wsApiDomainName}/${prod}`;
+    const PROD_TELEGRAM_WEBHOOK_ENDPOINT = `https://${restApiDomainName}/${prod}${telegramRoute}`;
+
+    const telegramBotToken = new TerraformVariable(this, "TELEGRAM_BOT_TOKEN", {
+      type: "string",
+      nullable: false,
+      description: "telegram bot token, obtain in telegram from botfather",
+      sensitive: true,
+    });
 
     const PROD_ENV = {
       SERVERLESS_ENVIRONMENT: prod,
       WS_API_EXECUTION_ENDPOINT: PROD_WS_API_EXECUTION_ENDPOINT,
+      TELEGRAM_BOT_TOKEN: telegramBotToken.value,
+      TELEGRAM_WEBHOOK_ENDPOINT: PROD_TELEGRAM_WEBHOOK_ENDPOINT,
     };
 
-    const memorySize = 128;
+    const memorySize = 256;
 
     const asset = new QuarkusLambdaAsset(this, "k1te-serverless", {
       relativeProjectPath: "../k1te-serverless",
@@ -106,7 +121,7 @@ export class KiteStack extends TerraformStack {
       principal: apiGatewayPrincipal,
     });
 
-    const tgHandler = new Lambda(this, "tg-handler", {
+    const telegramHandler = new Lambda(this, "tg-handler", {
       role,
       asset,
       environment: {
@@ -116,8 +131,6 @@ export class KiteStack extends TerraformStack {
       memorySize,
     });
 
-    const restApiDomainName = `api.${domainName}`;
-
     const restApiProps = certificate && {
       domainName: restApiDomainName,
       certificate,
@@ -125,7 +138,7 @@ export class KiteStack extends TerraformStack {
 
     const restApi = new RestApi(this, "http-api", restApiProps)
       .addStage("prod")
-      .addHandler("/tg", "ANY", tgHandler)
+      .addHandler(telegramRoute, "ANY", telegramHandler)
       .done();
 
     restApi.domainName &&
@@ -146,10 +159,14 @@ export class KiteStack extends TerraformStack {
       memorySize,
     });
 
-    new LambdaInvocation(this, "lifecycle-invocation", {
+    const lifecycle = new LambdaInvocation(this, "lifecycle-invocation", {
       functionName: lifecycleHandler.functionName,
       input: JSON.stringify({}),
       lifecycleScope: "CRUD",
+    });
+
+    new TerraformOutput(this, "lifecycle-output", {
+      value: lifecycle.result,
     });
 
     Aspects.of(this).add(TAGGING_ASPECT);

@@ -193,7 +193,7 @@ export class WebsocketApiStage extends Construct {
     const policyStatement = new ExecuteApi()
       .allow()
       .allActions()
-      .onExecuteApiGeneral(scope.node.id, stage, "*", "*");
+      .onExecuteApiGeneral(scope.api.id, stage, "*", "*");
 
     handler.role.grant(
       `allow-execute-api-${scope.node.id}-${stage}`,
@@ -218,8 +218,6 @@ export class WebsocketApiStage extends Construct {
         value: `wss://${nameMapping.domainName}/${stage}`,
       });
     }
-
-    return this;
   }
 }
 
