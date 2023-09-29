@@ -2,6 +2,7 @@ package ua.com.pragmasoft.k1te.backend.tg;
 
 import java.io.Closeable;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -15,6 +16,7 @@ import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.MessageEntity;
 import com.pengrad.telegrambot.model.MessageEntity.Type;
 import com.pengrad.telegrambot.model.Update;
+import com.pengrad.telegrambot.model.User;
 import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.DeleteWebhook;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -71,12 +73,20 @@ public class TelegramConnector implements Connector, Closeable {
     this.router.registerConnector(this);
     this.channels = channels;
     this.base = base;
-    this.wsApi = wsApi;
+    if (wsApi.getScheme().equals("wss")) {
+      this.wsApi = wsApi;
+    } else {
+      try {
+        this.wsApi = new URI("wss", wsApi.getSchemeSpecificPart(), wsApi.getFragment());
+      } catch (URISyntaxException e) {
+        throw new IllegalStateException(e.getMessage(), e);
+      }
+    }
     log.info("Base {}, wsApi {}", this.base, this.wsApi);
   }
 
-  public void setWebhook() {
-    log.info("Register telegram webhook {}", this.base);
+  public URI setWebhook() {
+    log.debug("Register telegram webhook {}", this.base);
     var request = new SetWebhook().url(this.base.toASCIIString());
     var response = this.bot.execute(request);
     if (log.isDebugEnabled()) {
@@ -85,6 +95,7 @@ public class TelegramConnector implements Connector, Closeable {
     if (!response.isOk()) {
       throw new IllegalStateException(response.description());
     }
+    return this.base;
   }
 
   public void close() {
@@ -153,7 +164,7 @@ public class TelegramConnector implements Connector, Closeable {
 
     if ("/start".equals(command)) {
       String channel = cmd.args;
-      String memberName = msg.from().firstName() + ' ' + msg.from().lastName();
+      String memberName = userToString(msg.from());
       Member client = this.channels.joinChannel(channel, memberId, originConnection, memberName);
       var ctx = RoutingContext.create()
           .withOriginConnection(originConnection)
@@ -268,6 +279,22 @@ public class TelegramConnector implements Connector, Closeable {
   }
 
   private record CommandWithArgs(String command, String args) {
+  }
+
+  private static String userToString(User user) {
+    final StringBuilder b = new StringBuilder();
+    var name = user.firstName();
+    if (null != name && !name.isEmpty()) {
+      b.append(name);
+    }
+    name = user.lastName();
+    if (null != name && !name.isEmpty()) {
+      if (!b.isEmpty()) {
+        b.append(' ');
+      }
+      b.append(name);
+    }
+    return b.isEmpty() ? user.username() : b.toString();
   }
 
 }

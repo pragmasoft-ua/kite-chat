@@ -36,18 +36,18 @@ public class WsHandler implements RequestHandler<APIGatewayV2WebSocketEvent, API
 
   @Override
   public final APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent input, Context context) {
+    Log.debug(input.toString());
     final var eventType = input.getRequestContext().getEventType();
     final var connectionId = input.getRequestContext().getConnectionId();
     final var body = input.getBody();
-    final var channelName = input.getQueryStringParameters().get("c");
-    Objects.requireNonNull(channelName, "?c=<channelName> is required");
     final var connection = this.connectionRegistry.getConnection(connectionId);
     Payload responsePayload;
     try {
       responsePayload = switch (eventType) {
         case "CONNECT" -> this.wsConnector.onOpen(connection);
         case "DISCONNECT" -> this.wsConnector.onClose(connection);
-        case "MESSAGE" -> this.wsConnector.onPayload(DECODER.apply(body), connection, channelName);
+        case "MESSAGE" -> this.wsConnector.onPayload(DECODER.apply(body), connection, "pragmasoft"); // TODO
+                                                                                                     // parameterize
         default -> throw new IllegalStateException("Unsupported event type: " + eventType);
       };
     } catch (Exception e) {

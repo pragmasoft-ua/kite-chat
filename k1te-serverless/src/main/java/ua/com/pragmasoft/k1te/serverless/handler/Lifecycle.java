@@ -1,21 +1,17 @@
 package ua.com.pragmasoft.k1te.serverless.handler;
 
-class Lifecycle {
+public record Lifecycle(Tf tf) {
 
-  static class Tf {
-    public String action;
+  public record Tf(String action) {
   }
 
-  @SuppressWarnings("java:S115")
-  enum Action {
+  public enum Action {
     create, update, delete
   }
 
-  Tf tf;
-
   @Override
   public String toString() {
-    return tf.action;
+    return "Lifecycle:" + tf.action;
   }
 
 }

@@ -16,9 +16,7 @@ public class LambdaHandlerTest {
     // you test your lambdas by invoking on http://localhost:8081
     // this works in dev mode too
 
-    Lifecycle in = new Lifecycle();
-    in.tf = new Lifecycle.Tf();
-    in.tf.action = Lifecycle.Action.create.name();
+    Lifecycle in = new Lifecycle(new Lifecycle.Tf(Lifecycle.Action.create.name()));
     given()
         .contentType("application/json")
         .accept("application/json")

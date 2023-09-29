@@ -76,11 +76,14 @@ export class DynamoDbSchema extends Construct {
     const policyStatement = new Dynamodb()
       .allow()
       .allActions()
-      .on(...this.tables.map((t) => t.arn));
+      .on(...this.allResources());
     to.grant(
       `allow-all-${this.tables.map((t) => t.name).join(",")}`,
       policyStatement
     );
     return this;
   }
+
+  private allResources = () =>
+    this.tables.flatMap((t) => [t.arn, `${t.arn}/index/*`]);
 }

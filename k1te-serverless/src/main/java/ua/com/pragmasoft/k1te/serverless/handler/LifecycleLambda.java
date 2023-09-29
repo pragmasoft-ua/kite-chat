@@ -24,7 +24,7 @@ public class LifecycleLambda implements RequestHandler<Lifecycle, String> {
 
   @Override
   public String handleRequest(Lifecycle input, Context context) {
-    Action action = Action.valueOf(input.tf.action);
+    Action action = Action.valueOf(input.tf().action());
     var result = switch (action) {
       case create -> registerWebhook();
       case update -> registerWebhook();
@@ -35,8 +35,8 @@ public class LifecycleLambda implements RequestHandler<Lifecycle, String> {
   }
 
   private String registerWebhook() {
-    this.telegramConnector.setWebhook();
-    return "Registered telegram webhook";
+    var webhookUri = this.telegramConnector.setWebhook();
+    return "Registered telegram webhook " + webhookUri;
   }
 
   private String unregisterWebhook() {

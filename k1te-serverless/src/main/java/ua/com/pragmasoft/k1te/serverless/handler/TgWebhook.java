@@ -14,6 +14,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import software.amazon.awssdk.http.HttpStatusCode;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
+import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 
 @ApplicationScoped
 @Named("tg")
@@ -31,20 +32,16 @@ public class TgWebhook implements RequestHandler<APIGatewayV2HTTPEvent, APIGatew
   @Override
   public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent input, Context context) {
     final var requestBody = input.getBody();
-    final var response = new APIGatewayV2HTTPResponse();
-    response.setHeaders(Map.of("Content-Type", "text/plain"));
-    try {
-      Log.debug(">> " + requestBody);
-      Update update = BotUtils.parseUpdate(requestBody);
-      var responseBody = this.connector.onUpdate(update);
-      Log.debug("<< " + responseBody);
-      response.setBody(responseBody);
-      response.setStatusCode(HttpStatusCode.OK);
-    } catch (Exception e) {
-      response.setBody(e.getLocalizedMessage());
-      response.setStatusCode(HttpStatusCode.INTERNAL_SERVER_ERROR);
-    }
-    return response;
+    Log.debug(">> " + requestBody);
+    Update update = BotUtils.parseUpdate(requestBody);
+    var responseBody = this.connector.onUpdate(update);
+    Log.debug("<< " + responseBody);
+    return APIGatewayV2HTTPResponse
+        .builder()
+        .withStatusCode(HttpStatusCode.OK)
+        .withHeaders(Map.of("Content-Type", "application/json"))
+        .withBody(responseBody)
+        .build();
   }
 
 }

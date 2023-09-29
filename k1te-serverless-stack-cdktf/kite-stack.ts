@@ -138,7 +138,7 @@ export class KiteStack extends TerraformStack {
 
     const restApi = new RestApi(this, "http-api", restApiProps)
       .addStage("prod")
-      .addHandler(telegramRoute, "ANY", telegramHandler)
+      .addHandler(telegramRoute, "POST", telegramHandler)
       .done();
 
     restApi.domainName &&
