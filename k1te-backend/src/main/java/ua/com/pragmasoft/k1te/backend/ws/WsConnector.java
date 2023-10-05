@@ -15,6 +15,7 @@ import ua.com.pragmasoft.k1te.backend.router.domain.payload.ErrorResponse;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.JoinChannel;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessagePayload;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.OkResponse;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Ping;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
@@ -76,20 +77,19 @@ public class WsConnector implements Connector {
     }
     final ErrorResponse errorResponse;
     if (t instanceof KiteException ke) {
-      errorResponse = new ErrorResponse("⛔" + ke.getMessage(), ke.code());
+      errorResponse = new ErrorResponse("⛔ " + ke.getMessage(), ke.code());
     } else {
-      errorResponse = new ErrorResponse("⛔" + t.getMessage(), KiteException.SERVER_ERROR);
+      errorResponse = new ErrorResponse("⛔ " + t.getMessage(), KiteException.SERVER_ERROR);
     }
     return errorResponse;
   }
 
-  public Payload onPayload(Payload payload, WsConnection connection, String channelName) {
+  public Payload onPayload(Payload payload, WsConnection connection) {
     if (payload instanceof MessagePayload message) {
       return this.onMessage(message, connection);
     } else if (payload instanceof Ping) {
       return new Pong();
     } else if (payload instanceof JoinChannel joinCommand) {
-      joinCommand.channelName = channelName;
       return this.onJoinChannel(joinCommand, connection);
     } else {
       throw new IllegalStateException(
@@ -98,18 +98,17 @@ public class WsConnector implements Connector {
   }
 
   private Payload onJoinChannel(JoinChannel joinChannel, WsConnection connection) {
-    log.debug("Join member {} to channel {}", joinChannel.memberId, joinChannel.channelName);
+    log.debug("Join member {} to channel {}", joinChannel.memberId(), joinChannel.channelName());
     String originConnection = this.connectionUriOf(connection);
-    Member client = this.channels.joinChannel(joinChannel.channelName, joinChannel.memberId, originConnection,
-        joinChannel.memberName);
+    Member client = this.channels.joinChannel(joinChannel.channelName(), joinChannel.memberId(), originConnection,
+        joinChannel.memberName());
     var ctx = RoutingContext.create()
         .withOriginConnection(originConnection)
         .withFrom(client)
         .withRequest(new PlaintextMessage(
             "✅ %s joined channel %s".formatted(client.getUserName(), client.getChannelName())));
     this.router.dispatch(ctx);
-    return new PlaintextMessage(
-        "✅ You joined channel %s as %s".formatted(joinChannel.channelName, client.getUserName()));
+    return new OkResponse();
   }
 
   private Payload onMessage(MessagePayload message, WsConnection connection) {

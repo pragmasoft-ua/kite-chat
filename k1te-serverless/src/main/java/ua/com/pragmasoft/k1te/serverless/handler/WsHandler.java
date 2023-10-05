@@ -1,7 +1,6 @@
 package ua.com.pragmasoft.k1te.serverless.handler;
 
 import java.util.Map;
-import java.util.Objects;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -46,8 +45,7 @@ public class WsHandler implements RequestHandler<APIGatewayV2WebSocketEvent, API
       responsePayload = switch (eventType) {
         case "CONNECT" -> this.wsConnector.onOpen(connection);
         case "DISCONNECT" -> this.wsConnector.onClose(connection);
-        case "MESSAGE" -> this.wsConnector.onPayload(DECODER.apply(body), connection, "pragmasoft"); // TODO
-                                                                                                     // parameterize
+        case "MESSAGE" -> this.wsConnector.onPayload(DECODER.apply(body), connection);
         default -> throw new IllegalStateException("Unsupported event type: " + eventType);
       };
     } catch (Exception e) {

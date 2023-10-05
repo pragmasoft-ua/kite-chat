@@ -19,9 +19,10 @@ public class PayloadEncoder implements Function<Payload, String> {
 
   static {
     ENCODERS.put(Payload.Type.ACK, PayloadEncoder::encodeAck);
+    ENCODERS.put(Payload.Type.OK, PayloadEncoder::encodeTypeOnlyPayload);
     ENCODERS.put(Payload.Type.ERR, PayloadEncoder::encodeError);
     ENCODERS.put(Payload.Type.TXT, PayloadEncoder::encodePlaintext);
-    ENCODERS.put(Payload.Type.PONG, PayloadEncoder::encodePong);
+    ENCODERS.put(Payload.Type.PONG, PayloadEncoder::encodeTypeOnlyPayload);
   }
 
   @Override
@@ -71,7 +72,7 @@ public class PayloadEncoder implements Function<Payload, String> {
     jw.writeArray(array);
   }
 
-  private static void encodePong(Payload payload, JsonWriter jw) {
+  private static void encodeTypeOnlyPayload(Payload payload, JsonWriter jw) {
     var array = Json
         .createArrayBuilder()
         .add(payload.type().name())

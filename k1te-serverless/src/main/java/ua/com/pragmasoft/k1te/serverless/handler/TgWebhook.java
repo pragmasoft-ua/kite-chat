@@ -14,7 +14,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import software.amazon.awssdk.http.HttpStatusCode;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
-import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 
 @ApplicationScoped
 @Named("tg")

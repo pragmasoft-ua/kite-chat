@@ -44,10 +44,11 @@ public class PayloadDecoder implements Function<String, Payload> {
   }
 
   private static Payload decodeJoinChannel(JsonArray array) {
-    Objects.checkIndex(2, array.size());
+    Objects.checkIndex(3, array.size());
     String memberId = array.getString(1);
     String memberName = array.getString(2, memberId);
-    return new JoinChannel(memberId, memberName);
+    String channelName = array.getString(3);
+    return new JoinChannel(memberId, memberName, channelName);
   }
 
   private static Payload decodePlaintextMessage(JsonArray array) {
