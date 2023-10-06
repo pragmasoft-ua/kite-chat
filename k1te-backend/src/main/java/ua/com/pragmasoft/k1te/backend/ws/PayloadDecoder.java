@@ -11,10 +11,13 @@ import org.slf4j.LoggerFactory;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryMessage;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.JoinChannel;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
-import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.Ping;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload.Type;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadRequest;
 
 public class PayloadDecoder implements Function<String, Payload> {
 
@@ -25,6 +28,9 @@ public class PayloadDecoder implements Function<String, Payload> {
   static {
     DECODERS.put(Type.JOIN, PayloadDecoder::decodeJoinChannel);
     DECODERS.put(Type.TXT, PayloadDecoder::decodePlaintextMessage);
+    DECODERS.put(Type.BIN, PayloadDecoder::decodeBinaryMessage);
+    DECODERS.put(Type.UPL, PayloadDecoder::decodeUploadRequest);
+    DECODERS.put(Type.PING, PayloadDecoder::decodePing);
   }
 
   @Override
@@ -53,13 +59,36 @@ public class PayloadDecoder implements Function<String, Payload> {
 
   private static Payload decodePlaintextMessage(JsonArray array) {
     Objects.checkIndex(3, array.size());
-    String text = array.getString(1);
-    String messageId = array.getString(2);
-    Instant created = Instant.parse(array.getString(3));
+    String messageId = array.getString(1);
+    String text = array.getString(2);
+    Instant timestamp = Instant.parse(array.getString(3));
     return new PlaintextMessage(
         text,
         messageId,
-        created);
+        timestamp);
   }
 
+  private static Payload decodeBinaryMessage(JsonArray array) {
+    Objects.checkIndex(6, array.size());
+    var messageId = array.getString(1);
+    var url = array.getString(2);
+    var fileName = array.getString(3);
+    var fileType = array.getString(4);
+    var fileSize = array.getJsonNumber(5).longValueExact();
+    Instant timestamp = Instant.parse(array.getString(6));
+    return new BinaryMessage(url, fileName, fileType, fileSize, messageId, timestamp);
+  }
+
+  private static Payload decodeUploadRequest(JsonArray array) {
+    Objects.checkIndex(4, array.size());
+    var messageId = array.getString(1);
+    var fileName = array.getString(2);
+    var fileType = array.getString(3);
+    var fileSize = array.getJsonNumber(4).longValueExact();
+    return new UploadRequest(fileName, fileType, fileSize, messageId);
+  }
+
+  private static Payload decodePing(JsonArray array) {
+    return new Ping();
+  }
 }

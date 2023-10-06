@@ -20,6 +20,8 @@ import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Ping;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Pong;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadRequest;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadResponse;
 import ua.com.pragmasoft.k1te.backend.shared.KiteException;
 import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
 
@@ -37,11 +39,15 @@ public class WsConnector implements Connector {
 
   private final WsConnectionRegistry connections;
 
-  public WsConnector(final Router router, final Channels channels, final WsConnectionRegistry connections) {
+  private final ObjectStore objectStore;
+
+  public WsConnector(final Router router, final Channels channels, final WsConnectionRegistry connections,
+      ObjectStore objectStore) {
     this.router = router;
     router.registerConnector(this);
     this.channels = channels;
     this.connections = connections;
+    this.objectStore = objectStore;
   }
 
   @Override
@@ -85,7 +91,9 @@ public class WsConnector implements Connector {
   }
 
   public Payload onPayload(Payload payload, WsConnection connection) {
-    if (payload instanceof MessagePayload message) {
+    if (payload instanceof UploadRequest uploadRequest) {
+      return this.onUploadRequest(uploadRequest);
+    } else if (payload instanceof MessagePayload message) {
       return this.onMessage(message, connection);
     } else if (payload instanceof Ping) {
       return new Pong();
@@ -95,6 +103,14 @@ public class WsConnector implements Connector {
       throw new IllegalStateException(
           "Unsupported payload type %s".formatted(payload.getClass().getSimpleName()));
     }
+  }
+
+  private UploadResponse onUploadRequest(UploadRequest uploadRequest) {
+    var uri = this.objectStore.store(
+        uploadRequest.fileName(),
+        uploadRequest.fileType(),
+        uploadRequest.fileSize());
+    return new UploadResponse(uri, uploadRequest.messageId());
   }
 
   private Payload onJoinChannel(JoinChannel joinChannel, WsConnection connection) {

@@ -1,13 +1,12 @@
 package ua.com.pragmasoft.k1te.backend.router.domain.payload;
 
-import java.net.URL;
-import java.time.Instant;
+import java.net.URI;
 
-public record UploadResponse(URL url, String messageId, Instant created)
+public record UploadResponse(URI uri, String messageId)
     implements MessagePayload {
 
-  public UploadResponse(URL url, String messageId) {
-    this(url, messageId, Instant.now());
+  public UploadResponse(String uri, String messageId) {
+    this(URI.create(uri), messageId);
   }
 
   @Override
@@ -18,9 +17,8 @@ public record UploadResponse(URL url, String messageId, Instant created)
   @Override
   public String toString() {
     return type().label
-        + " [url=" + url
+        + " [uri=" + uri
         + ", messageId=" + messageId
-        + ", created=" + created
         + "]";
   }
 

@@ -6,27 +6,39 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.model.File;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.MessageEntity;
 import com.pengrad.telegrambot.model.MessageEntity.Type;
+import com.pengrad.telegrambot.model.PhotoSize;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.User;
 import com.pengrad.telegrambot.model.request.ParseMode;
+import com.pengrad.telegrambot.request.AbstractMultipartRequest;
+import com.pengrad.telegrambot.request.AbstractSendRequest;
+import com.pengrad.telegrambot.request.ContentTypes;
 import com.pengrad.telegrambot.request.DeleteWebhook;
+import com.pengrad.telegrambot.request.GetFile;
+import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.request.SendPhoto;
 import com.pengrad.telegrambot.request.SetWebhook;
+import com.pengrad.telegrambot.response.GetFileResponse;
 
 import ua.com.pragmasoft.k1te.backend.router.domain.Channels;
 import ua.com.pragmasoft.k1te.backend.router.domain.Connector;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 import ua.com.pragmasoft.k1te.backend.router.domain.Router;
 import ua.com.pragmasoft.k1te.backend.router.domain.RoutingContext;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryMessage;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessagePayload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
@@ -109,17 +121,23 @@ public class TelegramConnector implements Connector, Closeable {
 
   public String onUpdate(final Update u) {
     var message = u.message();
+    var isEdited = false;
     if (null == message)
+      message = u.channelPost();
+    if (null == message) {
       message = u.editedMessage();
+      isEdited = true;
+    }
+    if (null == message) {
+      message = u.editedChannelPost();
+    }
     if (null == message)
       return this.onUnhandledUpdate(u);
     try {
-      if (isCommand(u.message())) {
-        return this.onCommand(parseCommand(message), message);
-      } else if (null != u.message()) {
-        return this.onOutgoingMessage(message);
+      if (isCommand(message)) {
+        return this.onCommand(message);
       } else {
-        return this.onEditedMessage(message);
+        return this.onMessage(message, isEdited);
       }
     } catch (Exception e) {
       log.error("onUpdate", e);
@@ -135,26 +153,36 @@ public class TelegramConnector implements Connector, Closeable {
   @Override
   public void dispatch(RoutingContext ctx) {
     Long destinationChatId = toLong(this.rawConnection(ctx.destinationConnection));
+    Member from = ctx.from;
+    Member to = ctx.to;
+    AbstractSendRequest<?> sendMessage;
     if (ctx.request instanceof PlaintextMessage plaintext) {
       String text = plaintext.text();
-      Member from = ctx.from;
-      Member to = ctx.to;
       if (to.isHost()) {
         text = '#' + from.getId() + '\n' + text;
       }
-      var sendMessage = new SendMessage(destinationChatId, text);
-      var sendResponse = this.bot.execute(sendMessage);
-      ctx.response = new MessageAck(plaintext.messageId(),
-          fromLong(sendResponse.message().messageId().longValue()),
-          Instant.ofEpochSecond(sendResponse.message().date()));
+      sendMessage = new SendMessage(destinationChatId, text);
+    } else if (ctx.request instanceof BinaryMessage binary) {
+      String uri = binary.uri().toString();
+      AbstractMultipartRequest<?> binaryMessage = binary.isImage() ? new SendPhoto(destinationChatId, uri)
+          : new SendDocument(destinationChatId, uri);
+      sendMessage = binaryMessage
+          .fileName(binary.fileName())
+          .contentType(binary.fileType());
+
     } else {
       throw new RoutingException(UNSUPPORTED_PAYLOAD + ctx.request.getClass().getSimpleName());
     }
+    var sendResponse = this.bot.execute(sendMessage);
+    ctx.response = new MessageAck(ctx.request.messageId(),
+        fromLong(sendResponse.message().messageId().longValue()),
+        Instant.ofEpochSecond(sendResponse.message().date()));
   }
 
-  private String onCommand(final CommandWithArgs cmd, Message msg) {
+  private String onCommand(final Message message) {
+    CommandWithArgs cmd = parseCommand(message);
     String command = cmd.command;
-    Long rawChatId = msg.chat().id();
+    Long rawChatId = message.chat().id();
     if ("/help".equals(command)) {
       return new SendMessage(rawChatId, HELP).parseMode(ParseMode.Markdown).toWebhookResponse();
     }
@@ -164,7 +192,7 @@ public class TelegramConnector implements Connector, Closeable {
 
     if ("/start".equals(command)) {
       String channel = cmd.args;
-      String memberName = userToString(msg.from());
+      String memberName = userToString(message.from());
       Member client = this.channels.joinChannel(channel, memberId, originConnection, memberName);
       var ctx = RoutingContext.create()
           .withOriginConnection(originConnection)
@@ -175,7 +203,7 @@ public class TelegramConnector implements Connector, Closeable {
       response = "✅ You joined channel %s".formatted(channel);
     } else if ("/host".equals(command)) {
       String channelName = cmd.args;
-      String title = msg.chat().title();
+      String title = message.chat().title();
       this.channels.hostChannel(channelName, memberId, originConnection, title);
       String channelPublicUrl = this.wsApi.toString() + "?c=" + URLEncoder.encode(channelName, StandardCharsets.UTF_8);
       response = "✅ Created channel %s. Use URL %s to configure k1te chat frontend"
@@ -201,17 +229,29 @@ public class TelegramConnector implements Connector, Closeable {
     return new SendMessage(rawChatId, response).toWebhookResponse();
   }
 
-  private String onOutgoingMessage(final Message msg) {
-    Long rawChatId = msg.chat().id();
+  private String onMessage(final Message message, boolean isEdited) {
+    Long rawChatId = message.chat().id();
     String originConnection = this.connectionUri(fromLong(rawChatId));
     Member from = this.channels.find(originConnection);
-    final String toMemberId = Optional.ofNullable(msg.replyToMessage())
+    final String toMemberId = Optional.ofNullable(message.replyToMessage())
         .flatMap(TelegramConnector::memberIdFromHashTag)
         .or(() -> Optional.ofNullable(from.getPeerMemberId()))
         .orElseThrow(RoutingException::new);
     Member to = this.channels.find(from.getChannelName(), toMemberId);
-    String msgId = fromLong(msg.messageId().longValue());
-    MessagePayload request = new PlaintextMessage(msg.text(), msgId, Instant.ofEpochSecond(msg.date()));
+    String msgId = fromLong(message.messageId().longValue());
+    MessagePayload request = null;
+    var document = message.document();
+    if (null != document) {
+      var url = this.fileDownloadUrl(document.fileId());
+      request = new BinaryMessage(url, document.fileName(), document.mimeType(), document.fileSize());
+    } else if (null != message.photo() && message.photo().length > 0) {
+      PhotoSize photo = largestPhoto(message.photo());
+      var url = this.fileDownloadUrl(photo.fileId());
+      request = new BinaryMessage(url, message.text(), ContentTypes.PHOTO_MIME_TYPE, photo.fileSize(), msgId);
+    } else {
+      request = new PlaintextMessage(message.text(), msgId, Instant.ofEpochSecond(message.date()));
+    }
+
     var ctx = RoutingContext
         .create()
         .withOriginConnection(originConnection)
@@ -223,10 +263,6 @@ public class TelegramConnector implements Connector, Closeable {
     MessageAck ack = ctx.response;
     log.debug("Message #{} delivered", ack.messageId());
     return OK;
-  }
-
-  private String onEditedMessage(Message message) {
-    throw new UnsupportedOperationException("Message editing is currently not supported");
   }
 
   private String onUnhandledUpdate(final Update u) {
@@ -276,6 +312,20 @@ public class TelegramConnector implements Connector, Closeable {
 
   private static Long toLong(String id) {
     return Long.parseUnsignedLong(id, Character.MAX_RADIX);
+  }
+
+  private PhotoSize largestPhoto(PhotoSize[] photos) {
+    return Arrays
+        .stream(photos)
+        .max(Comparator.comparing(PhotoSize::fileSize))
+        .orElseThrow();
+  }
+
+  private String fileDownloadUrl(String fileId) {
+    GetFile getFile = new GetFile(fileId);
+    GetFileResponse getFileResponse = bot.execute(getFile);
+    File file = getFileResponse.file();
+    return bot.getFullFilePath(file);
   }
 
   private record CommandWithArgs(String command, String args) {

@@ -70,8 +70,7 @@ public class JakartaWebsocketAdapter {
   @OnMessage
   public void onPayload(Payload payload, Session session) throws IOException {
     var connection = this.connectionRegistry.createConnection(session);
-    var channelName = session.getRequestParameterMap().get("c").get(0);
-    var response = this.wsConnector.onPayload(payload, connection, channelName);
+    var response = this.wsConnector.onPayload(payload, connection);
     if (null != response) {
       connection.sendObject(response);
     }

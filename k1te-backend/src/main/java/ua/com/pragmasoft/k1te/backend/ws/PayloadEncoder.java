@@ -8,10 +8,12 @@ import java.util.function.Function;
 
 import jakarta.json.Json;
 import jakarta.json.JsonWriter;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryMessage;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.ErrorResponse;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadResponse;
 
 public class PayloadEncoder implements Function<Payload, String> {
 
@@ -22,6 +24,8 @@ public class PayloadEncoder implements Function<Payload, String> {
     ENCODERS.put(Payload.Type.OK, PayloadEncoder::encodeTypeOnlyPayload);
     ENCODERS.put(Payload.Type.ERR, PayloadEncoder::encodeError);
     ENCODERS.put(Payload.Type.TXT, PayloadEncoder::encodePlaintext);
+    ENCODERS.put(Payload.Type.BIN, PayloadEncoder::encodeBinary);
+    ENCODERS.put(Payload.Type.UPL, PayloadEncoder::encodeUploadResponse);
     ENCODERS.put(Payload.Type.PONG, PayloadEncoder::encodeTypeOnlyPayload);
   }
 
@@ -68,6 +72,32 @@ public class PayloadEncoder implements Function<Payload, String> {
         .add(message.text())
         .add(message.messageId())
         .add(message.created().toString())
+        .build();
+    jw.writeArray(array);
+  }
+
+  private static void encodeBinary(Payload payload, JsonWriter jw) {
+    var message = (BinaryMessage) payload;
+    var array = Json
+        .createArrayBuilder()
+        .add(payload.type().name())
+        .add(message.messageId())
+        .add(message.uri().toString())
+        .add(message.fileName())
+        .add(message.fileType())
+        .add(message.fileSize())
+        .add(message.created().toString())
+        .build();
+    jw.writeArray(array);
+  }
+
+  private static void encodeUploadResponse(Payload payload, JsonWriter jw) {
+    var message = (UploadResponse) payload;
+    var array = Json
+        .createArrayBuilder()
+        .add(payload.type().name())
+        .add(message.messageId())
+        .add(message.uri().toString())
         .build();
     jw.writeArray(array);
   }

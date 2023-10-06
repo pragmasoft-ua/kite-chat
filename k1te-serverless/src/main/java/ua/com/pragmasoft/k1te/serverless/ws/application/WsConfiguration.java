@@ -12,6 +12,7 @@ import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.apigatewaymanagementapi.ApiGatewayManagementApiClient;
 import ua.com.pragmasoft.k1te.backend.router.domain.Channels;
 import ua.com.pragmasoft.k1te.backend.router.domain.Router;
+import ua.com.pragmasoft.k1te.backend.ws.ObjectStore;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector.WsConnectionRegistry;
 
@@ -40,8 +41,8 @@ public class WsConfiguration {
   @Produces
   @ApplicationScoped
   public WsConnector websocketConnector(Router router, Channels channels,
-      WsConnectionRegistry connections) {
-    return new WsConnector(router, channels, connections);
+      WsConnectionRegistry connections, ObjectStore objectStore) {
+    return new WsConnector(router, channels, connections, objectStore);
   }
 
 }

@@ -1,24 +1,20 @@
 package ua.com.pragmasoft.k1te.backend.router.domain.payload;
 
-import java.net.URL;
+import java.net.URI;
 import java.time.Instant;
 
-// type: MsgType.BIN;
-// messageId: string;
-// timestamp: Date;
-// url: string;
-// fileName?: string;
-// fileType?: string;
-// fileSize?: number;
-
-public record BinaryMessage(URL url, String fileName, String fileType, long fileSize, String messageId, Instant created)
+public record BinaryMessage(URI uri, String fileName, String fileType, long fileSize, String messageId, Instant created)
     implements MessagePayload {
 
-  public BinaryMessage(URL url, String fileName, String fileType, long fileSize, String messageId) {
+  public BinaryMessage(String uri, String fileName, String fileType, long fileSize, String messageId, Instant created) {
+    this(URI.create(uri), fileName, fileType, fileSize, messageId, created);
+  }
+
+  public BinaryMessage(String url, String fileName, String fileType, long fileSize, String messageId) {
     this(url, fileName, fileType, fileSize, messageId, Instant.now());
   }
 
-  public BinaryMessage(URL url, String fileName, String fileType, long fileSize) {
+  public BinaryMessage(String url, String fileName, String fileType, long fileSize) {
     this(url, fileName, fileType, fileSize, "-");
   }
 
@@ -27,10 +23,14 @@ public record BinaryMessage(URL url, String fileName, String fileType, long file
     return Type.BIN;
   }
 
+  public boolean isImage() {
+    return this.fileType.startsWith("image");
+  }
+
   @Override
   public String toString() {
     return type().label
-        + " [url=" + url
+        + " [uri=" + uri
         + ", fileName=" + fileName
         + ", fileType=" + fileType
         + ", fileSize=" + fileSize
