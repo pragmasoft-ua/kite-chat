@@ -108,9 +108,13 @@ First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade
 
 ### TODO
 
+- `/leave` does not work **Cannot dispatch request, no route found**, then simply **Not found**
+- if I send an image it responds with error message `text`
+- After I add a member to the support chat, got ⛔ Not found member
+
 - deep links to start conversation in Telegram immediately
 - check error messages.
-- document creating group in Telegram. Requires to turh off privacy mode for https://t.me/k1techatbot
+- document creating group in Telegram. Requires to turn off privacy mode for https://t.me/k1techatbot
 - stop exposing real chat ids and websocket ids as member ids
 - https://quarkus.io/guides/smallrye-fault-tolerance (timeouts? circuit breaker?)
 - suport of message editing
@@ -130,9 +134,9 @@ First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade
 - when channel is dropped by host, all clients have to leave as well
 - pin unanswered messages? Maybe make this configurable.
 - telegram throttling sometimes will be a concern. Consider using dedicated bot tokens for commercial clients. Also, research aws lambda retry mechanism as a solution to tg throttling for other clients.
-- proxy or vpn may cause ws connection closed after a minute of inactivity. Send ping from server every 30s or so and await for pong.
+- ✅proxy or vpn may cause ws connection closed after a minute of inactivity. Send ping from server every 30s or so and await for pong.
 - API Gateway supports message payloads up to 128 KB with a maximum frame size of 32 KB. If a message exceeds 32 KB, you must split it into multiple frames, each 32 KB or smaller. If a larger message is received, the connection is closed with code 1009.
 - tg api largest text message is 4kb. Larger ones need to be split.
-- it is better to send files with http put/post rather than websocket. Presigned s3 for large files. Only send url over websocket.
+- ✅it is better to send files with http put/post rather than websocket. Presigned s3 for large files. Only send url over websocket.
 - trunk based development, feature flags
-- CraC, native image
+- SnapStart, native image

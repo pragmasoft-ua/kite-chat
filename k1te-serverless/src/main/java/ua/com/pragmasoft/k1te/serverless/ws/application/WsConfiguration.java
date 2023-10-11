@@ -15,6 +15,7 @@ import ua.com.pragmasoft.k1te.backend.router.domain.Router;
 import ua.com.pragmasoft.k1te.backend.ws.ObjectStore;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector.WsConnectionRegistry;
+import ua.com.pragmasoft.k1te.backend.ws.infrastructure.S3ObjectStore;
 
 public class WsConfiguration {
 
@@ -36,6 +37,11 @@ public class WsConfiguration {
   @ApplicationScoped
   public AwsApiGwConnectionRegistry awsApiGwConnectionRegistry(ApiGatewayManagementApiClient apiClient) {
     return new AwsApiGwConnectionRegistry(apiClient);
+  }
+
+  @ApplicationScoped
+  public S3ObjectStore objectStore(@ConfigProperty(name = "bucket.name") String bucketName) {
+    return new S3ObjectStore(bucketName);
   }
 
   @Produces

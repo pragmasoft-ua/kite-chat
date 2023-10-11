@@ -1,8 +1,6 @@
 <?xml version="1.0"?>
-<project
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
-  xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>ua.com.pragmasoft</groupId>
@@ -10,17 +8,15 @@
     <version>2023.10.1</version>
     <relativePath>..</relativePath>
   </parent>
-
   <artifactId>k1te-server</artifactId>
   <properties>
     <skipITs>true</skipITs>
   </properties>
-
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <version>${project.version}</version>
       <artifactId>k1te-backend</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -53,6 +49,10 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkiverse.amazonservices</groupId>
+      <artifactId>quarkus-amazon-s3</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>

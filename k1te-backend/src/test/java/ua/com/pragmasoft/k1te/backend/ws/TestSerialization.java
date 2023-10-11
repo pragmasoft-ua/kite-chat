@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
 
-public class TestSerialization {
+class TestSerialization {
 
   static final Logger log = LoggerFactory.getLogger(TestSerialization.class);
 
@@ -20,7 +20,7 @@ public class TestSerialization {
   static final PayloadDecoder DECODER = new PayloadDecoder();
 
   @Test
-  public void testSerializeAndDeserialize() {
+  void testSerializeAndDeserialize() {
     final String serialized = ENCODER.apply(PLAINTEXT_MSG);
     log.info(serialized);
     final Payload deserialized = DECODER.apply(serialized);

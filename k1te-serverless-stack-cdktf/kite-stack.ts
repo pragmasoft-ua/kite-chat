@@ -18,6 +18,7 @@ import { RestApi } from "./rest-api";
 import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
 import { TlsCertificate } from "./tls-certificate";
 import { WebsocketApi } from "./websocket-api";
+import { ObjectStore } from "./object-store";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 
@@ -58,6 +59,12 @@ export class KiteStack extends TerraformStack {
 
     schema.allowAll(role);
 
+    const objectStore = new ObjectStore(this, "prod-object-store", {
+      bucketPrefix: "prod-k1te-chat-object-store-",
+    });
+
+    objectStore.allowReadWrite(role);
+
     const apiGatewayPrincipal = new ApiGatewayPrincipal(
       this,
       "apigateway-principal"
@@ -97,6 +104,7 @@ export class KiteStack extends TerraformStack {
       WS_API_EXECUTION_ENDPOINT: PROD_WS_API_EXECUTION_ENDPOINT,
       TELEGRAM_BOT_TOKEN: telegramBotToken.value,
       TELEGRAM_WEBHOOK_ENDPOINT: PROD_TELEGRAM_WEBHOOK_ENDPOINT,
+      BUCKET_NAME: objectStore.bucket.bucket,
     };
 
     const memorySize = 256;

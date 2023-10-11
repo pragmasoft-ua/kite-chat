@@ -10,25 +10,28 @@ import ua.com.pragmasoft.k1te.backend.ws.ObjectStore;
 
 public final class S3ObjectStore implements ObjectStore {
 
-  private final String bucket;
+  static final S3Presigner presigner = S3Presigner.create();
 
-  public S3ObjectStore(String bucket) {
-    this.bucket = bucket;
+  private final String bucketName;
+
+  public S3ObjectStore(String bucketName) {
+    this.bucketName = bucketName;
   }
 
   @Override
   public URI store(String fileName, String fileType, long fileSize) {
-    try (S3Presigner presigner = S3Presigner.create()) {
 
-      var presignRequest = PutObjectPresignRequest.builder()
-          .signatureDuration(Duration.ofMinutes(60))
-          .putObjectRequest(b -> b.bucket(this.bucket)
-              .key(fileName)
-              .contentType(fileType)
-              .build())
-          .build();
+    var presignRequest = PutObjectPresignRequest.builder()
+        .signatureDuration(Duration.ofMinutes(60))
+        .putObjectRequest(b -> b.bucket(this.bucketName)
+            .key(fileName)
+            .contentType(fileType)
+            .contentLength(fileSize)
+            .build())
+        .build();
 
-      var presignedRequest = presigner.presignPutObject(presignRequest);
+    var presignedRequest = presigner.presignPutObject(presignRequest);
+    try {
       return presignedRequest.url().toURI();
     } catch (URISyntaxException e) {
       throw new IllegalStateException(e.getMessage(), e);

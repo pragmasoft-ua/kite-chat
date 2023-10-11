@@ -69,8 +69,8 @@ public class PayloadEncoder implements Function<Payload, String> {
     var array = Json
         .createArrayBuilder()
         .add(payload.type().name())
-        .add(message.text())
         .add(message.messageId())
+        .add(message.text())
         .add(message.created().toString())
         .build();
     jw.writeArray(array);
