@@ -30,9 +30,9 @@ export class KiteStack extends TerraformStack {
     new AwsProvider(this, "AWS");
 
     new S3Backend(this, {
-      bucket: "k1te-chat-tfstate",
+      bucket: "k1te-chat-tfstate-alex", //I added my bucket
       key: `${id}/terraform.tfstate`,
-      region: "eu-north-1",
+      region: "eu-central-1", //I added my bucket region
     });
 
     const dnsZone = domainName
@@ -79,7 +79,13 @@ export class KiteStack extends TerraformStack {
       certificate,
     };
 
+    const restApiProps = certificate && {
+      domainName: restApiDomainName,
+      certificate,
+    };
+
     const wsApi = new WebsocketApi(this, "ws-api", wsApiProps);
+    const restApi = new RestApi(this, "http-api", restApiProps);
 
     wsApi.domainName &&
       dnsZone &&
@@ -88,6 +94,17 @@ export class KiteStack extends TerraformStack {
         name: wsApiDomainName,
         value: wsApi.domainName.domainNameConfiguration.targetDomainName,
       });
+
+    restApi.domainName &&
+      dnsZone &&
+      dnsZone.createRecord(restApiDomainName, {
+        type: "CNAME",
+        name: restApiDomainName,
+        value: restApi.domainName.domainNameConfiguration.targetDomainName,
+      });
+
+    const wsApiStage = wsApi.addStage({ stage: prod });
+    const restApiStage = restApi.addStage(prod);
 
     const PROD_WS_API_EXECUTION_ENDPOINT = `https://${wsApiDomainName}/${prod}`;
     const PROD_TELEGRAM_WEBHOOK_ENDPOINT = `https://${restApiDomainName}/${prod}${telegramRoute}`;
@@ -101,9 +118,13 @@ export class KiteStack extends TerraformStack {
 
     const PROD_ENV = {
       SERVERLESS_ENVIRONMENT: prod,
-      WS_API_EXECUTION_ENDPOINT: PROD_WS_API_EXECUTION_ENDPOINT,
+      WS_API_EXECUTION_ENDPOINT: domainName
+        ? PROD_WS_API_EXECUTION_ENDPOINT
+        : wsApiStage.getInvokeUrl(),
       TELEGRAM_BOT_TOKEN: telegramBotToken.value,
-      TELEGRAM_WEBHOOK_ENDPOINT: PROD_TELEGRAM_WEBHOOK_ENDPOINT,
+      TELEGRAM_WEBHOOK_ENDPOINT: domainName
+        ? PROD_TELEGRAM_WEBHOOK_ENDPOINT
+        : `${restApiStage.getInvokeUrl()}${telegramRoute}`,
       BUCKET_NAME: objectStore.bucket.bucket,
     };
 
@@ -123,12 +144,6 @@ export class KiteStack extends TerraformStack {
       memorySize,
     });
 
-    wsApi.addStage({
-      stage: prod,
-      handler: wsHandler,
-      principal: apiGatewayPrincipal,
-    });
-
     const telegramHandler = new Lambda(this, "tg-handler", {
       role,
       asset,
@@ -139,23 +154,8 @@ export class KiteStack extends TerraformStack {
       memorySize,
     });
 
-    const restApiProps = certificate && {
-      domainName: restApiDomainName,
-      certificate,
-    };
-
-    const restApi = new RestApi(this, "http-api", restApiProps)
-      .addStage("prod")
-      .addHandler(telegramRoute, "POST", telegramHandler)
-      .done();
-
-    restApi.domainName &&
-      dnsZone &&
-      dnsZone.createRecord(restApiDomainName, {
-        type: "CNAME",
-        name: restApiDomainName,
-        value: restApi.domainName.domainNameConfiguration.targetDomainName,
-      });
+    wsApiStage.addDefaultRoutes(wsHandler, apiGatewayPrincipal);
+    restApiStage.addHandler(telegramRoute, "POST", telegramHandler);
 
     const lifecycleHandler = new Lambda(this, "lifecycle-handler", {
       role,
