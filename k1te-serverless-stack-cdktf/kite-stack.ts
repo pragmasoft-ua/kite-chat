@@ -2,7 +2,6 @@ import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
 import {
   Aspects,
-  S3Backend,
   TerraformOutput,
   TerraformStack,
   TerraformVariable,
@@ -28,12 +27,6 @@ export class KiteStack extends TerraformStack {
     this.node.setContext(ALLOW_TAGS, true);
 
     new AwsProvider(this, "AWS");
-
-    new S3Backend(this, {
-      bucket: "k1te-chat-tfstate",
-      key: `${id}/terraform.tfstate`,
-      region: "eu-north-1",
-    });
 
     const dnsZone = domainName
       ? new CloudflareDnsZone(this, domainName)
@@ -70,27 +63,39 @@ export class KiteStack extends TerraformStack {
       "apigateway-principal"
     );
 
-    const wsApiDomainName = `ws.${domainName}`;
-    const restApiDomainName = `api.${domainName}`;
     const telegramRoute = "/tg";
 
     const wsApiProps = certificate && {
-      domainName: wsApiDomainName,
+      domainName: `ws.${domainName}`,
+      certificate,
+    };
+
+    const restApiProps = certificate && {
+      domainName: `api.${domainName}`,
       certificate,
     };
 
     const wsApi = new WebsocketApi(this, "ws-api", wsApiProps);
+    const restApi = new RestApi(this, "http-api", restApiProps);
 
     wsApi.domainName &&
       dnsZone &&
-      dnsZone.createRecord(wsApiDomainName, {
+      dnsZone.createRecord(wsApi.domainName.domainName, {
         type: "CNAME",
-        name: wsApiDomainName,
+        name: wsApi.domainName.domainName,
         value: wsApi.domainName.domainNameConfiguration.targetDomainName,
       });
 
-    const PROD_WS_API_EXECUTION_ENDPOINT = `https://${wsApiDomainName}/${prod}`;
-    const PROD_TELEGRAM_WEBHOOK_ENDPOINT = `https://${restApiDomainName}/${prod}${telegramRoute}`;
+    restApi.domainName &&
+      dnsZone &&
+      dnsZone.createRecord(restApi.domainName.domainName, {
+        type: "CNAME",
+        name: restApi.domainName.domainName,
+        value: restApi.domainName.domainNameConfiguration.targetDomainName,
+      });
+
+    const wsApiStage = wsApi.addStage({ stage: prod });
+    const restApiStage = restApi.addStage(prod);
 
     const telegramBotToken = new TerraformVariable(this, "TELEGRAM_BOT_TOKEN", {
       type: "string",
@@ -101,9 +106,9 @@ export class KiteStack extends TerraformStack {
 
     const PROD_ENV = {
       SERVERLESS_ENVIRONMENT: prod,
-      WS_API_EXECUTION_ENDPOINT: PROD_WS_API_EXECUTION_ENDPOINT,
+      WS_API_EXECUTION_ENDPOINT: wsApiStage.invokeUrl,
       TELEGRAM_BOT_TOKEN: telegramBotToken.value,
-      TELEGRAM_WEBHOOK_ENDPOINT: PROD_TELEGRAM_WEBHOOK_ENDPOINT,
+      TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
       BUCKET_NAME: objectStore.bucket.bucket,
     };
 
@@ -123,12 +128,6 @@ export class KiteStack extends TerraformStack {
       memorySize,
     });
 
-    wsApi.addStage({
-      stage: prod,
-      handler: wsHandler,
-      principal: apiGatewayPrincipal,
-    });
-
     const telegramHandler = new Lambda(this, "tg-handler", {
       role,
       asset,
@@ -139,23 +138,8 @@ export class KiteStack extends TerraformStack {
       memorySize,
     });
 
-    const restApiProps = certificate && {
-      domainName: restApiDomainName,
-      certificate,
-    };
-
-    const restApi = new RestApi(this, "http-api", restApiProps)
-      .addStage("prod")
-      .addHandler(telegramRoute, "POST", telegramHandler)
-      .done();
-
-    restApi.domainName &&
-      dnsZone &&
-      dnsZone.createRecord(restApiDomainName, {
-        type: "CNAME",
-        name: restApiDomainName,
-        value: restApi.domainName.domainNameConfiguration.targetDomainName,
-      });
+    wsApiStage.addDefaultRoutes(wsHandler, apiGatewayPrincipal);
+    restApiStage.addHandler(telegramRoute, "POST", telegramHandler);
 
     const lifecycleHandler = new Lambda(this, "lifecycle-handler", {
       role,

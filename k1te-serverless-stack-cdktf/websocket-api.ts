@@ -12,17 +12,15 @@ import { Apigatewayv2Stage } from "@cdktf/provider-aws/lib/apigatewayv2-stage";
 import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group";
 import { Construct } from "constructs";
 import { ExecuteApi } from "iam-floyd";
-import { ApiGatewayPrincipal } from "./apigateway-principal";
 import { Lambda } from "./lambda";
 import { TlsCertificate } from "./tls-certificate";
+import { ApiGatewayPrincipal } from "./apigateway-principal";
 
 const PING_REQUEST_TEMPLATE = JSON.stringify({ statusCode: 200 });
 
 const PONG_RESPONSE_TEMPLATE = JSON.stringify(["PONG"]);
 
 export type WebsocketApiStageProps = {
-  handler: Lambda;
-  principal: ApiGatewayPrincipal;
   stage: string;
   logRetentionDays?: number;
 };
@@ -34,6 +32,7 @@ export type ApiProps = {
 
 export class WebsocketApiStage extends Construct {
   private stage: Apigatewayv2Stage;
+  private readonly api: WebsocketApi;
 
   constructor(
     scope: WebsocketApi,
@@ -42,12 +41,8 @@ export class WebsocketApiStage extends Construct {
   ) {
     super(scope, id);
 
-    const {
-      handler,
-      stage,
-      logRetentionDays: retentionInDays = 7,
-      principal,
-    } = props;
+    const { stage, logRetentionDays: retentionInDays = 7 } = props;
+    this.api = scope;
 
     const accessLogGroup = new CloudwatchLogGroup(this, "access-logs", {
       name: `/aws/apigateway/${scope.api.name}/${stage}/access-logs`,
@@ -90,6 +85,18 @@ export class WebsocketApiStage extends Construct {
         throttlingBurstLimit: 5,
       },
     });
+  }
+
+  get invokeUrl() {
+    if (this.api.domainName) {
+      return `https://${this.api.domainName.domainName}/${this.stage.name}`;
+    }
+    return this.stage.invokeUrl;
+  }
+
+  addDefaultRoutes(handler: Lambda, principal: ApiGatewayPrincipal) {
+    const scope = this.api;
+    const stage = this.stage.name;
 
     const integration = new Apigatewayv2Integration(
       this,
