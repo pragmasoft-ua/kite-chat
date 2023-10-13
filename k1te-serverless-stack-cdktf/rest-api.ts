@@ -137,7 +137,10 @@ export class RestApiStage extends Construct {
     return this;
   }
 
-  getInvokeUrl() {
+  get invokeUrl() {
+    if (this.api.domainName) {
+      return `https://${this.api.domainName.domainName}/${this.stage.name}`;
+    }
     return this.stage.invokeUrl;
   }
 

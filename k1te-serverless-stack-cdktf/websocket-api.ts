@@ -87,7 +87,10 @@ export class WebsocketApiStage extends Construct {
     });
   }
 
-  getInvokeUrl() {
+  get invokeUrl() {
+    if (this.api.domainName) {
+      return `https://${this.api.domainName.domainName}/${this.stage.name}`;
+    }
     return this.stage.invokeUrl;
   }
 
