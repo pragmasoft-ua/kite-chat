@@ -2,11 +2,11 @@ package ua.com.pragmasoft.k1te.backend.router.domain.payload;
 
 import java.net.URI;
 
-public record UploadResponse(URI uri, String messageId)
+public record UploadResponse(String messageId, URI canonicalUri, URI uploadUri)
     implements MessagePayload {
 
-  public UploadResponse(String uri, String messageId) {
-    this(URI.create(uri), messageId);
+  public UploadResponse(String messageId, URI uri) {
+    this(messageId, uri, null);
   }
 
   @Override
@@ -17,7 +17,7 @@ public record UploadResponse(URI uri, String messageId)
   @Override
   public String toString() {
     return type().label
-        + " [uri=" + uri
+        + " [uri=" + canonicalUri
         + ", messageId=" + messageId
         + "]";
   }

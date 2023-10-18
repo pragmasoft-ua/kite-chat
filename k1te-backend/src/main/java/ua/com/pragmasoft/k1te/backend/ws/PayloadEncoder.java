@@ -97,9 +97,12 @@ public class PayloadEncoder implements Function<Payload, String> {
         .createArrayBuilder()
         .add(payload.type().name())
         .add(message.messageId())
-        .add(message.uri().toString())
-        .build();
-    jw.writeArray(array);
+        .add(message.canonicalUri().toString());
+
+    if (null != message.uploadUri()) {
+      array.add(message.uploadUri().toString());
+    }
+    jw.writeArray(array.build());
   }
 
   private static void encodeTypeOnlyPayload(Payload payload, JsonWriter jw) {

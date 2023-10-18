@@ -80,12 +80,13 @@ public class PayloadDecoder implements Function<String, Payload> {
   }
 
   private static Payload decodeUploadRequest(JsonArray array) {
-    Objects.checkIndex(4, array.size());
+    Objects.checkIndex(5, array.size());
     var messageId = array.getString(1);
     var fileName = array.getString(2);
     var fileType = array.getString(3);
     var fileSize = array.getJsonNumber(4).longValueExact();
-    return new UploadRequest(fileName, fileType, fileSize, messageId);
+    Instant timestamp = Instant.parse(array.getString(5));
+    return new UploadRequest(fileName, fileType, fileSize, messageId, timestamp);
   }
 
   private static Payload decodePing(JsonArray array) {

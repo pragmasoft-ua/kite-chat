@@ -11,6 +11,7 @@ import ua.com.pragmasoft.k1te.backend.router.domain.Connector;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 import ua.com.pragmasoft.k1te.backend.router.domain.Router;
 import ua.com.pragmasoft.k1te.backend.router.domain.RoutingContext;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryPayload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.ErrorResponse;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.JoinChannel;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
@@ -92,7 +93,7 @@ public class WsConnector implements Connector {
 
   public Payload onPayload(Payload payload, WsConnection connection) {
     if (payload instanceof UploadRequest uploadRequest) {
-      return this.onUploadRequest(uploadRequest);
+      return this.onUploadRequest(uploadRequest, connection);
     } else if (payload instanceof MessagePayload message) {
       return this.onMessage(message, connection);
     } else if (payload instanceof Ping) {
@@ -105,12 +106,10 @@ public class WsConnector implements Connector {
     }
   }
 
-  private UploadResponse onUploadRequest(UploadRequest uploadRequest) {
-    var uri = this.objectStore.store(
-        uploadRequest.fileName(),
-        uploadRequest.fileType(),
-        uploadRequest.fileSize());
-    return new UploadResponse(uri, uploadRequest.messageId());
+  private UploadResponse onUploadRequest(UploadRequest uploadRequest, WsConnection connection) {
+    final var connectionUri = this.connectionUriOf(connection);
+    Member client = this.channels.find(connectionUri);
+    return this.objectStore.presign(uploadRequest, client.getChannelName(), client.getId());
   }
 
   private Payload onJoinChannel(JoinChannel joinChannel, WsConnection connection) {
@@ -140,13 +139,27 @@ public class WsConnector implements Connector {
   @Override
   public void dispatch(RoutingContext ctx) {
     var messagePayload = ctx.request;
+    if (messagePayload instanceof BinaryPayload binaryPayload) {
+      /*
+       * Telegram sends binary url which is temporary and contains bot token so it
+       * is not suitable to expose to the public web.
+       * Due to this we need to copy this resource to s3 and expose s3 url instead.
+       * Currently we only receive BinaryPayload from the Telegram, so there's no need
+       * to check who is the sender. Later we may have other connectors though
+       * Then we'll need additional flag like isTransientUrl or url may contain query
+       * param ?transient=true in the BinaryPayload to copy conditionally only if flag
+       * is true.
+       */
+      Member recipient = ctx.to;
+      messagePayload = this.objectStore.copyTransient(binaryPayload, recipient.getChannelName(), recipient.getId());
+    }
     WsConnection connection = this.requiredConnection(ctx.destinationConnection);
     try {
       connection.sendObject(messagePayload);
+      ctx.response = new MessageAck(messagePayload.messageId());
     } catch (IOException e) {
       throw new RoutingException(e.getMessage(), e);
     }
-    ctx.response = new MessageAck(messagePayload.messageId());
   }
 
   private String connectionUriOf(WsConnection c) {
