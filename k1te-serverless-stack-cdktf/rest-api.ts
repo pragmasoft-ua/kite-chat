@@ -32,24 +32,18 @@ class RestApiHandler extends Construct {
 
     const gw = scope.api.api;
 
-    let name = "lambda-integration";
-
-    this.integration = new Apigatewayv2Integration(this, name, {
+    this.integration = new Apigatewayv2Integration(this, "lambda-integration", {
       apiId: gw.id,
       integrationType: "AWS_PROXY",
       integrationUri: handler.arn,
       payloadFormatVersion: "2.0",
     });
 
-    name = "route";
-
-    this.route = new Apigatewayv2Route(this, name, {
+    this.route = new Apigatewayv2Route(this, "route", {
       apiId: gw.id,
       routeKey,
       target: "integrations/" + this.integration.id,
     });
-
-    name = "lambda-permission";
 
     handler.allowInvocationForService(scope.api);
   }
@@ -105,7 +99,7 @@ export class RestApiStage extends Construct {
         }),
       },
       defaultRouteSettings: {
-        dataTraceEnabled: true,
+        dataTraceEnabled: false,
         loggingLevel,
         detailedMetricsEnabled: false,
         throttlingRateLimit: 10,
