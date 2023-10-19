@@ -110,6 +110,7 @@ export class KiteStack extends TerraformStack {
       TELEGRAM_BOT_TOKEN: telegramBotToken.value,
       TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
       BUCKET_NAME: objectStore.bucket.bucket,
+      JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1",
     };
 
     const memorySize = 256;
@@ -155,6 +156,8 @@ export class KiteStack extends TerraformStack {
       functionName: lifecycleHandler.functionName,
       input: JSON.stringify({}),
       lifecycleScope: "CRUD",
+      triggers: PROD_ENV,
+      dependsOn: [lifecycleHandler.fn],
     });
 
     new TerraformOutput(this, "lifecycle-output", {

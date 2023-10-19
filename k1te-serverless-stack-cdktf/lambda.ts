@@ -44,7 +44,7 @@ const DEFAULT_PROPS: Partial<LambdaProps> = {
 };
 
 export class Lambda extends Construct {
-  private fn: LambdaFunction;
+  readonly fn: LambdaFunction;
   readonly alias: LambdaAlias;
   readonly role: Role;
   readonly environment: { [key: string]: string };
@@ -72,7 +72,11 @@ export class Lambda extends Construct {
           },
         }) as unknown as Record<string, string>,
       },
-      architectures: ["arm64"],
+      architectures: ["x86_64"],
+      snapStart: {
+        applyOn: "PublishedVersions",
+      },
+      publish: true,
       filename: asset.path,
       sourceCodeHash: asset.hash,
       runtime: asset.runtime,
