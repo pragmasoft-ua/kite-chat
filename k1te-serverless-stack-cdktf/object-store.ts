@@ -77,7 +77,7 @@ export class ObjectStore extends Construct {
       .toPutObject()
       .toDeleteObject()
       .toListBucket()
-      .on(this.bucket.arn);
+      .onObject(this.bucket.bucket, "*");
     to.grant(`allow-crud-${this.bucket.bucket}`, policyStatement);
     return this;
   }
