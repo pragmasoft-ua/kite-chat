@@ -1,7 +1,20 @@
 package ua.com.pragmasoft.k1te.backend.ws;
 
-import java.net.URI;
+import java.time.Instant;
+import java.time.ZoneId;
+
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryPayload;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadRequest;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadResponse;
 
 public interface ObjectStore {
-  URI store(String fileName, String fileType, long fileSize);
+
+  UploadResponse presign(UploadRequest binaryPayload, String channelName, String memberId);
+
+  BinaryPayload copyTransient(BinaryPayload transientPayload, String channelName, String memberId);
+
+  default String objectName(String channelName, String memberId, String simpleName, Instant timestamp) {
+    return String.format("%s/%s/%tF/%s", channelName, memberId, timestamp.atZone(ZoneId.systemDefault()), simpleName);
+  }
+
 }

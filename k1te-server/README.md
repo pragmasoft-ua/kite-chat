@@ -128,7 +128,7 @@ First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade
 - @nxrocks/nx-quarkus
 - https://github.com/schnatterer/moby-names-generator-java
 - initialize lambda based webhook - local-exec provisioner using curl
-- snapstart
+- ✅snapstart
 - /info command - am I joined or hosted ? or amend /help
 - /join alias of /start
 - when channel is dropped by host, all clients have to leave as well

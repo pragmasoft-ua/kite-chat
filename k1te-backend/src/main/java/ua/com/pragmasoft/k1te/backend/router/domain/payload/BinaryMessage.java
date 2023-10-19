@@ -4,7 +4,7 @@ import java.net.URI;
 import java.time.Instant;
 
 public record BinaryMessage(URI uri, String fileName, String fileType, long fileSize, String messageId, Instant created)
-    implements MessagePayload {
+    implements BinaryPayload {
 
   public BinaryMessage(String uri, String fileName, String fileType, long fileSize, String messageId, Instant created) {
     this(URI.create(uri), fileName, fileType, fileSize, messageId, created);
@@ -16,15 +16,6 @@ public record BinaryMessage(URI uri, String fileName, String fileType, long file
 
   public BinaryMessage(String url, String fileName, String fileType, long fileSize) {
     this(url, fileName, fileType, fileSize, "-");
-  }
-
-  @Override
-  public Type type() {
-    return Type.BIN;
-  }
-
-  public boolean isImage() {
-    return this.fileType.startsWith("image");
   }
 
   @Override

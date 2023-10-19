@@ -22,7 +22,6 @@ import com.pengrad.telegrambot.model.PhotoSize;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.User;
 import com.pengrad.telegrambot.model.request.ParseMode;
-import com.pengrad.telegrambot.request.AbstractMultipartRequest;
 import com.pengrad.telegrambot.request.AbstractSendRequest;
 import com.pengrad.telegrambot.request.ContentTypes;
 import com.pengrad.telegrambot.request.DeleteWebhook;
@@ -38,7 +37,7 @@ import ua.com.pragmasoft.k1te.backend.router.domain.Connector;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 import ua.com.pragmasoft.k1te.backend.router.domain.Router;
 import ua.com.pragmasoft.k1te.backend.router.domain.RoutingContext;
-import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryMessage;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryPayload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessagePayload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
@@ -162,18 +161,34 @@ public class TelegramConnector implements Connector, Closeable {
         text = '#' + from.getId() + '\n' + text;
       }
       sendMessage = new SendMessage(destinationChatId, text);
-    } else if (ctx.request instanceof BinaryMessage binary) {
-      String uri = binary.uri().toString();
-      AbstractMultipartRequest<?> binaryMessage = binary.isImage() ? new SendPhoto(destinationChatId, uri)
-          : new SendDocument(destinationChatId, uri);
+    } else if (ctx.request instanceof BinaryPayload binaryPayload) {
+
+      var fileIdOrUri = (binaryPayload instanceof TelegramBinaryMessage telegramBinaryPayload)
+          ? telegramBinaryPayload.fileId()
+          : binaryPayload.uri().toString();
+
+      var binaryMessage = binaryPayload.isImage()
+          ? new SendPhoto(destinationChatId, fileIdOrUri)
+          : new SendDocument(destinationChatId, fileIdOrUri);
+
       sendMessage = binaryMessage
-          .fileName(binary.fileName())
-          .contentType(binary.fileType());
+          .fileName(binaryPayload.fileName())
+          .contentType(binaryPayload.fileType());
 
     } else {
       throw new RoutingException(UNSUPPORTED_PAYLOAD + ctx.request.getClass().getSimpleName());
     }
+    if (log.isDebugEnabled()) {
+      log.debug(">> {}", sendMessage.toWebhookResponse());
+    }
     var sendResponse = this.bot.execute(sendMessage);
+    if (log.isDebugEnabled()) {
+      log.debug("<< {}", sendResponse);
+    }
+    if (!sendResponse.isOk()) {
+      throw new RoutingException(
+          "%s connector error: (%d) %s".formatted(this.id(), sendResponse.errorCode(), sendResponse.description()));
+    }
     ctx.response = new MessageAck(ctx.request.messageId(),
         fromLong(sendResponse.message().messageId().longValue()),
         Instant.ofEpochSecond(sendResponse.message().date()));
@@ -239,17 +254,33 @@ public class TelegramConnector implements Connector, Closeable {
         .orElseThrow(RoutingException::new);
     Member to = this.channels.find(from.getChannelName(), toMemberId);
     String msgId = fromLong(message.messageId().longValue());
+    Instant messageTimestamp = Instant.ofEpochSecond(message.date());
     MessagePayload request = null;
     var document = message.document();
     if (null != document) {
-      var url = this.fileDownloadUrl(document.fileId());
-      request = new BinaryMessage(url, document.fileName(), document.mimeType(), document.fileSize());
+      request = new TelegramBinaryMessage(
+          msgId,
+          document.fileId(),
+          document.fileName(),
+          document.mimeType(),
+          document.fileSize(),
+          messageTimestamp);
     } else if (null != message.photo() && message.photo().length > 0) {
       PhotoSize photo = largestPhoto(message.photo());
-      var url = this.fileDownloadUrl(photo.fileId());
-      request = new BinaryMessage(url, message.text(), ContentTypes.PHOTO_MIME_TYPE, photo.fileSize(), msgId);
+      var photoFileName = Optional
+          .ofNullable(message.caption())
+          .orElse(ContentTypes.PHOTO_FILE_NAME);
+      request = new TelegramBinaryMessage(
+          msgId,
+          photo.fileId(),
+          photoFileName,
+          ContentTypes.PHOTO_MIME_TYPE,
+          photo.fileSize(),
+          messageTimestamp);
+    } else if (null != message.text()) {
+      request = new PlaintextMessage(message.text(), msgId, messageTimestamp);
     } else {
-      request = new PlaintextMessage(message.text(), msgId, Instant.ofEpochSecond(message.date()));
+      throw new RoutingException("unsupported message type");
     }
 
     var ctx = RoutingContext
@@ -321,16 +352,6 @@ public class TelegramConnector implements Connector, Closeable {
         .orElseThrow();
   }
 
-  private String fileDownloadUrl(String fileId) {
-    GetFile getFile = new GetFile(fileId);
-    GetFileResponse getFileResponse = bot.execute(getFile);
-    File file = getFileResponse.file();
-    return bot.getFullFilePath(file);
-  }
-
-  private record CommandWithArgs(String command, String args) {
-  }
-
   private static String userToString(User user) {
     final StringBuilder b = new StringBuilder();
     var name = user.firstName();
@@ -345,6 +366,82 @@ public class TelegramConnector implements Connector, Closeable {
       b.append(name);
     }
     return b.isEmpty() ? user.username() : b.toString();
+  }
+
+  private record CommandWithArgs(String command, String args) {
+  }
+
+  /**
+   * More efficient implementation of a BinaryPayload lazily creates file url
+   * which is only needed when routed to other connectors.
+   * Exposes fileId which is needed to re-route the file inside the
+   * Telegram connector
+   * 
+   */
+  private class TelegramBinaryMessage implements BinaryPayload {
+
+    private final String messageId;
+    private URI uri;
+    private final String fileId;
+    private final String fileName;
+    private final String fileType;
+    private final long fileSize;
+    private final Instant created;
+
+    private TelegramBinaryMessage(String messageId, String fileId, String fileName, String fileType,
+        long fileSize, Instant created) {
+      this.messageId = messageId;
+      this.fileId = fileId;
+      this.fileName = fileName;
+      this.fileType = fileType;
+      this.fileSize = fileSize;
+      this.created = created;
+    }
+
+    @Override
+    public String messageId() {
+      return this.messageId;
+    }
+
+    /**
+     * Lazily retrieves URI.
+     */
+    @Override
+    public URI uri() {
+      if (null == this.uri) {
+        GetFile getFile = new GetFile(this.fileId());
+        GetFileResponse getFileResponse = TelegramConnector.this.bot.execute(getFile);
+        File file = getFileResponse.file();
+        String uriString = TelegramConnector.this.bot.getFullFilePath(file);
+        this.uri = URI.create(uriString);
+      }
+      return this.uri;
+    }
+
+    String fileId() {
+      return this.fileId;
+    }
+
+    @Override
+    public String fileName() {
+      return this.fileName;
+    }
+
+    @Override
+    public String fileType() {
+      return this.fileType;
+    }
+
+    @Override
+    public long fileSize() {
+      return this.fileSize;
+    }
+
+    @Override
+    public Instant created() {
+      return this.created;
+    }
+
   }
 
 }
