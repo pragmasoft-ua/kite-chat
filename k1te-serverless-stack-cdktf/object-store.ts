@@ -5,6 +5,8 @@ import { TerraformOutput } from "cdktf";
 import { Construct } from "constructs";
 import { S3 } from "iam-floyd/lib/generated";
 import { Grantable } from "./grantable";
+import { S3BucketCorsConfiguration } from "@cdktf/provider-aws/lib/s3-bucket-cors-configuration";
+import { S3BucketLifecycleConfiguration } from "@cdktf/provider-aws/lib/s3-bucket-lifecycle-configuration";
 
 export type ObjectStoreProps = {
   bucketPrefix: string;
@@ -22,17 +24,24 @@ export class ObjectStore extends Construct {
 
     this.bucket = new S3Bucket(this, "object-store", {
       bucketPrefix,
+    });
 
-      lifecycleRule: [
+    new S3BucketLifecycleConfiguration(this, "object-store-lifecycle-config", {
+      bucket: this.bucket.id,
+      rule: [
         {
           id: "expire-objects",
           expiration: { days: 7 },
-          enabled: true,
+          status: "Enabled",
         },
       ],
+    });
+
+    new S3BucketCorsConfiguration(this, "object-store-cors-config", {
+      bucket: this.bucket.id,
       corsRule: [
         {
-          allowedMethods: ["GET", "PUT", "HEAD"],
+          allowedMethods: ["HEAD", "GET", "PUT"],
           allowedOrigins: ["*"],
           allowedHeaders: ["*"],
           exposeHeaders: [],

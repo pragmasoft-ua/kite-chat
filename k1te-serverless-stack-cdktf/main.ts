@@ -5,7 +5,7 @@ import { KiteStack } from "./kite-stack";
 
 const app = new App();
 
-const kiteStack = new KiteStack(app, "kite");
+const kiteStack = new KiteStack(app, "kite", "k1te.chat");
 new S3Backend(kiteStack, {
   bucket: "k1te-chat-tfstate",
   key: `kite/terraform.tfstate`,

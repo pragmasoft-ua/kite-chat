@@ -79,16 +79,18 @@ export class KiteStack extends TerraformStack {
     const restApi = new RestApi(this, "http-api", restApiProps);
 
     wsApi.domainName &&
+      wsApiProps?.domainName &&
       dnsZone &&
-      dnsZone.createRecord(wsApi.domainName.domainName, {
+      dnsZone.createRecord(wsApiProps.domainName, {
         type: "CNAME",
         name: wsApi.domainName.domainName,
         value: wsApi.domainName.domainNameConfiguration.targetDomainName,
       });
 
     restApi.domainName &&
+      restApiProps?.domainName &&
       dnsZone &&
-      dnsZone.createRecord(restApi.domainName.domainName, {
+      dnsZone.createRecord(restApiProps.domainName, {
         type: "CNAME",
         name: restApi.domainName.domainName,
         value: restApi.domainName.domainNameConfiguration.targetDomainName,

@@ -6,7 +6,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ua.com.pragmasoft</groupId>
   <artifactId>k1te-chat-parent</artifactId>
-  <version>2023.10.1</version>
+  <version>2023.10.3</version>
   <packaging>pom</packaging>
 
   <name>k1te-chat-parent</name>
@@ -17,14 +17,13 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <compiler-plugin.version>3.11.0</compiler-plugin.version>
     <maven.compiler.parameters>true</maven.compiler.parameters>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
     <maven.compiler.release>17</maven.compiler.release>
     <quarkus-plugin.version>3.3.0</quarkus-plugin.version>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.version>3.4.2</quarkus.platform.version>
     <surefire-plugin.version>3.1.2</surefire-plugin.version>
+    <spotless.version>2.40.0</spotless.version>
     <skipITs>true</skipITs>
   </properties>
 
@@ -58,6 +57,62 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <!-- optional: limit format enforcement to just the files changed by this feature branch -->
+          <ratchetFrom>origin/main</ratchetFrom>
+          <formats>
+            <!-- you can define as many formats as you want, each is independent -->
+            <format>
+              <!-- define the files to apply to -->
+              <includes>
+                <include>*.md</include>
+                <include>.gitignore</include>
+                <include>*.xml</include>
+              </includes>
+              <!-- define the steps to apply to those files -->
+              <trimTrailingWhitespace />
+              <endWithNewline />
+            </format>
+          </formats>
+          <!-- define a language-specific format -->
+          <java>
+            <!-- no need to specify files, inferred automatically, but you can if you want -->
+            <!-- apply a specific flavor of google-java-format and reflow long strings -->
+            <googleJavaFormat>
+              <reflowLongStrings>true</reflowLongStrings>
+              <formatJavadoc>true</formatJavadoc>
+            </googleJavaFormat>
+            <!-- <eclipse>
+              <file>
+                https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml</file>
+            </eclipse> -->
+            <!-- make sure every file has the following copyright header.
+              optionally, Spotless can set copyright years by digging
+              through git history (see "license" section below) -->
+            <licenseHeader>
+              <content>/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, $YEAR */</content>
+              <!-- or <file>${project.basedir}/license-header</file> -->
+            </licenseHeader>
+          </java>
+        </configuration>
+      </plugin>
+    </plugins>
+
+  </build>
 
   <modules>
     <module>k1te-backend</module>
