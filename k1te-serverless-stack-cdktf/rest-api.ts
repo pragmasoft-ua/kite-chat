@@ -35,7 +35,7 @@ class RestApiHandler extends Construct {
     this.integration = new Apigatewayv2Integration(this, "lambda-integration", {
       apiId: gw.id,
       integrationType: "AWS_PROXY",
-      integrationUri: handler.arn,
+      integrationUri: handler.alias.arn,
       payloadFormatVersion: "2.0",
     });
 
