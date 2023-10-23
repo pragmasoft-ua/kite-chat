@@ -33,3 +33,13 @@ aws lambda invoke outfile.json --cli-binary-format raw-in-base64-out --function-
 ```bash
 aws lambda delete-function --function-name TestLambda
 ```
+
+### SnapStart
+In order to get the maximum velocity of Lambda using SnapStart you need to 
+specify Java classes to preloaded them at Snapshot stage.
+
+In order to do so use the **class-preloader** bash script, here is an example.
+```bash
+./class-preloader -groups "/aws/lambda/tg-handler /aws/lambda/ws-handler /aws/lambda/lifecycle-handler"
+```
+Or use ./class-preloader help to get more information.
