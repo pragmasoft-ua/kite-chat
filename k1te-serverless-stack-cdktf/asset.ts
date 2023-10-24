@@ -5,32 +5,32 @@ import path = require("node:path");
 import fs = require("node:fs");
 import assert = require("node:assert");
 
-type Runtime = "java11" | "java17";
+type Runtime = "java11" | "java17" | "nodejs18.x";
+type Handler =
+  | "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
+  | "index.handler";
 
-export type QuarkusLambdaAssetProps = {
+export type LambdaAssetProps = {
   relativeProjectPath: string;
+  target?: string;
   runtime?: Runtime;
   assetType?: AssetType;
-  handler?: string;
+  handler?: Handler;
 };
 
-const DEFAULT_PROPS: Partial<QuarkusLambdaAssetProps> = {
+const DEFAULT_PROPS: Partial<LambdaAssetProps> = {
   runtime: "java17",
   assetType: AssetType.FILE,
   handler:
     "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest",
 };
 
-export class QuarkusLambdaAsset extends Construct {
+export class LambdaAsset extends Construct {
   readonly asset: TerraformAsset;
   readonly runtime: Runtime;
   readonly handler: string;
 
-  constructor(
-    scope: Construct,
-    id: string,
-    props: Readonly<QuarkusLambdaAssetProps>
-  ) {
+  constructor(scope: Construct, id: string, props: Readonly<LambdaAssetProps>) {
     super(scope, id);
 
     const {
@@ -38,12 +38,13 @@ export class QuarkusLambdaAsset extends Construct {
       runtime,
       assetType: type,
       handler,
+      target = "target/function.zip",
     } = Object.assign({}, DEFAULT_PROPS, props);
 
     const absoluteAssetPath = path.resolve(
       __dirname,
       relativeProjectPath,
-      "target/function.zip"
+      target
     );
 
     assert(

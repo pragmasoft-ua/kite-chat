@@ -5,7 +5,7 @@ import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group
 import { LambdaAlias } from "@cdktf/provider-aws/lib/lambda-alias";
 import { Lazy } from "cdktf";
 import { Construct } from "constructs";
-import { QuarkusLambdaAsset } from "./asset";
+import { LambdaAsset } from "./asset";
 import { Grantable, ServicePrincipal } from "./grantable";
 import { Role } from "./iam";
 import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
@@ -13,7 +13,9 @@ import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
 export const LAMBDA_SERVICE_PRINCIPAL = "lambda.amazonaws.com";
 
 export type LambdaProps = {
-  asset: QuarkusLambdaAsset;
+  asset: LambdaAsset;
+  isSnapStart?: boolean;
+  architectures?: string[];
   role?: Role;
 
   /**
@@ -41,6 +43,7 @@ const DEFAULT_PROPS: Partial<LambdaProps> = {
   logRetentionInDays: 7,
   timeout: 15,
   memorySize: 256,
+  architectures: ["x86_64"],
 };
 
 export class Lambda extends Construct {
@@ -52,11 +55,25 @@ export class Lambda extends Construct {
   constructor(scope: Construct, id: string, props: Readonly<LambdaProps>) {
     super(scope, id);
 
-    const { role, asset, memorySize, timeout, environment } = {
+    const {
+      role,
+      asset,
+      memorySize,
+      timeout,
+      environment,
+      architectures,
+      isSnapStart = false,
+    } = {
       ...DEFAULT_PROPS,
       ...props,
     };
     this.environment = environment ?? {};
+    const publish = isSnapStart;
+    const snapStart = isSnapStart
+      ? {
+          applyOn: "PublishedVersions",
+        }
+      : undefined;
 
     this.role = role ?? this.defaultRole();
 
@@ -72,11 +89,9 @@ export class Lambda extends Construct {
           },
         }) as unknown as Record<string, string>,
       },
-      architectures: ["x86_64"],
-      snapStart: {
-        applyOn: "PublishedVersions",
-      },
-      publish: true,
+      architectures,
+      snapStart,
+      publish,
       filename: asset.path,
       sourceCodeHash: asset.hash,
       runtime: asset.runtime,

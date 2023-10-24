@@ -1,0 +1,23 @@
+{
+  "requestContext": {
+    "routeKey": "$default",
+    "messageId": "NQoEIca4PHcCGwg=",
+    "eventType": "MESSAGE",
+    "extendedRequestId": "NQoEIGXkvHcF63A=",
+    "requestTime": "23/Oct/2023:14:44:54 +0000",
+    "messageDirection": "IN",
+    "stage": "prod",
+    "connectedAt": 1698072294509,
+    "requestTimeEpoch": 1698072294956,
+    "identity": {
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ",
+      "sourceIp": "some api"
+    },
+    "requestId": "NQoEIGXkvHcF63A=",
+    "domainName": "domain name",
+    "connectionId": "NQoEEcatvHcCGwg=",
+    "apiId": "api"
+  },
+  "body": "[\"JOIN\",\"HqcMLf1qT4\",null,\"my-chat-123\"]",
+  "isBase64Encoded": false
+}
