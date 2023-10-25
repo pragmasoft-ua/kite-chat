@@ -21,7 +21,6 @@ import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.serverless.handler.event.LambdaEvent;
 
 @Named(value = "main")
-@SuppressWarnings("rawtypes")
 public class RequestDispatcher implements RequestStreamHandler {
 
   private final ObjectMapper objectMapper;
@@ -30,24 +29,7 @@ public class RequestDispatcher implements RequestStreamHandler {
   @Inject
   public RequestDispatcher(ObjectMapper objectMapper, Instance<RequestHandler<?, ?>> handlers) {
     this.objectMapper = objectMapper;
-    handlers.forEach(
-        handler -> {
-          if (handler.getClass().getGenericInterfaces().length > 0) {
-            Type[] arguments = null;
-            if (handler.getClass().getGenericInterfaces()[0] == ClientProxy.class) {
-              arguments =
-                  ((ParameterizedType) handler.getClass().getSuperclass().getGenericInterfaces()[0])
-                      .getActualTypeArguments();
-            } else {
-              arguments =
-                  ((ParameterizedType) handler.getClass().getGenericInterfaces()[0])
-                      .getActualTypeArguments();
-            }
-            if (arguments != null && arguments.length > 0) {
-              this.handlers.put(arguments[0], handler);
-            }
-          }
-        });
+    registerHandlers(handlers);
   }
 
   @Override
@@ -67,5 +49,26 @@ public class RequestDispatcher implements RequestStreamHandler {
     }
 
     objectMapper.writeValue(output, handler.handleRequest(lambdaEvent, context));
+  }
+
+  private void registerHandlers(Instance<RequestHandler<?, ?>> handlers) {
+    handlers.forEach(
+        handler -> {
+          if (handler.getClass().getGenericInterfaces().length > 0) {
+            Type[] arguments = null;
+            if (handler.getClass().getGenericInterfaces()[0] == ClientProxy.class) {
+              arguments =
+                  ((ParameterizedType) handler.getClass().getSuperclass().getGenericInterfaces()[0])
+                      .getActualTypeArguments();
+            } else {
+              arguments =
+                  ((ParameterizedType) handler.getClass().getGenericInterfaces()[0])
+                      .getActualTypeArguments();
+            }
+            if (arguments != null && arguments.length > 0) {
+              this.handlers.put(arguments[0], handler);
+            }
+          }
+        });
   }
 }

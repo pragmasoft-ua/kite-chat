@@ -5,7 +5,7 @@ import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group
 import { LambdaAlias } from "@cdktf/provider-aws/lib/lambda-alias";
 import { Lazy } from "cdktf";
 import { Construct } from "constructs";
-import { LambdaAsset } from "./asset";
+import { Resource } from "./asset";
 import { Grantable, ServicePrincipal } from "./grantable";
 import { Role } from "./iam";
 import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
@@ -13,7 +13,7 @@ import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
 export const LAMBDA_SERVICE_PRINCIPAL = "lambda.amazonaws.com";
 
 export type LambdaProps = {
-  asset: LambdaAsset;
+  asset: Resource;
   isSnapStart?: boolean;
   architectures?: string[];
   role?: Role;

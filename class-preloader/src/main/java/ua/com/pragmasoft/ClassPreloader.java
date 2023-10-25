@@ -3,12 +3,10 @@ package ua.com.pragmasoft;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 
 public class ClassPreloader {
   public static void main(String[] args) {
     String logGroupNames = System.getProperty("groupNames");
-    Objects.requireNonNull(logGroupNames);
     List<String> groupNames = List.of(logGroupNames.replace("\"", "").split(" "));
     Path output =
         Path.of(

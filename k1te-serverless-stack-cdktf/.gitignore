@@ -11,3 +11,4 @@ tsconfig.tsbuildinfo
 !setup.js
 docker
 .env
+lifecycle-handler/lifecycle.zip

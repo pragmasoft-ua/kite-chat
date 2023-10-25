@@ -5,7 +5,7 @@ LIMIT=3
 
 function help() {
   echo "
-  Usage: ./class-preloader - runs class-preloader Java project that go to AWS CloudWatch and extract Logs which have loaded class by JVM.
+  Usage: ./class-preloader.sh - runs class-preloader Java project that go to AWS CloudWatch and extract Logs which have loaded class by JVM.
   Parameters:
   1) -groups (required) [here you need to specify your LogGroups' names (use SPACE as a delimiter)]
   2) -limit [here you can specify the number of LogStreams that script will use per LogGroup]
@@ -47,9 +47,8 @@ function generate() {
     limit=${LIMIT}
   fi
 
-  cd ../class-preloader || exit
-  echo "Building maven project"
-  if mvn install; then
+
+  if mvn compile; then
     echo "Project was built successfully"
     mvn exec:java -DgroupNames=\""${array[*]}"\" -Doutput="${output}" -Dlimit="${limit}"
     exit 0

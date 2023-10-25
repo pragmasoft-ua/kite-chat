@@ -2,7 +2,6 @@
 package ua.com.pragmasoft.k1te.serverless.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
 import java.io.IOException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -19,21 +18,26 @@ class LambdaHandlerTest {
   @Test
   void testHttpEvent() throws IOException {
     LambdaEvent lambdaEvent =
-        objectMapper.readValue(new File("http-event.json"), LambdaEvent.class);
+        objectMapper.readValue(
+            getClass().getClassLoader().getResourceAsStream("http-event.json"), LambdaEvent.class);
     Assertions.assertSame(lambdaEvent.getClass(), HttpV2LambdaEvent.class);
   }
 
   @Test
   void testWebSocketConnectEvent() throws IOException {
     LambdaEvent lambdaEvent =
-        objectMapper.readValue(new File("ws-connect-event.json"), LambdaEvent.class);
+        objectMapper.readValue(
+            getClass().getClassLoader().getResourceAsStream("ws-connect-event.json"),
+            LambdaEvent.class);
     Assertions.assertSame(lambdaEvent.getClass(), WebSocketLambdaEvent.class);
   }
 
   @Test
   void testWebSocketMessageEvent() throws IOException {
     LambdaEvent lambdaEvent =
-        objectMapper.readValue(new File("ws-message-event.json"), LambdaEvent.class);
+        objectMapper.readValue(
+            getClass().getClassLoader().getResourceAsStream("ws-message-event.json"),
+            LambdaEvent.class);
     Assertions.assertSame(lambdaEvent.getClass(), WebSocketLambdaEvent.class);
   }
 }

@@ -1,13 +1,16 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.serverless.router.application;
 
 import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.request.GetMe;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import java.time.Duration;
+import java.util.stream.Collectors;
 import org.crac.Context;
 import org.crac.Core;
 import org.crac.Resource;
@@ -21,14 +24,11 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import ua.com.pragmasoft.k1te.backend.router.domain.Connector;
 
-import java.time.Duration;
-import java.util.stream.Collectors;
-
 /**
- * This class eagerly initializes all connectors, not only those
- * injected to the active lambda handler
- * <p>
- * https://quarkus.io/guides/cdi-reference#eager-instantiation-of-beans
+ * This class eagerly initializes all connectors, not only those injected to the active lambda
+ * handler
+ *
+ * <p>https://quarkus.io/guides/cdi-reference#eager-instantiation-of-beans
  */
 @Startup
 @ApplicationScoped
@@ -44,12 +44,13 @@ public class ConnectorsInitializer implements Resource {
   private final TelegramBot bot;
 
   @Inject
-  public ConnectorsInitializer(final Instance<Connector> connectors,
-                               DynamoDbClient dbClient,
-                               ApiGatewayManagementApiClient apiClient,
-                               S3Client s3Client,
-                               S3Presigner presigner,
-                               TelegramBot bot) {
+  public ConnectorsInitializer(
+      final Instance<Connector> connectors,
+      DynamoDbClient dbClient,
+      ApiGatewayManagementApiClient apiClient,
+      S3Client s3Client,
+      S3Presigner presigner,
+      TelegramBot bot) {
     this.connectors = connectors;
     this.dbClient = dbClient;
     this.apiClient = apiClient;
@@ -70,7 +71,8 @@ public class ConnectorsInitializer implements Resource {
     this.initS3();
     this.initTelegramBot();
     Log.debug(
-            "Initialized connectors: " + this.connectors.stream().map(Connector::id).collect(Collectors.joining(",")));
+        "Initialized connectors: "
+            + this.connectors.stream().map(Connector::id).collect(Collectors.joining(",")));
   }
 
   @Override
@@ -85,9 +87,7 @@ public class ConnectorsInitializer implements Resource {
 
   private void initApiGatewayClient() {
     try {
-      apiClient.getConnection(GetConnectionRequest.builder()
-              .connectionId(DUMMY)
-              .build());
+      apiClient.getConnection(GetConnectionRequest.builder().connectionId(DUMMY).build());
     } catch (ApiGatewayManagementApiException apiException) {
       Log.debug("Catch ApiGatewayManagementApiException during dummy request");
     }
@@ -101,18 +101,16 @@ public class ConnectorsInitializer implements Resource {
       Log.debug("Catch S3Exception during dummy request");
     }
     Log.debug("S3Client has been initialized");
-    presigner.presignGetObject(GetObjectPresignRequest.builder()
+    presigner.presignGetObject(
+        GetObjectPresignRequest.builder()
             .signatureDuration(Duration.ofDays(1))
-            .getObjectRequest(b -> b
-                    .bucket(DUMMY)
-                    .key(DUMMY)
-                    .build())
+            .getObjectRequest(b -> b.bucket(DUMMY).key(DUMMY).build())
             .build());
     Log.debug("S3Presigner has been initialized");
   }
 
   private void initTelegramBot() {
-    bot.execute(new SendMessage(DUMMY, DUMMY));
+    bot.execute(new GetMe());
+    Log.debug("Telegram Bot has been initialized");
   }
 }
-
