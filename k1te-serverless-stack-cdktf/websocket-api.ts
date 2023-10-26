@@ -104,7 +104,7 @@ export class WebsocketApiStage extends Construct {
       {
         apiId: scope.api.id,
         integrationType: "AWS_PROXY",
-        integrationUri: handler.arn,
+        integrationUri: handler.alias.arn,
         credentialsArn: principal.role.arn,
         contentHandlingStrategy: "CONVERT_TO_TEXT",
         passthroughBehavior: "WHEN_NO_MATCH",

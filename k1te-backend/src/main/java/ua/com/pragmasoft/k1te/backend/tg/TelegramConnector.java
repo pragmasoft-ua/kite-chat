@@ -230,6 +230,7 @@ public class TelegramConnector implements Connector, Closeable {
           RoutingContext
               .create()
               .withOriginConnection(originConnection)
+              .withFrom(client)
               .withRequest(new PlaintextMessage(
                   "✅ %s left channel %s".formatted(client.getUserName(), client.getChannelName()))));
       response = "✅ You left channel %s".formatted(client.getChannelName());
@@ -376,7 +377,7 @@ public class TelegramConnector implements Connector, Closeable {
    * which is only needed when routed to other connectors.
    * Exposes fileId which is needed to re-route the file inside the
    * Telegram connector
-   * 
+   *
    */
   private class TelegramBinaryMessage implements BinaryPayload {
 

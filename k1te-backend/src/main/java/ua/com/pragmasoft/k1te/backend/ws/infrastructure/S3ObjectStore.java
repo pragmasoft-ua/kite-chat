@@ -1,11 +1,5 @@
 package ua.com.pragmasoft.k1te.backend.ws.infrastructure;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -18,19 +12,26 @@ import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadRequest;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadResponse;
 import ua.com.pragmasoft.k1te.backend.ws.ObjectStore;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+
 public final class S3ObjectStore implements ObjectStore {
 
   private static final Duration SIGNATURE_VALIDITY = Duration.ofMinutes(60);
 
-  static final S3Presigner presigner = S3Presigner.create();
+  private final S3Presigner presigner;
 
   private final String bucketName;
 
   private final S3Client s3Client;
 
-  public S3ObjectStore(String bucketName, S3Client s3Client) {
+  public S3ObjectStore(String bucketName, S3Client s3Client, S3Presigner presigner) {
     this.bucketName = bucketName;
     this.s3Client = s3Client;
+    this.presigner = presigner;
   }
 
   @Override
