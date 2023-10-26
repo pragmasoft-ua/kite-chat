@@ -1,0 +1,191 @@
+{
+  "resources":{
+  "includes":[{
+    "pattern":"\\QMETA-INF/dev-mode-context.dat\\E"
+  }, {
+    "pattern":"\\QMETA-INF/importmap.json\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/java.lang.System$LoggerFinder\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/java.nio.file.spi.FileSystemProvider\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/org.jboss.logmanager.ConfiguratorFactory\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/org.jboss.logmanager.LogContextConfigurator\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/org.jboss.logmanager.LogContextInitializer\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/org.jboss.logmanager.MDCProvider\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/org.slf4j.spi.SLF4JServiceProvider\\E"
+  }, {
+    "pattern":"\\Qio/quarkus/deployment/dev/DevModeMain.class\\E"
+  }, {
+    "pattern":"\\Qjava/io/Closeable.class\\E"
+  }, {
+    "pattern":"\\Qjava/io/Serializable.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/AutoCloseable.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Boolean.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Byte.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/CharSequence.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Character.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Class.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Comparable.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Double.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Enum.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Float.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Integer.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Iterable.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Long.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Number.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Object.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Short.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/String.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/Throwable.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/annotation/Documented.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/annotation/Inherited.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/annotation/Retention.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/annotation/Target.class\\E"
+  }, {
+    "pattern":"\\Qjava/lang/reflect/Method.class\\E"
+  }, {
+    "pattern":"\\Qjava/net/URI.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/Collection.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/List.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/Map.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/Optional.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/OptionalDouble.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/OptionalInt.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/OptionalLong.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/Set.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/concurrent/CompletableFuture.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/concurrent/Executor.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/concurrent/ExecutorService.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/concurrent/ScheduledExecutorService.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/function/Consumer.class\\E"
+  }, {
+    "pattern":"\\Qjava/util/function/Supplier.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/io/Closeable.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/io/Serializable.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/AutoCloseable.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Boolean.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Byte.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/CharSequence.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Character.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Class.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Comparable.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Double.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Enum.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Float.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Integer.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Iterable.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Long.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Number.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Object.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Short.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/String.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/Throwable.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/annotation/Documented.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/annotation/Inherited.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/annotation/Retention.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/annotation/Target.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/lang/reflect/Method.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/net/URI.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/Collection.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/List.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/Map.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/Optional.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/OptionalDouble.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/OptionalInt.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/OptionalLong.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/Set.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/concurrent/CompletableFuture.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/concurrent/Executor.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/concurrent/ExecutorService.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/concurrent/ScheduledExecutorService.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/function/Consumer.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjava/util/function/Supplier.class\\E"
+  }, {
+    "pattern":"java.base:\\Qjdk/internal/icu/impl/data/icudt67b/nfkc.nrm\\E"
+  }, {
+    "pattern":"java.base:\\Qjdk/internal/icu/impl/data/icudt67b/uprops.icu\\E"
+  }, {
+    "pattern":"java.base:\\Qsun/net/idn/uidna.spp\\E"
+  }]},
+  "bundles":[]
+}

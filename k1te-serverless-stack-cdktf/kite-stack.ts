@@ -114,13 +114,15 @@ export class KiteStack extends TerraformStack {
       TELEGRAM_BOT_TOKEN: telegramBotToken.value,
       TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
       BUCKET_NAME: objectStore.bucket.bucket,
-      JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1",
+      DISABLE_SIGNAL_HANDLERS: "true",
     };
 
     const memorySize = 256;
 
     const quarkusAsset = new LambdaAsset(this, "k1te-serverless-quarkus", {
       relativeProjectPath: "../k1te-serverless",
+      handler: "hello.handler",
+      runtime: "provided.al2",
     });
     const archiveResource = new ArchiveResource(
       this,
@@ -135,11 +137,10 @@ export class KiteStack extends TerraformStack {
       role,
       asset: quarkusAsset,
       environment: {
-        QUARKUS_LAMBDA_HANDLER: "main",
         ...PROD_ENV,
       },
       memorySize,
-      isSnapStart: true,
+      timeout: 60,
     });
 
     wsApiStage.addDefaultRoutes(mainHandler, apiGatewayPrincipal);

@@ -1,0 +1,8 @@
+[
+  {
+    "interfaces":["io.smallrye.faulttolerance.api.RateLimit","io.quarkus.deployment.recording.AnnotationProxyProvider$AnnotationProxy"]
+  },
+  {
+    "interfaces":["sun.misc.SignalHandler"]
+  }
+]
