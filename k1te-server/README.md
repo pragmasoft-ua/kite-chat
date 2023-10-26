@@ -108,7 +108,7 @@ First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade
 
 ### TODO
 
-- `/leave` does not work **Cannot dispatch request, no route found**, then simply **Not found**
+- ✅`/leave` does not work **Cannot dispatch request, no route found**, then simply **Not found**
 - if I send an image it responds with error message `text`
 - After I add a member to the support chat, got ⛔ Not found member
 

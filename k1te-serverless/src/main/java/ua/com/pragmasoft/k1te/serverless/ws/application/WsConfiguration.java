@@ -1,7 +1,9 @@
 package ua.com.pragmasoft.k1te.serverless.ws.application;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 
+import io.quarkus.runtime.Startup;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.quarkus.logging.Log;
@@ -11,6 +13,7 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.apigatewaymanagementapi.ApiGatewayManagementApiClient;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import ua.com.pragmasoft.k1te.backend.router.domain.Channels;
 import ua.com.pragmasoft.k1te.backend.router.domain.Router;
 import ua.com.pragmasoft.k1te.backend.ws.ObjectStore;
@@ -20,11 +23,19 @@ import ua.com.pragmasoft.k1te.backend.ws.infrastructure.S3ObjectStore;
 
 public class WsConfiguration {
 
+
   @Produces
   @ApplicationScoped
   @SuppressWarnings("java:S6241") // Region is encoded in the endpoint uri.
   public ApiGatewayManagementApiClient apiClient(
-      @ConfigProperty(name = "ws.api.execution.endpoint") final URI wsApiExecutionEndpoint) {
+      @ConfigProperty(name = "ws.api.execution.endpoint") URI wsApiExecutionEndpoint) {
+    if (wsApiExecutionEndpoint.getScheme().equals("wss")) {
+      try {
+        wsApiExecutionEndpoint = new URI("https",wsApiExecutionEndpoint.getSchemeSpecificPart(),wsApiExecutionEndpoint.getFragment());
+      } catch (URISyntaxException e) {
+        throw new IllegalStateException(e.getMessage(), e);
+      }
+    }
     Log.infof("ApiGatewayManagementApiClient endpoint: %s", wsApiExecutionEndpoint);
     return ApiGatewayManagementApiClient
         .builder()
@@ -41,8 +52,8 @@ public class WsConfiguration {
   }
 
   @ApplicationScoped
-  public S3ObjectStore objectStore(@ConfigProperty(name = "bucket.name") String bucketName, S3Client s3Client) {
-    return new S3ObjectStore(bucketName, s3Client);
+  public S3ObjectStore objectStore(@ConfigProperty(name = "bucket.name") String bucketName, S3Client s3Client, S3Presigner presigner) {
+    return new S3ObjectStore(bucketName, s3Client, presigner);
   }
 
   @Produces

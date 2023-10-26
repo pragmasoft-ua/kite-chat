@@ -8,7 +8,7 @@ import {
 } from "cdktf";
 import { Construct } from "constructs";
 import { ApiGatewayPrincipal } from "./apigateway-principal";
-import { QuarkusLambdaAsset } from "./asset";
+import { ArchiveResource, LambdaAsset } from "./asset";
 import { CloudflareDnsZone } from "./dns-zone";
 import { DynamoDbSchema } from "./dynamodb-schema";
 import { Role } from "./iam";
@@ -18,6 +18,7 @@ import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
 import { TlsCertificate } from "./tls-certificate";
 import { WebsocketApi } from "./websocket-api";
 import { ObjectStore } from "./object-store";
+import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 
@@ -27,6 +28,7 @@ export class KiteStack extends TerraformStack {
     this.node.setContext(ALLOW_TAGS, true);
 
     new AwsProvider(this, "AWS");
+    new ArchiveProvider(this, "archive-provider");
 
     const dnsZone = domainName
       ? new CloudflareDnsZone(this, domainName)
@@ -112,51 +114,54 @@ export class KiteStack extends TerraformStack {
       TELEGRAM_BOT_TOKEN: telegramBotToken.value,
       TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
       BUCKET_NAME: objectStore.bucket.bucket,
+      JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1",
     };
 
     const memorySize = 256;
 
-    const asset = new QuarkusLambdaAsset(this, "k1te-serverless", {
+    const quarkusAsset = new LambdaAsset(this, "k1te-serverless-quarkus", {
       relativeProjectPath: "../k1te-serverless",
     });
+    const archiveResource = new ArchiveResource(
+      this,
+      "kite-serverless-nodejs",
+      {
+        output: "lifecycle-handler/lifecycle.zip",
+        sourceFile: "lifecycle-handler/index.mjs",
+      }
+    );
 
-    const wsHandler = new Lambda(this, "ws-handler", {
+    const mainHandler = new Lambda(this, "request-dispatcher", {
       role,
-      asset,
+      asset: quarkusAsset,
       environment: {
-        QUARKUS_LAMBDA_HANDLER: "ws",
+        QUARKUS_LAMBDA_HANDLER: "main",
         ...PROD_ENV,
       },
       memorySize,
+      isSnapStart: true,
     });
 
-    const telegramHandler = new Lambda(this, "tg-handler", {
-      role,
-      asset,
-      environment: {
-        QUARKUS_LAMBDA_HANDLER: "tg",
-        ...PROD_ENV,
-      },
-      memorySize,
-    });
-
-    wsApiStage.addDefaultRoutes(wsHandler, apiGatewayPrincipal);
-    restApiStage.addHandler(telegramRoute, "POST", telegramHandler);
+    wsApiStage.addDefaultRoutes(mainHandler, apiGatewayPrincipal);
+    restApiStage.addHandler(telegramRoute, "POST", mainHandler);
 
     const lifecycleHandler = new Lambda(this, "lifecycle-handler", {
       role,
-      asset,
+      asset: archiveResource,
       environment: {
-        QUARKUS_LAMBDA_HANDLER: "lifecycle",
-        ...PROD_ENV,
+        TELEGRAM_BOT_TOKEN: telegramBotToken.value,
+        TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
       },
-      memorySize,
+      memorySize: 128,
+      architectures: ["arm64"],
     });
 
     const lifecycle = new LambdaInvocation(this, "lifecycle-invocation", {
       functionName: lifecycleHandler.functionName,
       input: JSON.stringify({}),
       lifecycleScope: "CRUD",
+      triggers: PROD_ENV,
+      dependsOn: [lifecycleHandler.fn],
     });
 
     new TerraformOutput(this, "lifecycle-output", {

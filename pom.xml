@@ -118,5 +118,6 @@
     <module>k1te-backend</module>
     <module>k1te-server</module>
     <module>k1te-serverless</module>
+    <module>class-preloader</module>
   </modules>
 </project>
