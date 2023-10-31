@@ -1,21 +1,20 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.ws;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
 import java.io.StringReader;
 import java.time.Instant;
 import java.util.EnumMap;
 import java.util.Objects;
 import java.util.function.Function;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryMessage;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.JoinChannel;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
-import ua.com.pragmasoft.k1te.backend.router.domain.payload.Ping;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload.Type;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.Ping;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadRequest;
 
@@ -46,7 +45,6 @@ public class PayloadDecoder implements Function<String, Payload> {
       Objects.requireNonNull(decoder, "No decoder for " + type);
       return decoder.apply(array);
     }
-
   }
 
   private static Payload decodeJoinChannel(JsonArray array) {
@@ -62,10 +60,7 @@ public class PayloadDecoder implements Function<String, Payload> {
     String messageId = array.getString(1);
     String text = array.getString(2);
     Instant timestamp = Instant.parse(array.getString(3));
-    return new PlaintextMessage(
-        text,
-        messageId,
-        timestamp);
+    return new PlaintextMessage(text, messageId, timestamp);
   }
 
   private static Payload decodeBinaryMessage(JsonArray array) {

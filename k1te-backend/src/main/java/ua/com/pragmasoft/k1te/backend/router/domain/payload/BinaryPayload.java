@@ -1,3 +1,4 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain.payload;
 
 import java.net.URI;
@@ -22,5 +23,4 @@ public non-sealed interface BinaryPayload extends MessagePayload {
   default Type type() {
     return Type.BIN;
   }
-
 }

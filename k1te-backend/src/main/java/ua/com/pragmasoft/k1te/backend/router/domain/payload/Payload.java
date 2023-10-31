@@ -1,16 +1,14 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain.payload;
 
 import java.io.Serializable;
 
-public sealed interface Payload
-    extends Serializable
-    permits JoinChannel, MessagePayload, OkResponse, ErrorResponse, MessageAck, Ping,
-    Pong {
+public sealed interface Payload extends Serializable
+    permits JoinChannel, MessagePayload, OkResponse, ErrorResponse, MessageAck, Ping, Pong {
 
   Type type();
 
   public enum Type {
-
     JOIN("Join request"),
     ACK("Acknowledge"),
     OK("OK"),
@@ -26,7 +24,5 @@ public sealed interface Payload
     Type(String label) {
       this.label = label;
     }
-
   }
-
 }

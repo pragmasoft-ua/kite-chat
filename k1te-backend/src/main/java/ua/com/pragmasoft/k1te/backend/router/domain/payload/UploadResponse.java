@@ -1,3 +1,4 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain.payload;
 
 import java.net.URI;
@@ -16,10 +17,6 @@ public record UploadResponse(String messageId, URI canonicalUri, URI uploadUri)
 
   @Override
   public String toString() {
-    return type().label
-        + " [uri=" + canonicalUri
-        + ", messageId=" + messageId
-        + "]";
+    return type().label + " [uri=" + canonicalUri + ", messageId=" + messageId + "]";
   }
-
 }

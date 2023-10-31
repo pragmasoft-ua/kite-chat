@@ -1,8 +1,10 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain.payload;
 
 import java.util.Objects;
 
-public record JoinChannel(String memberId, String memberName, String channelName) implements Payload {
+public record JoinChannel(String memberId, String memberName, String channelName)
+    implements Payload {
 
   public JoinChannel(String memberId, String memberName, String channelName) {
     Objects.requireNonNull(memberId, "memberId");
@@ -19,8 +21,13 @@ public record JoinChannel(String memberId, String memberName, String channelName
 
   @Override
   public String toString() {
-    return type().label + " [memberId=" + memberId + ", memberName=" + memberName + ", channelName="
-        + channelName + "]";
+    return type().label
+        + " [memberId="
+        + memberId
+        + ", memberName="
+        + memberName
+        + ", channelName="
+        + channelName
+        + "]";
   }
-
 }

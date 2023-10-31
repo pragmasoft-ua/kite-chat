@@ -1,7 +1,7 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.serverless.ws.application;
 
 import java.io.IOException;
-
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.apigatewaymanagementapi.ApiGatewayManagementApiClient;
 import software.amazon.awssdk.services.apigatewaymanagementapi.model.DeleteConnectionRequest;
@@ -37,10 +37,8 @@ public final class AwsApiGwConnectionRegistry implements WsConnectionRegistry {
 
     @Override
     public void close() throws IOException {
-      final var request = DeleteConnectionRequest
-          .builder()
-          .connectionId(this.connectionUri)
-          .build();
+      final var request =
+          DeleteConnectionRequest.builder().connectionId(this.connectionUri).build();
       AwsApiGwConnectionRegistry.this.apiClient.deleteConnection(request);
     }
 
@@ -52,11 +50,11 @@ public final class AwsApiGwConnectionRegistry implements WsConnectionRegistry {
     @Override
     public void sendObject(Payload payload) throws IOException {
       final var serializedPayload = SdkBytes.fromUtf8String(ENCODER.apply(payload));
-      final var request = PostToConnectionRequest
-          .builder()
-          .connectionId(this.connectionUri)
-          .data(serializedPayload)
-          .build();
+      final var request =
+          PostToConnectionRequest.builder()
+              .connectionId(this.connectionUri)
+              .data(serializedPayload)
+              .build();
       AwsApiGwConnectionRegistry.this.apiClient.postToConnection(request);
     }
   }
@@ -65,5 +63,4 @@ public final class AwsApiGwConnectionRegistry implements WsConnectionRegistry {
   public WsConnection getConnection(String connectionUri) {
     return new AwsApiGwWebsocketConnection(connectionUri);
   }
-
 }

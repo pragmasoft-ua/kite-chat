@@ -1,10 +1,9 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
 import java.util.Objects;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
@@ -32,10 +31,11 @@ public class DynamoDbChannels implements Channels {
   public static final String REVERSE_CHANNEL_KEY_PREFIX = "host:";
   static final String CONDITION_FAILED = "ConditionalCheckFailed";
 
-  private static Expression nameNotExistsCondition = Expression.builder()
-      .expression("attribute_not_exists(#attr)")
-      .putExpressionName("#attr", "name") // name is a dynamodb keyword
-      .build();
+  private static Expression nameNotExistsCondition =
+      Expression.builder()
+          .expression("attribute_not_exists(#attr)")
+          .putExpressionName("#attr", "name") // name is a dynamodb keyword
+          .build();
 
   private final String channelsTableName;
   private final String membersTableName;
@@ -44,18 +44,18 @@ public class DynamoDbChannels implements Channels {
   private final DynamoDbTable<DynamoDbMember> membersTable;
 
   public DynamoDbChannels(DynamoDbEnhancedClient enhancedDynamo, String serverlessEnvironmentName) {
-    this.membersTableName = null != serverlessEnvironmentName
-        ? serverlessEnvironmentName + '.' + MEMBERS
-        : MEMBERS;
-    this.channelsTableName = null != serverlessEnvironmentName
-        ? serverlessEnvironmentName + '.' + CHANNELS
-        : CHANNELS;
+    this.membersTableName =
+        null != serverlessEnvironmentName ? serverlessEnvironmentName + '.' + MEMBERS : MEMBERS;
+    this.channelsTableName =
+        null != serverlessEnvironmentName ? serverlessEnvironmentName + '.' + CHANNELS : CHANNELS;
     log.info("Environment: {}", serverlessEnvironmentName);
     this.enhancedDynamo = enhancedDynamo;
-    this.channelsTable = this.enhancedDynamo.table(this.channelsTableName,
-        TableSchema.fromClass(DynamoDbChannel.class));
-    this.membersTable = this.enhancedDynamo.table(this.membersTableName,
-        TableSchema.fromClass(DynamoDbMember.class));
+    this.channelsTable =
+        this.enhancedDynamo.table(
+            this.channelsTableName, TableSchema.fromClass(DynamoDbChannel.class));
+    this.membersTable =
+        this.enhancedDynamo.table(
+            this.membersTableName, TableSchema.fromClass(DynamoDbMember.class));
   }
 
   @Override
@@ -68,40 +68,43 @@ public class DynamoDbChannels implements Channels {
       title = channel;
     }
 
-    DynamoDbMember hostMember = new DynamoDbMember(memberId, channel, title, ownerConnection, true, null);
+    DynamoDbMember hostMember =
+        new DynamoDbMember(memberId, channel, title, ownerConnection, true, null);
 
     DynamoDbChannel newChannel = new DynamoDbChannel(channel, memberId);
 
-    var putChannel = TransactPutItemEnhancedRequest
-        .builder(DynamoDbChannel.class)
-        .item(newChannel)
-        .conditionExpression(nameNotExistsCondition)
-        .build();
+    var putChannel =
+        TransactPutItemEnhancedRequest.builder(DynamoDbChannel.class)
+            .item(newChannel)
+            .conditionExpression(nameNotExistsCondition)
+            .build();
 
-    DynamoDbChannel reverseChannel = new DynamoDbChannel(REVERSE_CHANNEL_KEY_PREFIX + memberId, channel);
+    DynamoDbChannel reverseChannel =
+        new DynamoDbChannel(REVERSE_CHANNEL_KEY_PREFIX + memberId, channel);
 
-    var putReverseChannel = TransactPutItemEnhancedRequest
-        .builder(DynamoDbChannel.class)
-        .item(reverseChannel)
-        .conditionExpression(nameNotExistsCondition)
-        .build();
+    var putReverseChannel =
+        TransactPutItemEnhancedRequest.builder(DynamoDbChannel.class)
+            .item(reverseChannel)
+            .conditionExpression(nameNotExistsCondition)
+            .build();
 
     try {
-      this.enhancedDynamo.transactWriteItems(tx -> tx
-          .addPutItem(this.channelsTable, putChannel)
-          .addPutItem(this.channelsTable, putReverseChannel)
-          .addPutItem(this.membersTable, hostMember));
+      this.enhancedDynamo.transactWriteItems(
+          tx ->
+              tx.addPutItem(this.channelsTable, putChannel)
+                  .addPutItem(this.channelsTable, putReverseChannel)
+                  .addPutItem(this.membersTable, hostMember));
       return hostMember;
     } catch (TransactionCanceledException e) {
       var reasons = e.cancellationReasons();
-      var reason = reasons.get(0).code().equals(CONDITION_FAILED)
-          ? "Channel name is already taken"
-          : reasons.get(1).code().equals(CONDITION_FAILED)
-              ? "You cannot host more than one channel"
-              : reasons.get(2).message();
+      var reason =
+          reasons.get(0).code().equals(CONDITION_FAILED)
+              ? "Channel name is already taken"
+              : reasons.get(1).code().equals(CONDITION_FAILED)
+                  ? "You cannot host more than one channel"
+                  : reasons.get(2).message();
       throw new ConflictException(reason, e);
     }
-
   }
 
   @Override
@@ -111,13 +114,13 @@ public class DynamoDbChannels implements Channels {
 
     DynamoDbMember member = this.find(memberConnection);
 
-    if (!member.isHost())
-      throw new ValidationException("Only host member can drop its channel");
+    if (!member.isHost()) throw new ValidationException("Only host member can drop its channel");
 
     String channelName = member.getChannelName();
 
     Key channelKey = Key.builder().partitionValue(channelName).build();
-    Key reverseChannelKey = Key.builder().partitionValue(REVERSE_CHANNEL_KEY_PREFIX + member.getId()).build();
+    Key reverseChannelKey =
+        Key.builder().partitionValue(REVERSE_CHANNEL_KEY_PREFIX + member.getId()).build();
 
     this.enhancedDynamo.transactWriteItems(
         TransactWriteItemsEnhancedRequest.builder()
@@ -130,8 +133,8 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
-  public Member joinChannel(String channelName, String memberId, String memberConnection,
-      String userName) {
+  public Member joinChannel(
+      String channelName, String memberId, String memberConnection, String userName) {
 
     ChannelName.validate(channelName);
     Objects.requireNonNull(memberId, "member id");
@@ -144,8 +147,8 @@ public class DynamoDbChannels implements Channels {
       throw new NotFoundException("Channel not found");
     }
     final String hostId = channel.getHost();
-    DynamoDbMember clientMember = new DynamoDbMember(memberId, channelName, userName, memberConnection, false,
-        hostId);
+    DynamoDbMember clientMember =
+        new DynamoDbMember(memberId, channelName, userName, memberConnection, false, hostId);
 
     try {
       this.membersTable.putItem(clientMember);
@@ -195,10 +198,7 @@ public class DynamoDbChannels implements Channels {
   public DynamoDbMember find(String memberConnection) {
     Key secondaryKey = Key.builder().partitionValue(memberConnection).build();
     QueryConditional qc = QueryConditional.keyEqualTo(secondaryKey);
-    QueryEnhancedRequest q = QueryEnhancedRequest.builder()
-        .queryConditional(qc)
-        .limit(1)
-        .build();
+    QueryEnhancedRequest q = QueryEnhancedRequest.builder().queryConditional(qc).limit(1).build();
     var secondaryIndex = this.membersTable.index(DynamoDbMember.BY_CONNECTION);
     var response = secondaryIndex.query(q);
     if (!response.iterator().hasNext()) {
@@ -220,5 +220,4 @@ public class DynamoDbChannels implements Channels {
     }
     return member;
   }
-
 }

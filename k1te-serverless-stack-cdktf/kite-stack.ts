@@ -23,7 +23,12 @@ import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 
 export class KiteStack extends TerraformStack {
-  constructor(scope: Construct, id: string, domainName?: string) {
+  constructor(
+    scope: Construct,
+    id: string,
+    domainName?: string,
+    isNative?: boolean
+  ) {
     super(scope, id);
     this.node.setContext(ALLOW_TAGS, true);
 
@@ -121,9 +126,12 @@ export class KiteStack extends TerraformStack {
 
     const quarkusAsset = new LambdaAsset(this, "k1te-serverless-quarkus", {
       relativeProjectPath: "../k1te-serverless",
-      handler: "hello.handler",
-      runtime: "provided.al2",
+      handler: isNative
+        ? "hello.handler"
+        : "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest",
+      runtime: isNative ? "provided.al2" : "java17",
     });
+
     const archiveResource = new ArchiveResource(
       this,
       "kite-serverless-nodejs",
@@ -139,8 +147,9 @@ export class KiteStack extends TerraformStack {
       environment: {
         ...PROD_ENV,
       },
+      architectures: isNative ? ["arm64"] : ["x86_64"],
       memorySize,
-      timeout: 60,
+      timeout: 20,
     });
 
     wsApiStage.addDefaultRoutes(mainHandler, apiGatewayPrincipal);

@@ -1,8 +1,8 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessagePayload;
 
@@ -68,9 +68,20 @@ public final class RoutingContext {
 
   @Override
   public String toString() {
-    return "RoutingContext [originConnection=" + originConnection + ", destinationConnection="
-        + destinationConnection + ", from=" + from + ", to=" + to + ", request=" + request
-        + ", response=" + response + ", attributes=" + attributes + "]";
+    return "RoutingContext [originConnection="
+        + originConnection
+        + ", destinationConnection="
+        + destinationConnection
+        + ", from="
+        + from
+        + ", to="
+        + to
+        + ", request="
+        + request
+        + ", response="
+        + response
+        + ", attributes="
+        + attributes
+        + "]";
   }
-
 }

@@ -1,7 +1,7 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain;
 
 import java.util.Objects;
-
 import ua.com.pragmasoft.k1te.backend.shared.KiteException;
 
 public interface Connector {

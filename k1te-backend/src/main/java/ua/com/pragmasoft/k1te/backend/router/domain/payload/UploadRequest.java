@@ -1,8 +1,10 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain.payload;
 
 import java.time.Instant;
 
-public record UploadRequest(String fileName, String fileType, long fileSize, String messageId, Instant created)
+public record UploadRequest(
+    String fileName, String fileType, long fileSize, String messageId, Instant created)
     implements MessagePayload {
 
   public UploadRequest(String fileName, String fileType, long fileSize, String messageId) {
@@ -17,12 +19,16 @@ public record UploadRequest(String fileName, String fileType, long fileSize, Str
   @Override
   public String toString() {
     return type().label
-        + " [fileName=" + fileName
-        + ", fileType=" + fileType
-        + ", fileSize=" + fileSize
-        + ", messageId=" + messageId
-        + ", created=" + created
+        + " [fileName="
+        + fileName
+        + ", fileType="
+        + fileType
+        + ", fileSize="
+        + fileSize
+        + ", messageId="
+        + messageId
+        + ", created="
+        + created
         + "]";
   }
-
 }

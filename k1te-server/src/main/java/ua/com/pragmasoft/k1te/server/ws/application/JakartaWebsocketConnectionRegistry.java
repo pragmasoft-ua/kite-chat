@@ -1,14 +1,14 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.server.ws.application;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.websocket.CloseReason;
 import jakarta.websocket.CloseReason.CloseCodes;
 import jakarta.websocket.EncodeException;
 import jakarta.websocket.Session;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector.WsConnection;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector.WsConnectionRegistry;
@@ -68,7 +68,5 @@ public class JakartaWebsocketConnectionRegistry implements WsConnectionRegistry 
         throw new IOException(e.getMessage(), e);
       }
     }
-
   }
-
 }
