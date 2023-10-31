@@ -1,14 +1,13 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.serverless.handler;
-
-import java.util.Map;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
-
 import io.quarkus.logging.Log;
 import jakarta.inject.Named;
+import java.util.Map;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
 import ua.com.pragmasoft.k1te.backend.ws.PayloadDecoder;
 import ua.com.pragmasoft.k1te.backend.ws.PayloadEncoder;
@@ -16,7 +15,8 @@ import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 import ua.com.pragmasoft.k1te.serverless.ws.application.AwsApiGwConnectionRegistry;
 
 @Named("ws")
-public class WsHandler implements RequestHandler<APIGatewayV2WebSocketEvent, APIGatewayV2WebSocketResponse> {
+public class WsHandler
+    implements RequestHandler<APIGatewayV2WebSocketEvent, APIGatewayV2WebSocketResponse> {
 
   private static final PayloadDecoder DECODER = new PayloadDecoder();
   private static final PayloadEncoder ENCODER = new PayloadEncoder();
@@ -34,7 +34,8 @@ public class WsHandler implements RequestHandler<APIGatewayV2WebSocketEvent, API
   }
 
   @Override
-  public final APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent input, Context context) {
+  public final APIGatewayV2WebSocketResponse handleRequest(
+      APIGatewayV2WebSocketEvent input, Context context) {
     Log.debug(input.toString());
     final var eventType = input.getRequestContext().getEventType();
     final var connectionId = input.getRequestContext().getConnectionId();
@@ -42,12 +43,13 @@ public class WsHandler implements RequestHandler<APIGatewayV2WebSocketEvent, API
     final var connection = this.connectionRegistry.getConnection(connectionId);
     Payload responsePayload;
     try {
-      responsePayload = switch (eventType) {
-        case "CONNECT" -> this.wsConnector.onOpen(connection);
-        case "DISCONNECT" -> this.wsConnector.onClose(connection);
-        case "MESSAGE" -> this.wsConnector.onPayload(DECODER.apply(body), connection);
-        default -> throw new IllegalStateException("Unsupported event type: " + eventType);
-      };
+      responsePayload =
+          switch (eventType) {
+            case "CONNECT" -> this.wsConnector.onOpen(connection);
+            case "DISCONNECT" -> this.wsConnector.onClose(connection);
+            case "MESSAGE" -> this.wsConnector.onPayload(DECODER.apply(body), connection);
+            default -> throw new IllegalStateException("Unsupported event type: " + eventType);
+          };
     } catch (Exception e) {
       responsePayload = this.wsConnector.onError(connection, e);
     }
@@ -60,5 +62,4 @@ public class WsHandler implements RequestHandler<APIGatewayV2WebSocketEvent, API
     Log.debugf("ws %s (%s) -> %s", input, context, response);
     return response;
   }
-
 }

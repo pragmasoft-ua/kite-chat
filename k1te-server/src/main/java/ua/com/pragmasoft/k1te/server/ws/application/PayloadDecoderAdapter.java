@@ -1,3 +1,4 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.server.ws.application;
 
 import io.quarkus.logging.Log;
@@ -31,12 +32,10 @@ public class PayloadDecoderAdapter implements Decoder.Text<Payload> {
     } catch (Exception e) {
       throw new DecodeException(text, e.getMessage(), e);
     }
-
   }
 
   @Override
   public boolean willDecode(String text) {
     return true;
   }
-
 }

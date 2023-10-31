@@ -1,12 +1,11 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import ua.com.pragmasoft.k1te.backend.shared.KiteException;
 import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
@@ -73,5 +72,4 @@ public class KiteRouter implements Router {
     return Optional.ofNullable(this.connectors.get(connectorId))
         .orElseThrow(() -> new NotFoundException("No connector with id " + connectorId));
   }
-
 }

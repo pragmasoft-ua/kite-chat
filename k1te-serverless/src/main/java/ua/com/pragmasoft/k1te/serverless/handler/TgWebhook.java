@@ -1,6 +1,5 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.serverless.handler;
-
-import java.util.Map;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -8,10 +7,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import com.pengrad.telegrambot.BotUtils;
 import com.pengrad.telegrambot.model.Update;
-
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
+import java.util.Map;
 import software.amazon.awssdk.http.HttpStatusCode;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
 
@@ -35,12 +34,10 @@ public class TgWebhook implements RequestHandler<APIGatewayV2HTTPEvent, APIGatew
     Update update = BotUtils.parseUpdate(requestBody);
     var responseBody = this.connector.onUpdate(update);
     Log.debug("<< " + responseBody);
-    return APIGatewayV2HTTPResponse
-        .builder()
+    return APIGatewayV2HTTPResponse.builder()
         .withStatusCode(HttpStatusCode.OK)
         .withHeaders(Map.of("Content-Type", "application/json"))
         .withBody(responseBody)
         .build();
   }
-
 }

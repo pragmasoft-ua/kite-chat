@@ -1,6 +1,5 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.server.ws.application;
-
-import java.io.IOException;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -12,13 +11,16 @@ import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
+import java.io.IOException;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 import ua.com.pragmasoft.k1te.server.ws.application.JakartaWebsocketConnectionRegistry.JakartaWebsocketConnection;
 
-@ServerEndpoint(value = JakartaWebsocketAdapter.CHANNELS_PATH, decoders = {
-    PayloadDecoderAdapter.class }, encoders = {
-        PayloadEncoderAdapter.class }, subprotocols = { WsConnector.SUBPROTOCOL })
+@ServerEndpoint(
+    value = JakartaWebsocketAdapter.CHANNELS_PATH,
+    decoders = {PayloadDecoderAdapter.class},
+    encoders = {PayloadEncoderAdapter.class},
+    subprotocols = {WsConnector.SUBPROTOCOL})
 @ApplicationScoped
 public class JakartaWebsocketAdapter {
 
@@ -29,7 +31,8 @@ public class JakartaWebsocketAdapter {
   private final WsConnector wsConnector;
 
   @Inject
-  public JakartaWebsocketAdapter(WsConnector wsConnector, JakartaWebsocketConnectionRegistry connectionRegistry) {
+  public JakartaWebsocketAdapter(
+      WsConnector wsConnector, JakartaWebsocketConnectionRegistry connectionRegistry) {
     this.wsConnector = wsConnector;
     this.connectionRegistry = connectionRegistry;
   }
@@ -75,5 +78,4 @@ public class JakartaWebsocketAdapter {
       connection.sendObject(response);
     }
   }
-
 }

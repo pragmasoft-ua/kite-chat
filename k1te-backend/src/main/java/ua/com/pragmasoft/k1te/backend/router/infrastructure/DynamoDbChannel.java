@@ -1,8 +1,8 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
 import java.time.Duration;
 import java.time.Instant;
-
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
@@ -62,5 +62,4 @@ public class DynamoDbChannel {
   public String toString() {
     return "DynamoDbChannel [name=" + name + ", host=" + host + ", ttl=" + ttl + "]";
   }
-
 }

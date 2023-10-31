@@ -1,11 +1,10 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.ws;
 
 import java.io.Closeable;
 import java.io.IOException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import ua.com.pragmasoft.k1te.backend.router.domain.Channels;
 import ua.com.pragmasoft.k1te.backend.router.domain.Connector;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
@@ -42,7 +41,10 @@ public class WsConnector implements Connector {
 
   private final ObjectStore objectStore;
 
-  public WsConnector(final Router router, final Channels channels, final WsConnectionRegistry connections,
+  public WsConnector(
+      final Router router,
+      final Channels channels,
+      final WsConnectionRegistry connections,
       ObjectStore objectStore) {
     this.router = router;
     router.registerConnector(this);
@@ -69,11 +71,12 @@ public class WsConnector implements Connector {
     log.debug("Member disconnected from channel on {}", connectionUri);
     Member client = this.channels.find(connectionUri);
     this.router.dispatch(
-        RoutingContext
-            .create()
+        RoutingContext.create()
             .withOriginConnection(connectionUri)
-            .withRequest(new PlaintextMessage(
-                "✅ %s left channel %s".formatted(client.getUserName(), client.getChannelName()))));
+            .withRequest(
+                new PlaintextMessage(
+                    "✅ %s left channel %s"
+                        .formatted(client.getUserName(), client.getChannelName()))));
     this.channels.leaveChannel(connectionUri);
     return null;
   }
@@ -115,13 +118,20 @@ public class WsConnector implements Connector {
   private Payload onJoinChannel(JoinChannel joinChannel, WsConnection connection) {
     log.debug("Join member {} to channel {}", joinChannel.memberId(), joinChannel.channelName());
     String originConnection = this.connectionUriOf(connection);
-    Member client = this.channels.joinChannel(joinChannel.channelName(), joinChannel.memberId(), originConnection,
-        joinChannel.memberName());
-    var ctx = RoutingContext.create()
-        .withOriginConnection(originConnection)
-        .withFrom(client)
-        .withRequest(new PlaintextMessage(
-            "✅ %s joined channel %s".formatted(client.getUserName(), client.getChannelName())));
+    Member client =
+        this.channels.joinChannel(
+            joinChannel.channelName(),
+            joinChannel.memberId(),
+            originConnection,
+            joinChannel.memberName());
+    var ctx =
+        RoutingContext.create()
+            .withOriginConnection(originConnection)
+            .withFrom(client)
+            .withRequest(
+                new PlaintextMessage(
+                    "✅ %s joined channel %s"
+                        .formatted(client.getUserName(), client.getChannelName())));
     this.router.dispatch(ctx);
     return new OkResponse();
   }
@@ -129,9 +139,7 @@ public class WsConnector implements Connector {
   private Payload onMessage(MessagePayload message, WsConnection connection) {
     log.debug("Message {}", message);
     var originConnection = this.connectionUriOf(connection);
-    var ctx = RoutingContext.create()
-        .withOriginConnection(originConnection)
-        .withRequest(message);
+    var ctx = RoutingContext.create().withOriginConnection(originConnection).withRequest(message);
     this.router.dispatch(ctx);
     return ctx.response;
   }
@@ -151,7 +159,9 @@ public class WsConnector implements Connector {
        * is true.
        */
       Member recipient = ctx.to;
-      messagePayload = this.objectStore.copyTransient(binaryPayload, recipient.getChannelName(), recipient.getId());
+      messagePayload =
+          this.objectStore.copyTransient(
+              binaryPayload, recipient.getChannelName(), recipient.getId());
     }
     WsConnection connection = this.requiredConnection(ctx.destinationConnection);
     try {
@@ -179,13 +189,10 @@ public class WsConnector implements Connector {
     public String connectionUri();
 
     public void sendObject(Payload payload) throws IOException;
-
   }
 
   public static interface WsConnectionRegistry {
 
     WsConnection getConnection(String connectionUri);
-
   }
-
 }

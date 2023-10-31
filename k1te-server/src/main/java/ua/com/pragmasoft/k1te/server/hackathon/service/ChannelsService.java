@@ -1,8 +1,10 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.server.hackathon.service;
 
 import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ua.com.pragmasoft.k1te.backend.router.domain.ChannelName;
@@ -14,8 +16,6 @@ import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
 import ua.com.pragmasoft.k1te.server.hackathon.entity.H2Channel;
 import ua.com.pragmasoft.k1te.server.hackathon.entity.H2Member;
 
-import java.util.Objects;
-
 @ApplicationScoped
 @Transactional
 public class ChannelsService implements Channels {
@@ -23,7 +23,8 @@ public class ChannelsService implements Channels {
   private static final Logger log = LoggerFactory.getLogger(ChannelsService.class);
 
   @Override
-  public Member hostChannel(String channelName, String memberId, String ownerConnection, String title) {
+  public Member hostChannel(
+      String channelName, String memberId, String ownerConnection, String title) {
 
     ChannelName.validate(channelName);
     Objects.requireNonNull(memberId, "member id");
@@ -37,7 +38,8 @@ public class ChannelsService implements Channels {
       throw new ConflictException("Such channel name already exists");
     }
     if (H2Member.findById(memberId) != null) {
-      throw new ConflictException("You already have Channel - /leave or /drop it to host a new one");
+      throw new ConflictException(
+          "You already have Channel - /leave or /drop it to host a new one");
     }
 
     H2Channel channel = new H2Channel();
@@ -64,18 +66,18 @@ public class ChannelsService implements Channels {
 
     Member member = find(ownerConnection);
 
-    if (!member.isHost())
-      throw new ValidationException("Only host member can drop its channel");
+    if (!member.isHost()) throw new ValidationException("Only host member can drop its channel");
 
     String channelName = member.getChannelName();
-    H2Channel.deleteById(channelName); //Delete with Cascade
+    H2Channel.deleteById(channelName); // Delete with Cascade
     H2Channel.flush();
     log.debug("Channel {} was deleted", channelName);
     return member;
   }
 
   @Override
-  public Member joinChannel(String channelName, String memberId, String connection, String userName) {
+  public Member joinChannel(
+      String channelName, String memberId, String connection, String userName) {
     ChannelName.validate(channelName);
     Objects.requireNonNull(memberId, "member id");
     Objects.requireNonNull(connection, "connection");
@@ -85,8 +87,7 @@ public class ChannelsService implements Channels {
       throw new ConflictException("You can have only one open chat");
 
     H2Channel channel = H2Channel.findById(channelName);
-    if (channel == null)
-      throw new NotFoundException();
+    if (channel == null) throw new NotFoundException();
 
     H2Member member = new H2Member();
     member.setId(memberId);
@@ -120,20 +121,19 @@ public class ChannelsService implements Channels {
   public Member find(String memberConnection) {
     Objects.requireNonNull(memberConnection, "connection");
     H2Member member = H2Member.find("connectionUri", memberConnection).firstResult();
-    if (member == null)
-      throw new NotFoundException();
+    if (member == null) throw new NotFoundException();
     return member;
   }
 
   @Override
   public Member find(String channel, String memberId) {
-    H2Member member = H2Member.find("id=:memberId AND channelName=:channelName", Parameters
-        .with("channelName", channel)
-        .and("memberId", memberId))
-      .firstResult();
+    H2Member member =
+        H2Member.find(
+                "id=:memberId AND channelName=:channelName",
+                Parameters.with("channelName", channel).and("memberId", memberId))
+            .firstResult();
 
-    if (member == null)
-      throw new NotFoundException();
+    if (member == null) throw new NotFoundException();
 
     return member;
   }

@@ -1,3 +1,4 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.server.hackathon.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
@@ -8,8 +9,7 @@ import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 @Table(name = "Member")
 public class H2Member extends PanacheEntityBase implements Member {
 
-  @Id
-  private String id;
+  @Id private String id;
 
   @Column(nullable = false)
   private String userName;
@@ -87,5 +87,4 @@ public class H2Member extends PanacheEntityBase implements Member {
     this.channelName = channel.getChannelName();
     this.channel = channel;
   }
-
 }

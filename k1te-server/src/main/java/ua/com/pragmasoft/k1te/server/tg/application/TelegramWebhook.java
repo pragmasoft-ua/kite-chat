@@ -1,10 +1,8 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.server.tg.application;
-
-import java.time.temporal.ChronoUnit;
 
 import com.pengrad.telegrambot.BotUtils;
 import com.pengrad.telegrambot.model.Update;
-
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
@@ -17,6 +15,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import java.time.temporal.ChronoUnit;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
 
 @ApplicationScoped
@@ -26,9 +25,7 @@ public class TelegramWebhook {
   public static final String WEBHOOK_PATH = "/api/telegram";
   private final TelegramConnector connector;
 
-  /**
-   *
-   */
+  /** */
   @Inject
   public TelegramWebhook(final TelegramConnector connector) {
     this.connector = connector;
@@ -63,5 +60,4 @@ public class TelegramWebhook {
     Log.debug("<< " + responseBody);
     return responseBody;
   }
-
 }

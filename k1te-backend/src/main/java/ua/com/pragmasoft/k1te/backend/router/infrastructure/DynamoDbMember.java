@@ -1,3 +1,4 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
@@ -19,7 +20,12 @@ public class DynamoDbMember implements Member {
   private boolean host;
   private String peerMemberId;
 
-  public DynamoDbMember(String id, String channelName, String userName, String connectionUri, boolean host,
+  public DynamoDbMember(
+      String id,
+      String channelName,
+      String userName,
+      String connectionUri,
+      boolean host,
       String peerMemberId) {
     super();
     this.id = id;
@@ -95,9 +101,18 @@ public class DynamoDbMember implements Member {
 
   @Override
   public String toString() {
-    return "DynamoDbMember [id=" + id + ", channelName=" + channelName + ", connection="
-        + connectionUri + ", userName=" + userName + ", host=" + host + ", peerMemberId="
-        + peerMemberId + "]";
+    return "DynamoDbMember [id="
+        + id
+        + ", channelName="
+        + channelName
+        + ", connection="
+        + connectionUri
+        + ", userName="
+        + userName
+        + ", host="
+        + host
+        + ", peerMemberId="
+        + peerMemberId
+        + "]";
   }
-
 }

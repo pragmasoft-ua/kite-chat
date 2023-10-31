@@ -1,8 +1,8 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.server.router.application;
 
 import io.quarkus.arc.DefaultBean;
 import io.quarkus.arc.profile.IfBuildProfile;
-import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -18,8 +18,9 @@ public class RouterConfiguration {
   @Produces
   @ApplicationScoped
   @DefaultBean
-  public Channels channels(DynamoDbEnhancedClient ddb,
-                           @ConfigProperty(name = "serverless.environment") final String serverlessEnvironmentName) {
+  public Channels channels(
+      DynamoDbEnhancedClient ddb,
+      @ConfigProperty(name = "serverless.environment") final String serverlessEnvironmentName) {
     return new DynamoDbChannels(ddb, serverlessEnvironmentName);
   }
 
@@ -30,11 +31,9 @@ public class RouterConfiguration {
     return channelsService;
   }
 
-
   @Produces
   @ApplicationScoped
   public Router router(Channels channels) {
     return new KiteRouter(channels);
   }
-
 }

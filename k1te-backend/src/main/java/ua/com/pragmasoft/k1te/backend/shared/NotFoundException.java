@@ -1,3 +1,4 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.shared;
 
 public class NotFoundException extends KiteException {
@@ -28,5 +29,4 @@ public class NotFoundException extends KiteException {
   public int code() {
     return NOT_FOUND;
   }
-
 }

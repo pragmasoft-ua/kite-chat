@@ -1,3 +1,4 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain.payload;
 
 import java.time.Instant;
@@ -26,5 +27,4 @@ public record MessageAck(String messageId, String destiationMessageId, Instant d
   public Type type() {
     return Type.ACK;
   }
-
 }
