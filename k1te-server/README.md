@@ -61,6 +61,20 @@ Then you can run your application in dev mode that enables live coding using:
 
 > **NOTE:** Quarkus now ships with a Dev UI, which is available in dev mode only at http://localhost:8080/q/dev/.
 
+### Run the Application with local H2 DataBase and Local filesystem
+In order to do so, you need run Quarkus app with a **hackathon** profile specified
+for both Quarkus and Maven profiles. It can be done by the following command.
+```bash
+mvn quarkus:dev -Dquarkus.profile=hackathon -P hackathon
+```
+You also need to check **.env.example.txt** file to specify all the necessary properties.
+
+During working Local file system implementation may encounter to problem how **Ngrok** works.
+1) It may **ask** you to register account (It's for free)
+2) It may also **block** file downloading that happens when you send any file from Telegram
+to WS and get .**htm** file with an error as a result. In order to solve this problem you can make use of **[ModHeader](https://chrome.google.com/webstore/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj)**
+Chrome extension and specify **ngrok-skip-browser-warning** for all Http requests.
+
 ## Packaging and running the application
 
 The application can be packaged using:

@@ -1,6 +1,7 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.server.hackathon.service;
 
+import io.quarkus.arc.profile.IfBuildProfile;
 import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -16,6 +17,7 @@ import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
 import ua.com.pragmasoft.k1te.server.hackathon.entity.H2Channel;
 import ua.com.pragmasoft.k1te.server.hackathon.entity.H2Member;
 
+@IfBuildProfile("hackathon")
 @ApplicationScoped
 @Transactional
 public class ChannelsService implements Channels {
