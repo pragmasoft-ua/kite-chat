@@ -1,5 +1,5 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
-package ua.com.pragmasoft.k1te.server.hackathon.util;
+package ua.com.pragmasoft.k1te.server.standalone.infrastructure;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
@@ -11,10 +11,11 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
+import ua.com.pragmasoft.k1te.server.standalone.application.JwtProperties;
 
 @ApplicationScoped
-@IfBuildProfile("hackathon")
-public class JwtUtil {
+@IfBuildProfile("standalone")
+public class JwtVerifier {
 
   private static final String FILENAME = "fileName";
   private static final String FILETYPE = "fileType";
@@ -24,7 +25,7 @@ public class JwtUtil {
 
   private final JwtProperties jwtProperties;
 
-  public JwtUtil(JwtProperties jwtProperties) {
+  public JwtVerifier(JwtProperties jwtProperties) {
     this.jwtProperties = jwtProperties;
   }
 
@@ -42,10 +43,11 @@ public class JwtUtil {
         .sign(Algorithm.HMAC256(jwtProperties.secret()));
   }
 
-  public FileData validateToken(String token, String requiredMethod) {
+  public FileData validateAndDecodeToken(String token, String requiredMethod) {
     try {
       JWTVerifier verifier =
           JWT.require(Algorithm.HMAC256(jwtProperties.secret()))
+              .withClaim(METHOD, requiredMethod)
               .withIssuer(jwtProperties.issuer())
               .build();
 
@@ -58,9 +60,6 @@ public class JwtUtil {
       String channelName = decodedJWT.getClaim(CHANNEL_NAME).asString();
       String memberId = decodedJWT.getSubject();
       Instant createdAt = decodedJWT.getIssuedAt().toInstant();
-
-      if (!method.equals(requiredMethod))
-        throw new ValidationException("You don't have permission to this resource");
 
       return new FileData(method, fileName, fileSize, fileType, channelName, memberId, createdAt);
     } catch (JWTVerificationException jwtException) {

@@ -1,5 +1,9 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
-package ua.com.pragmasoft.k1te.server.hackathon.storage;
+package ua.com.pragmasoft.k1te.server.standalone.domain;
+
+import static jakarta.ws.rs.HttpMethod.GET;
+import static jakarta.ws.rs.HttpMethod.PUT;
+import static ua.com.pragmasoft.k1te.server.standalone.application.FileSystemStorageResource.STORAGE_API;
 
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -20,36 +24,32 @@ import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryPayload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadRequest;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadResponse;
 import ua.com.pragmasoft.k1te.backend.ws.ObjectStore;
-import ua.com.pragmasoft.k1te.server.hackathon.util.JwtUtil;
+import ua.com.pragmasoft.k1te.server.standalone.infrastructure.JwtVerifier;
 
 @ApplicationScoped
-@IfBuildProfile("hackathon")
-public class LocalObjectStore implements ObjectStore {
+@IfBuildProfile("standalone")
+public class FileSystemObjectStore implements ObjectStore {
 
-  private static final Logger log = LoggerFactory.getLogger(LocalObjectStore.class);
-
-  public static final String GET = "GET";
-  public static final String PUT = "PUT";
+  private static final Logger log = LoggerFactory.getLogger(FileSystemObjectStore.class);
 
   private final FileSystem fileSystem;
   private final String destinationPath;
   private final String storageEndpoint;
-  private final JwtUtil jwtUtil;
+  private final JwtVerifier jwtVerifier;
 
-  public LocalObjectStore(
+  public FileSystemObjectStore(
       FileSystem fileSystem,
-      @ConfigProperty(name = "local.object.store.path") String destinationPath,
-      @ConfigProperty(name = "local.object.store.endpoint") String storageEndpoint,
-      JwtUtil jwtUtil) {
+      @ConfigProperty(name = "local.object.store.path", defaultValue = "storage")
+          String destinationPath,
+      @ConfigProperty(name = "base.url") String baseUrl,
+      JwtVerifier jwtVerifier) {
 
-    if (!Files.exists(fileSystem.getPath(destinationPath))
-        || !Files.isDirectory(fileSystem.getPath(destinationPath)))
-      throw new IllegalStateException("Specified path for LocalObjectStore is invalid");
-
+    log.debug(
+        "Destination path for files is {}", fileSystem.getPath(destinationPath).toAbsolutePath());
     this.fileSystem = fileSystem;
     this.destinationPath = destinationPath;
-    this.storageEndpoint = storageEndpoint;
-    this.jwtUtil = jwtUtil;
+    this.storageEndpoint = baseUrl + STORAGE_API;
+    this.jwtVerifier = jwtVerifier;
   }
 
   @Override
@@ -58,15 +58,15 @@ public class LocalObjectStore implements ObjectStore {
     String fileType = uploadRequest.fileType();
     long fileSize = uploadRequest.fileSize();
 
-    JwtUtil.FileData getFileData =
-        new JwtUtil.FileData(
+    JwtVerifier.FileData getFileData =
+        new JwtVerifier.FileData(
             GET, fileName, fileSize, fileType, channelName, memberId, uploadRequest.created());
-    JwtUtil.FileData putFileData =
-        new JwtUtil.FileData(
+    JwtVerifier.FileData putFileData =
+        new JwtVerifier.FileData(
             PUT, fileName, fileSize, fileType, channelName, memberId, uploadRequest.created());
 
-    URI getUri = presignUri(jwtUtil.generateToken(getFileData));
-    URI putUri = presignUri(jwtUtil.generateToken(putFileData));
+    URI getUri = this.presignUri(jwtVerifier.generateToken(getFileData));
+    URI putUri = this.presignUri(jwtVerifier.generateToken(putFileData));
 
     log.debug("Download URI: {}", getUri);
     log.debug("Upload URI: {}", putUri);
@@ -79,13 +79,13 @@ public class LocalObjectStore implements ObjectStore {
     String fileType = payload.fileType();
     long fileSize = payload.fileSize();
 
-    Path workDir = workDir(channelName, memberId, payload.created());
-    uploadFile(payload.uri(), workDir, fileName);
+    Path workDir = this.getWorkDir(channelName, memberId, payload.created());
+    this.uploadFile(payload.uri(), workDir, fileName);
 
-    JwtUtil.FileData fileData =
-        new JwtUtil.FileData(
+    JwtVerifier.FileData fileData =
+        new JwtVerifier.FileData(
             GET, fileName, fileSize, fileType, channelName, memberId, payload.created());
-    URI getUri = presignUri(jwtUtil.generateToken(fileData));
+    URI getUri = this.presignUri(jwtVerifier.generateToken(fileData));
     log.debug("Download URI: {}", getUri);
 
     return new BinaryMessage(
@@ -93,9 +93,10 @@ public class LocalObjectStore implements ObjectStore {
   }
 
   private void uploadFile(URI inputUri, Path parent, String fileName) {
-    try {
-      uploadFile(inputUri.toURL().openStream(), parent, fileName);
+    try (InputStream inputStream = inputUri.toURL().openStream()) {
+      uploadFile(inputStream, parent, fileName);
     } catch (IOException e) {
+      log.warn("Couldn't read data from a given URI");
       throw new IllegalStateException(e.getMessage(), e);
     }
   }
@@ -118,13 +119,15 @@ public class LocalObjectStore implements ObjectStore {
   }
 
   public Path getFullPath(String channelName, String memberId, Instant createdAt, String fileName) {
-    return Path.of(workDir(channelName, memberId, createdAt).toString(), fileName);
+    return Path.of(getWorkDir(channelName, memberId, createdAt).toString(), fileName);
   }
 
-  public Path workDir(String channelName, String memberId, Instant createdAt) {
-    String dirPath =
-        String.format("%s/%s/%tF", channelName, memberId, createdAt.atZone(ZoneId.systemDefault()));
-    return fileSystem.getPath(destinationPath, dirPath);
+  public Path getWorkDir(String channelName, String memberId, Instant createdAt) {
+    return fileSystem.getPath(
+        destinationPath,
+        channelName,
+        memberId,
+        createdAt.atZone(ZoneId.systemDefault()).toLocalDate().toString());
   }
 
   private URI presignUri(String token) {

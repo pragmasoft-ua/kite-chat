@@ -156,12 +156,15 @@
       </properties>
     </profile>
     <profile>
-      <id>hackathon</id>
+      <id>standalone</id>
       <activation>
         <property>
-          <name>hackathon</name>
+          <name>standalone</name>
         </property>
       </activation>
+      <properties>
+        <quarkus.profile>standalone</quarkus.profile>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>io.quarkus</groupId>

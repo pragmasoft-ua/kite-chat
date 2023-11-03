@@ -29,6 +29,7 @@ public class WsConfiguration {
 
   @Produces
   @ApplicationScoped
+  @DefaultBean
   public FileSystem fileSystem() {
     return FileSystems.getDefault();
   }
