@@ -1,7 +1,7 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.server.standalone.domain;
 
-import static ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheMember.id;
+import static ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheMember.buildId;
 
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -40,7 +40,7 @@ public class PanacheChannels implements Channels {
     if (PanacheChannel.findById(channelName) != null) {
       throw new ConflictException("Such channel name already exists");
     }
-    if (PanacheMember.findById(id(memberId, channelName)) != null) {
+    if (PanacheMember.findByMemberId(memberId) != null) {
       throw new ConflictException(
           "You already have Channel - /leave or /drop it to host a new one");
     }
@@ -82,14 +82,14 @@ public class PanacheChannels implements Channels {
     Objects.requireNonNull(connection, "connection");
     Objects.requireNonNull(userName, "user name");
 
-    if (PanacheMember.findById(id(memberId, channelName)) != null) {
-      PanacheMember member = PanacheMember.findById(id(memberId, channelName));
-      if (member.getConnectionUri().equals(connection))
+    PanacheMember existingMember = PanacheMember.findByMemberId(memberId);
+    if (existingMember != null) {
+      if (existingMember.getConnectionUri().equals(connection))
         throw new ConflictException("You can't have more than one open chat");
 
-      member.setConnectionUri(connection);
-      member.persistAndFlush();
-      return member;
+      existingMember.setConnectionUri(connection);
+      existingMember.persistAndFlush();
+      return existingMember;
     }
 
     PanacheChannel channel = PanacheChannel.findById(channelName);
@@ -112,7 +112,7 @@ public class PanacheChannels implements Channels {
     if (member.isHost())
       throw new ValidationException("Host can't leave the chat, you can only drop it");
 
-    PanacheMember.deleteById(id(member.getId(), member.getChannelName()));
+    PanacheMember.deleteById(buildId(member.getId(), member.getChannelName()));
     PanacheMember.flush();
     log.debug("Member {} left the Channel", member.getId());
     return member;
@@ -128,7 +128,7 @@ public class PanacheChannels implements Channels {
 
   @Override
   public Member find(String channelName, String memberId) {
-    PanacheMember member = PanacheMember.findById(id(memberId, channelName));
+    PanacheMember member = PanacheMember.findById(buildId(memberId, channelName));
 
     if (member == null) throw new NotFoundException();
 
@@ -142,7 +142,7 @@ public class PanacheChannels implements Channels {
       return;
     }
     PanacheMember member =
-        PanacheMember.findById(id(recipientMember.getId(), recipientMember.getChannelName()));
+        PanacheMember.findById(buildId(recipientMember.getId(), recipientMember.getChannelName()));
     member.setPeerMemberId(peerMemberId);
     member.persistAndFlush();
   }

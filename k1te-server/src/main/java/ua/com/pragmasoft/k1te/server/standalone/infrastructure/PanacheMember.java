@@ -5,7 +5,6 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.Objects;
-
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 
 @Entity
@@ -37,11 +36,15 @@ public class PanacheMember extends PanacheEntityBase implements Member {
       String connectionUri,
       String peerMemberId) {
     return new PanacheMember(
-        id(memberId, channelName), userName, host, connectionUri, peerMemberId);
+        buildId(memberId, channelName), userName, host, connectionUri, peerMemberId);
   }
 
-  public static MemberPK id(String memberId, String channelName) {
+  public static MemberPK buildId(String memberId, String channelName) {
     return new MemberPK(memberId, channelName);
+  }
+
+  public static PanacheMember findByMemberId(String memberId) {
+    return find("id.memberId", memberId).firstResult();
   }
 
   public PanacheMember() {}

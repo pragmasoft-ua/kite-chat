@@ -57,10 +57,10 @@ public class TelegramConnector implements Connector, Closeable {
       /host *channel* set up current chat as a support channel named *channel*
       /drop unregister current support channel
 
-      /start *channel* start conversation with support channel named *channel*
+      /join *channel* start conversation with support channel named *channel*
       /leave leave current support channel
 
-      *channel* name should contain only alphanumeric letters, .(dot) , -(minus), \\_(underline), ~(tilde)
+      *channel* name should contain only alphanumeric letters, -(minus), \\_(underline)
       and be 8..32 characters long.
 
       Once conversation is established, bot will forward messages from client to host and vice versa.
@@ -159,7 +159,7 @@ public class TelegramConnector implements Connector, Closeable {
     if (ctx.request instanceof PlaintextMessage plaintext) {
       String text = plaintext.text();
       if (to.isHost()) {
-        text = '#' + from.getId() + '\n' + text;
+        text = '#' + from.getId() + " " + from.getUserName() + '\n' + text;
       }
       sendMessage = new SendMessage(destinationChatId, text);
     } else if (ctx.request instanceof BinaryPayload binaryPayload) {
@@ -211,27 +211,41 @@ public class TelegramConnector implements Connector, Closeable {
     String response;
 
     if ("/start".equals(command)) {
-      String channel = cmd.args;
+      if (cmd.args.isEmpty())
+        return new SendMessage(rawChatId, HELP).parseMode(ParseMode.Markdown).toWebhookResponse();
+
       String memberName = userToString(message.from());
-      Member client = this.channels.joinChannel(channel, memberId, originConnection, memberName);
-      var ctx =
-          RoutingContext.create()
-              .withOriginConnection(originConnection)
-              .withFrom(client)
-              .withRequest(
-                  new PlaintextMessage("✅ %s joined channel %s".formatted(memberName, channel)));
-      this.router.dispatch(ctx);
-      response = "✅ You joined channel %s".formatted(channel);
+
+      if (cmd.hasSubCommand()) {
+        SubCommand subCommand = cmd.subCommand();
+        String channelName = subCommand.args[0];
+
+        response =
+            switch (subCommand.type) {
+              case HOST -> onHostCommand(
+                  channelName, message.chat().title(), memberId, originConnection);
+              case JOIN -> {
+                if (subCommand.args.length > 1) { // /join channelName userId
+                  String userId = subCommand.args[1];
+                  memberName = "%s #%s".formatted(memberName, userId);
+                }
+                yield onStartCommand(channelName, memberId, originConnection, memberName);
+              }
+              default -> throw new ValidationException(
+                  "Unsupported subCommand type " + subCommand.type);
+            };
+      } else {
+        String channelName = cmd.args;
+        response = onStartCommand(channelName, memberId, originConnection, memberName);
+      }
+    } else if ("/join".equals(command)) {
+      String channelName = cmd.args;
+      String memberName = userToString(message.from());
+      response = onStartCommand(channelName, memberId, originConnection, memberName);
     } else if ("/host".equals(command)) {
       String channelName = cmd.args;
       String title = message.chat().title();
-      this.channels.hostChannel(channelName, memberId, originConnection, title);
-      String channelPublicUrl =
-          this.wsApi.toString() + "?c=" + URLEncoder.encode(channelName, StandardCharsets.UTF_8);
-      response =
-          "✅ Created channel %s. Use URL %s to configure k1te chat frontend"
-              .formatted(channelName, channelPublicUrl);
-
+      response = onHostCommand(channelName, title, memberId, originConnection);
     } else if ("/leave".equals(command)) {
       Member client = this.channels.leaveChannel(originConnection);
       this.router.dispatch(
@@ -252,6 +266,28 @@ public class TelegramConnector implements Connector, Closeable {
       throw new ValidationException("Unsupported command " + command);
     }
     return new SendMessage(rawChatId, response).toWebhookResponse();
+  }
+
+  private String onHostCommand(
+      String channelName, String title, String memberId, String originConnection) {
+    this.channels.hostChannel(channelName, memberId, originConnection, title);
+    String channelPublicUrl =
+        this.wsApi.toString() + "?c=" + URLEncoder.encode(channelName, StandardCharsets.UTF_8);
+    return "✅ Created channel %s. Use URL %s to configure k1te chat frontend"
+        .formatted(channelName, channelPublicUrl);
+  }
+
+  private String onStartCommand(
+      String channelName, String memberId, String originConnection, String memberName) {
+    Member client = this.channels.joinChannel(channelName, memberId, originConnection, memberName);
+    var ctx =
+        RoutingContext.create()
+            .withOriginConnection(originConnection)
+            .withFrom(client)
+            .withRequest(
+                new PlaintextMessage("✅ %s joined channel %s".formatted(memberName, channelName)));
+    this.router.dispatch(ctx);
+    return "✅ You joined channel %s".formatted(channelName);
   }
 
   private String onMessage(final Message message, boolean isEdited) {
@@ -332,7 +368,7 @@ public class TelegramConnector implements Connector, Closeable {
     final var text = message.text();
     final var command = text.substring(start, end).toLowerCase();
     final var args = text.substring(end).toLowerCase().trim();
-    return new CommandWithArgs(command, args);
+    return new CommandWithArgs(command, SubCommand.of(args), args);
   }
 
   private static Optional<String> memberIdFromHashTag(final Message replyTo) {
@@ -377,7 +413,48 @@ public class TelegramConnector implements Connector, Closeable {
     return b.isEmpty() ? user.username() : b.toString();
   }
 
-  private record CommandWithArgs(String command, String args) {}
+  private record CommandWithArgs(String command, SubCommand subCommand, String args) {
+    public boolean hasSubCommand() {
+      return subCommand.type != SubCommand.SubCommandType.NONE;
+    }
+  }
+
+  private static class SubCommand {
+    private final SubCommandType type;
+    private final String[] args;
+
+    private SubCommand(SubCommandType type, String[] args) {
+      this.type = type;
+      this.args = args;
+    }
+
+    public static SubCommand of(String args) {
+      String[] subCommands = args.split("__");
+
+      if (subCommands.length > 1) {
+        SubCommandType commandType = SubCommandType.parse(subCommands[0]);
+        String[] newArgs = Arrays.copyOfRange(subCommands, 1, subCommands.length);
+
+        return new SubCommand(commandType, newArgs);
+      }
+
+      return new SubCommand(SubCommandType.NONE, null);
+    }
+
+    private enum SubCommandType {
+      NONE,
+      JOIN,
+      HOST;
+
+      public static SubCommandType parse(String text) {
+        return switch (text) {
+          case "join" -> SubCommandType.JOIN;
+          case "host" -> SubCommandType.HOST;
+          default -> throw new ValidationException("Unsupported subCommand " + text);
+        };
+      }
+    }
+  }
 
   /**
    * More efficient implementation of a BinaryPayload lazily creates file url which is only needed
