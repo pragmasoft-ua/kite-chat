@@ -8,9 +8,57 @@
   <artifactId>k1te-chat-parent</artifactId>
   <version>2023.10.3</version>
   <packaging>pom</packaging>
-
   <name>k1te-chat-parent</name>
-  <url>https://github.com/pragmasoft-ua/kite-chat</url>
+  <url>https://www.k1te.chat/</url>
+  <description>
+    K1te chat is an embeddable support chat system for static and dynamic websites,
+
+    which uses Telegram as its backend. This repository contains back end side.
+
+    Front end is in the separate repository here: https://github.com/pragmasoft-ua/kite-chat-frontend
+  </description>
+  <developers>
+    <developer>
+      <name>Dmytro Zemnytskyi</name>
+      <email>pragmasoft@gmail.com</email>
+      <organization>Pragmasoft Ukraine</organization>
+      <roles>
+        <role>Architect</role>
+      </roles>
+    </developer>
+    <developer>
+      <name>Alex Sitiy</name>
+      <email>alexsitiy@pragmasoft.com.ua</email>
+      <organization>Pragmasoft Ukraine</organization>
+      <roles>
+        <role>Developer</role>
+      </roles>
+    </developer>
+  </developers>
+  <inceptionYear>2023</inceptionYear>
+  <scm>
+    <url>https://github.com/pragmasoft-ua/kite-chat</url>
+    <connection>https://github.com/pragmasoft-ua/kite-chat.git</connection>
+    <developerConnection>git@github.com:pragmasoft-ua/kite-chat.git</developerConnection>
+  </scm>
+  <issueManagement>
+    <system>GitHub</system>
+    <url>https://github.com/pragmasoft-ua/kite-chat/issues</url>
+  </issueManagement>
+  <ciManagement>
+    <system>GitHub</system>
+    <url>https://github.com/pragmasoft-ua/kite-chat/actions</url>
+  </ciManagement>
+  <organization>
+    <name>Pragmasoft Ukraine</name>
+    <url>https://jobs.dou.ua/companies/pragmasoft/</url>
+  </organization>
+  <licenses>
+    <license>
+      <name>GNU LESSER GENERAL PUBLIC LICENSE Version 3</name>
+      <url>https://www.gnu.org/licenses/lgpl-3.0.html</url>
+    </license>
+  </licenses>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
