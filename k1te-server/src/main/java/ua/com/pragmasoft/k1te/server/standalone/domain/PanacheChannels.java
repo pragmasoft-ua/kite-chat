@@ -1,7 +1,9 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
-package ua.com.pragmasoft.k1te.server.hackathon.service;
+package ua.com.pragmasoft.k1te.server.standalone.domain;
 
-import io.quarkus.panache.common.Parameters;
+import static ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheMember.id;
+
+import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.util.Objects;
@@ -13,14 +15,15 @@ import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 import ua.com.pragmasoft.k1te.backend.shared.ConflictException;
 import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
-import ua.com.pragmasoft.k1te.server.hackathon.entity.H2Channel;
-import ua.com.pragmasoft.k1te.server.hackathon.entity.H2Member;
+import ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheChannel;
+import ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheMember;
 
+@IfBuildProfile("standalone")
 @ApplicationScoped
 @Transactional
-public class ChannelsService implements Channels {
+public class PanacheChannels implements Channels {
 
-  private static final Logger log = LoggerFactory.getLogger(ChannelsService.class);
+  private static final Logger log = LoggerFactory.getLogger(PanacheChannels.class);
 
   @Override
   public Member hostChannel(
@@ -34,24 +37,20 @@ public class ChannelsService implements Channels {
       title = channelName;
     }
 
-    if (H2Channel.findById(channelName) != null) {
+    if (PanacheChannel.findById(channelName) != null) {
       throw new ConflictException("Such channel name already exists");
     }
-    if (H2Member.findById(memberId) != null) {
+    if (PanacheMember.findById(id(memberId, channelName)) != null) {
       throw new ConflictException(
           "You already have Channel - /leave or /drop it to host a new one");
     }
 
-    H2Channel channel = new H2Channel();
+    PanacheChannel channel = new PanacheChannel();
     channel.setChannelName(channelName);
     channel.setHostId(memberId);
 
-    H2Member member = new H2Member();
-    member.setId(memberId);
-    member.setChannel(channel);
-    member.setUserName(title);
-    member.setHost(true);
-    member.setConnectionUri(ownerConnection);
+    PanacheMember member =
+        PanacheMember.of(memberId, channelName, title, true, ownerConnection, null);
 
     channel.addMember(member);
     channel.persistAndFlush();
@@ -69,8 +68,8 @@ public class ChannelsService implements Channels {
     if (!member.isHost()) throw new ValidationException("Only host member can drop its channel");
 
     String channelName = member.getChannelName();
-    H2Channel.deleteById(channelName); // Delete with Cascade
-    H2Channel.flush();
+    PanacheChannel.deleteById(channelName); // Delete with Cascade
+    PanacheChannel.flush();
     log.debug("Channel {} was deleted", channelName);
     return member;
   }
@@ -83,19 +82,21 @@ public class ChannelsService implements Channels {
     Objects.requireNonNull(connection, "connection");
     Objects.requireNonNull(userName, "user name");
 
-    if (H2Member.findById(memberId) != null)
-      throw new ConflictException("You can have only one open chat");
+    if (PanacheMember.findById(id(memberId, channelName)) != null) {
+      PanacheMember member = PanacheMember.findById(id(memberId, channelName));
+      if (member.getConnectionUri().equals(connection))
+        throw new ConflictException("You can't have more than one open chat");
 
-    H2Channel channel = H2Channel.findById(channelName);
+      member.setConnectionUri(connection);
+      member.persistAndFlush();
+      return member;
+    }
+
+    PanacheChannel channel = PanacheChannel.findById(channelName);
     if (channel == null) throw new NotFoundException();
 
-    H2Member member = new H2Member();
-    member.setId(memberId);
-    member.setUserName(userName);
-    member.setChannel(channel);
-    member.setConnectionUri(connection);
-    member.setHost(false);
-    member.setPeerMemberId(channel.getHostId());
+    PanacheMember member =
+        PanacheMember.of(memberId, channelName, userName, false, connection, channel.getHostId());
 
     member.persistAndFlush();
     log.debug("Member {} joined the Channel {}", memberId, channelName);
@@ -111,8 +112,8 @@ public class ChannelsService implements Channels {
     if (member.isHost())
       throw new ValidationException("Host can't leave the chat, you can only drop it");
 
-    H2Member.deleteById(member.getId());
-    H2Member.flush();
+    PanacheMember.deleteById(id(member.getId(), member.getChannelName()));
+    PanacheMember.flush();
     log.debug("Member {} left the Channel", member.getId());
     return member;
   }
@@ -120,18 +121,14 @@ public class ChannelsService implements Channels {
   @Override
   public Member find(String memberConnection) {
     Objects.requireNonNull(memberConnection, "connection");
-    H2Member member = H2Member.find("connectionUri", memberConnection).firstResult();
+    PanacheMember member = PanacheMember.find("connectionUri", memberConnection).firstResult();
     if (member == null) throw new NotFoundException();
     return member;
   }
 
   @Override
-  public Member find(String channel, String memberId) {
-    H2Member member =
-        H2Member.find(
-                "id=:memberId AND channelName=:channelName",
-                Parameters.with("channelName", channel).and("memberId", memberId))
-            .firstResult();
+  public Member find(String channelName, String memberId) {
+    PanacheMember member = PanacheMember.findById(id(memberId, channelName));
 
     if (member == null) throw new NotFoundException();
 
@@ -144,7 +141,8 @@ public class ChannelsService implements Channels {
     if (peerMemberId.equals(recipientMember.getPeerMemberId())) {
       return;
     }
-    H2Member member = H2Member.findById(recipientMember.getId());
+    PanacheMember member =
+        PanacheMember.findById(id(recipientMember.getId(), recipientMember.getChannelName()));
     member.setPeerMemberId(peerMemberId);
     member.persistAndFlush();
   }

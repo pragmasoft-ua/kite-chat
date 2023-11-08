@@ -1,5 +1,5 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
-package ua.com.pragmasoft.k1te.server.hackathon.entity;
+package ua.com.pragmasoft.k1te.server.standalone.infrastructure;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
@@ -8,7 +8,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "Channel")
-public class H2Channel extends PanacheEntityBase {
+public class PanacheChannel extends PanacheEntityBase {
 
   @Id private String channelName;
 
@@ -19,9 +19,9 @@ public class H2Channel extends PanacheEntityBase {
       mappedBy = "channel",
       fetch = FetchType.LAZY,
       cascade = {CascadeType.REMOVE, CascadeType.PERSIST})
-  private List<H2Member> members = new ArrayList<>();
+  private List<PanacheMember> members = new ArrayList<>();
 
-  public void addMember(H2Member member) {
+  public void addMember(PanacheMember member) {
     this.members.add(member);
     member.setChannel(this);
   }
