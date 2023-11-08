@@ -4,6 +4,8 @@ package ua.com.pragmasoft.k1te.server.standalone.infrastructure;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.util.Objects;
+
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 
 @Entity
@@ -142,6 +144,24 @@ public class PanacheMember extends PanacheEntityBase implements Member {
 
     public void setChannelName(String channelName) {
       this.channelName = channelName;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      MemberPK memberPK = (MemberPK) o;
+
+      if (!Objects.equals(channelName, memberPK.channelName)) return false;
+      return Objects.equals(memberId, memberPK.memberId);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = channelName != null ? channelName.hashCode() : 0;
+      result = 31 * result + (memberId != null ? memberId.hashCode() : 0);
+      return result;
     }
   }
 }

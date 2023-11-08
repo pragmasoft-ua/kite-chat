@@ -14,7 +14,8 @@
 Kite chat allows to add live web chat widget to any web site and use Telegram channel as a support team's backend
 to reply live chat requests.
 
-Kite chat backend provides websocket endpoint for webchat widget and telegram bot webhook to forward messages to the Telegram channels.
+Kite chat backend provides websocket endpoint for webchat widget and telegram bot webhook to forward messages to the
+Telegram channels.
 
 This project uses Quarkus. If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
 
@@ -22,10 +23,17 @@ This project uses Quarkus. If you want to learn more about Quarkus, please visit
 
 ### Public URL
 
-In order to test telegram webhooks, you need public url. One way to obtain it for local development is [ngrok](https://ngrok.com/download). Install it with `choco install ngrok` on Windows, `snap install ngrok` on Linux, `brew install ngrok/ngrok/ngrok` on Mac. Then run command `ngrok http 8080` from the command line. Ngrok writes public url to its output like
-`Forwarding https://71d6-185-235-173-207.eu.ngrok.io -> http://localhost:8080`. Copy the **host name** from the first url and use it as a value of the `%dev.host.name=71d6-185-235-173-207.eu.ngrok.io` property in the `.env` config file. If you don't have `.env` config file, first create it by copying from `.env.example.txt`
+In order to test telegram webhooks, you need public url. One way to obtain it for local development
+is [ngrok](https://ngrok.com/download). Install it with `choco install ngrok` on Windows, `snap install ngrok` on
+Linux, `brew install ngrok/ngrok/ngrok` on Mac. Then run command `ngrok http 8080` from the command line. Ngrok writes
+public url to its output like
+`Forwarding https://71d6-185-235-173-207.eu.ngrok.io -> http://localhost:8080`. Copy the **host name** from the first
+url and use it as a value of the `%dev.host.name=71d6-185-235-173-207.eu.ngrok.io` property in the `.env` config file.
+If you don't have `.env` config file, first create it by copying from `.env.example.txt`
 
-Alternatively, you can use Microsoft [devtunnels](https://learn.microsoft.com/ru-ru/azure/developer/dev-tunnels/overview) for the same purpose, which has some benefits, like VsCode integration, permanent URL, auth.
+Alternatively, you can use
+Microsoft [devtunnels](https://learn.microsoft.com/ru-ru/azure/developer/dev-tunnels/overview) for the same purpose,
+which has some benefits, like VsCode integration, permanent URL, auth.
 
 **⛔IMPORTANT** devtunnels seems do not tunnel websockets properly.
 
@@ -40,7 +48,8 @@ curl https://sw1r28pt-8080.euw.devtunnels.ms/
 
 ### Local DynamoDb database
 
-Kite chat uses DynamoDB as its NoSQL database. For development purposes you need docker container running `amazon/dynamodb-local` image.
+Kite chat uses DynamoDB as its NoSQL database. For development purposes you need docker container
+running `amazon/dynamodb-local` image.
 
 `k1te-serverless-stack-cdktf` folder contains CDKTF local stack which launches dynamodb-local container and initializes
 DynamoDB database schema in it. Shortly, you need switch to the `k1te-serverless-stack-cdktf` folder and run
@@ -62,19 +71,100 @@ Then you can run your application in dev mode that enables live coding using:
 > **NOTE:** Quarkus now ships with a Dev UI, which is available in dev mode only at http://localhost:8080/q/dev/.
 
 ### Run the Application with local H2 DataBase and Local filesystem
+
 In order to do so, you need run Quarkus app with a **standalone** profile specified
 for Maven. It can be done by the following command.
+
 ```bash
 mvn quarkus:dev -P standalone
 ```
+
 You also need to check **.env.example.txt** file to specify all the necessary properties.
 
 #### Additional information that you should know before running the app
-During working Local file system implementation may encounter to problem how **Ngrok** works.
+
+During working Local file system implementation you may encounter to problem how **Ngrok** works.
+
 1) It may **ask** you to register account (It's for free)
 2) It may also **block** file downloading that happens when you send any file from Telegram
-to WS and get .**htm** file with an error as a result. In order to solve this problem you can make use of **[ModHeader](https://chrome.google.com/webstore/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj)**
-Chrome extension and specify **ngrok-skip-browser-warning** for all Http requests.
+   to WS and get .**htm** file with an error as a result. In order to solve this problem you can make use
+   of **[ModHeader](https://chrome.google.com/webstore/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj)**
+   Chrome extension and specify **ngrok-skip-browser-warning** for all Http requests.
+
+### Deploy on OpenShift
+
+To deploy this application on the OpenShift platform, follow these steps:
+
+1. **Install OpenShift CLI**: Ensure you have the OpenShift CLI installed on your computer. You can find installation
+   instructions [here](https://docs.openshift.com/container-platform/4.9/cli_reference/openshift_cli/getting-started-cli.html)
+   .
+2. **Sign in to your OpenShift account via CLI**:
+    ```bash
+    oc login -u myUsername
+    ```
+   or
+    ```bash
+    oc login --token=myToken --server=myServerUrl
+    ```
+   You can obtain the token via the "Copy Login Command" link in the OpenShift web console.
+
+3. **Set up Persistent Volume Claim (PVC)**:
+
+   To ensure your application's data persistence, you need to utilize a Persistent Volume Claim (PVC). This allows the
+   app to save files to a chosen Persistent Volume, which can be either manually selected or dynamically generated via
+   StorageClass provided by OpenShift. It allows you re-deploy the Pod without risking to lose your data, because for
+   OpenShift we use
+   **standalone** Maven Profile that utilizes H2 as a DataBase and Local FileSystem for saving chats' files.
+   <br/>
+   To create the PVC resource, run the following command:
+    ```bash
+    oc apply -f ./k1te-server-pvc.yaml
+    ```
+   The command creates a PVC named **k1te-server-pvc**. To verify the creation of this resource, execute the following
+   command:
+    ```bash
+    oc get pvc
+    ```
+   This will display the PVC resource named **k1te-server-pvc**.
+
+4. **Checking application.properties file for OpenShift**:
+
+   Before going further you should check application.properties file, OpenShift section.
+   <br/>
+   As the main resource we use StatefulSet, because with simple Deployment it will be difficult to re-deploy
+   the app, because we use PVC, and it provides us with ReadWriteOnce AccessMode that doesn't work with Rolling Update (
+   during re-deploy new Pod is created and only afterwards the old one is destroyed, but new one can't be created
+   because
+   PVC is already attached). But you can also fix it via **Recreate** Strategy type for Deployment.
+   <br/>
+   You also need to specify HOST_NAME as env to make the app works, because Telegram WebHook works only with https.
+   As a solution to it, we use CloudFlare that allows us to proxy one of the OpenShift Routes and attach domain to it.
+
+5. **Deploy the application**:
+
+   Execute the following command, replacing the example values with your own:
+
+    ```bash
+    ./mvnw install -Dquarkus.kubernetes.deploy=true \
+                   -P standalone \
+                   -Dquarkus.openshift.env.vars.secret=your-secret \
+                   -Dquarkus.openshift.env.vars.telegram-bot-token=your-bot-token \
+                   -DHOST_NAME=your-host-name
+    ```
+
+   This command performs an S2I binary build, where the input is the locally built JAR, and the output is an ImageStream
+   configured to automatically trigger a deployment.
+
+   After some time, necessary resources will be created. You can verify this using the CLI:
+
+    - `oc get pods` should display a single generated Pod with **k1te-server-*** as its name.
+    - `oc get statefulSet` should show a single generated StatefulSet with **k1te-server** as its name.
+    - `oc get svc` should present a single generated Service named **k1te-server** with Port **80**.
+    - `oc get routes` should exhibit a single generated Route named **k1te-server**, attached to the **k1te-server**
+      Service.
+
+   Additional properties can be added or modified for this deployment as needed. Refer to
+   this [resource](https://quarkus.io/guides/deploying-to-openshift#configuration-reference) for more information.
 
 ## Packaging and running the application
 
@@ -105,7 +195,8 @@ You can create a native executable using:
 ./mvnw package -Pnative
 ```
 
-On Windows, the command above needs to be launched from the "x64 native tools command prompt for VS 2019" which appears in the Windows start menu after the installation of Visual Studio Biold Tools 2019
+On Windows, the command above needs to be launched from the "x64 native tools command prompt for VS 2019" which appears
+in the Windows start menu after the installation of Visual Studio Biold Tools 2019
 
 Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
 
@@ -119,7 +210,9 @@ If you want to learn more about building native executables, please consult http
 
 ### Upgrade dependencies
 
-First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade quarkus` (on Linux), then use `quarkus upgrade` to upgrade Quarkus BOM in the pom, then upgrade other dependencies `./mvnw versions:use-latest-releases`
+First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade quarkus` (on Linux), then
+use `quarkus upgrade` to upgrade Quarkus BOM in the pom, then upgrade other
+dependencies `./mvnw versions:use-latest-releases`
 
 ### TODO
 
@@ -141,8 +234,10 @@ First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade
 - messages sent in telegram needs to be rewritten by bot (removed and added again with the dialog id hashtag)
 - ttl
 - Throttling (waf, api gw) https://github.com/aws-samples/fine-grained-rate-limit-demo/
-- Authentication - blockchain like message ids signing idea? keep hashed userid using site's domain name? Add telegrambot token signature protection. Put s3 behind api gw for throttling and custom lambda auth
-- For web - use js challenge - respond web client with random uri to which it can connect, rather than connecting always to the same uri
+- Authentication - blockchain like message ids signing idea? keep hashed userid using site's domain name? Add
+  telegrambot token signature protection. Put s3 behind api gw for throttling and custom lambda auth
+- For web - use js challenge - respond web client with random uri to which it can connect, rather than connecting always
+  to the same uri
 - ✅Serverless
 - AnsweringMachineConnector - try AI chatbot. https://github.com/langchain4j/langchain4j
 - MessageRecorderListener
@@ -156,11 +251,16 @@ First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade
 - WhatsApp, Facebook messenger bots
 - when channel is dropped by host, all clients have to leave as well
 - pin unanswered messages? Maybe make this configurable.
-- telegram throttling sometimes will be a concern. Consider using dedicated bot tokens for commercial clients. Also, research aws lambda retry mechanism as a solution to tg throttling for other clients.
-- ✅proxy or vpn may cause ws connection closed after a minute of inactivity. Send ping from server every 30s or so and await for pong.
-- API Gateway supports message payloads up to 128 KB with a maximum frame size of 32 KB. If a message exceeds 32 KB, you must split it into multiple frames, each 32 KB or smaller. If a larger message is received, the connection is closed with code 1009. Consider sending text larger than 4K (see below) as files.
+- telegram throttling sometimes will be a concern. Consider using dedicated bot tokens for commercial clients. Also,
+  research aws lambda retry mechanism as a solution to tg throttling for other clients.
+- ✅proxy or vpn may cause ws connection closed after a minute of inactivity. Send ping from server every 30s or so and
+  await for pong.
+- API Gateway supports message payloads up to 128 KB with a maximum frame size of 32 KB. If a message exceeds 32 KB, you
+  must split it into multiple frames, each 32 KB or smaller. If a larger message is received, the connection is closed
+  with code 1009. Consider sending text larger than 4K (see below) as files.
 - tg api largest text message is 4kb. Larger ones need to be split (or sent as file attachements).
-- ✅it is better to send files with http put/post rather than websocket. Presigned s3 for large files. Only send url over websocket.
+- ✅it is better to send files with http put/post rather than websocket. Presigned s3 for large files. Only send url over
+  websocket.
 - trunk based development, feature flags
 - ipv6 (not supported in ip gw currently)
 - captcha or https://blog.cloudflare.com/turnstile-private-captcha-alternative/
