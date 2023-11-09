@@ -24,10 +24,11 @@ import ua.com.pragmasoft.k1te.serverless.handler.event.LambdaEvent;
 public class RequestDispatcher implements RequestStreamHandler {
 
   private final ObjectMapper objectMapper;
-  private final Map<Type, RequestHandler> handlers = new IdentityHashMap<>();
+  private final Map<Type, RequestHandler<Object, Object>> handlers = new IdentityHashMap<>();
 
   @Inject
-  public RequestDispatcher(ObjectMapper objectMapper, Instance<RequestHandler<?, ?>> handlers) {
+  public RequestDispatcher(
+      ObjectMapper objectMapper, Instance<RequestHandler<Object, Object>> handlers) {
     this.objectMapper = objectMapper;
     registerHandlers(handlers);
   }
@@ -42,7 +43,7 @@ public class RequestDispatcher implements RequestStreamHandler {
       Log.errorf("Unsupported event type. {}", exception.getMessage());
       throw new UnsupportedOperationException(exception);
     }
-    RequestHandler handler = handlers.get(lambdaEvent.getClass().getSuperclass());
+    var handler = handlers.get(lambdaEvent.getClass().getSuperclass());
 
     if (null == handler) {
       throw new NotFoundException("There is no Handler that can process your request");
@@ -51,11 +52,11 @@ public class RequestDispatcher implements RequestStreamHandler {
     objectMapper.writeValue(output, handler.handleRequest(lambdaEvent, context));
   }
 
-  private void registerHandlers(Instance<RequestHandler<?, ?>> handlers) {
+  private void registerHandlers(Instance<RequestHandler<Object, Object>> handlers) {
     handlers.forEach(
         handler -> {
           if (handler.getClass().getGenericInterfaces().length > 0) {
-            Type[] arguments = null;
+            Type[] arguments;
             if (handler.getClass().getGenericInterfaces()[0] == ClientProxy.class) {
               arguments =
                   ((ParameterizedType) handler.getClass().getSuperclass().getGenericInterfaces()[0])
