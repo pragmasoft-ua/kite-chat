@@ -1,5 +1,10 @@
 # 🪁🗨️ Kite Chat Server
 
+
+https://github.com/pragmasoft-ua/kite-chat/assets/1993065/bead6059-a0d2-44d2-abdd-9843f6327204
+
+
+
 ## About
 
 Kite chat allows to add live web chat widget on any static or dynamic web site and use Telegram channel as a support team's backend to respond to live chat messages.
