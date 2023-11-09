@@ -77,7 +77,7 @@ public class FileSystemStorageResource {
     return RestResponse.status(Response.Status.BAD_REQUEST, validationException.getMessage());
   }
 
-  @ServerExceptionMapper
+  @ServerExceptionMapper(JWTVerificationException.class)
   public RestResponse<String> handleJWTVerificationException(
       JWTVerificationException jwtVerificationException) {
     return RestResponse.status(Response.Status.FORBIDDEN, jwtVerificationException.getMessage());

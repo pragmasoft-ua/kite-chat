@@ -9,7 +9,7 @@
 ░░░░░   ░░░░ ░░░░░    ░░░░░   ░░░░░░      ░░░░░░  ░░░░ ░░░░░  ░░░░░░░░    ░░░░░
 ```
 
-# Kite Chat Server
+# 🪁🗨️ Kite Chat Server
 
 Kite chat allows to add live web chat widget to any web site and use Telegram channel as a support team's backend
 to reply live chat requests.
@@ -85,8 +85,8 @@ You also need to check **.env.example.txt** file to specify all the necessary pr
 
 During working Local file system implementation you may encounter to problem how **Ngrok** works.
 
-1) It may **ask** you to register account (It's for free)
-2) It may also **block** file downloading that happens when you send any file from Telegram
+1. It may **ask** you to register account (It's for free)
+2. It may also **block** file downloading that happens when you send any file from Telegram
    to WS and get .**htm** file with an error as a result. In order to solve this problem you can make use
    of **[ModHeader](https://chrome.google.com/webstore/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj)**
    Chrome extension and specify **ngrok-skip-browser-warning** for all Http requests.
@@ -99,13 +99,17 @@ To deploy this application on the OpenShift platform, follow these steps:
    instructions [here](https://docs.openshift.com/container-platform/4.9/cli_reference/openshift_cli/getting-started-cli.html)
    .
 2. **Sign in to your OpenShift account via CLI**:
-    ```bash
-    oc login -u myUsername
-    ```
+
+   ```bash
+   oc login -u myUsername
+   ```
+
    or
-    ```bash
-    oc login --token=myToken --server=myServerUrl
-    ```
+
+   ```bash
+   oc login --token=myToken --server=myServerUrl
+   ```
+
    You can obtain the token via the "Copy Login Command" link in the OpenShift web console.
 
 3. **Set up Persistent Volume Claim (PVC)**:
@@ -117,14 +121,18 @@ To deploy this application on the OpenShift platform, follow these steps:
    **standalone** Maven Profile that utilizes H2 as a DataBase and Local FileSystem for saving chats' files.
    <br/>
    To create the PVC resource, run the following command:
-    ```bash
-    oc apply -f ./k1te-server-pvc.yaml
-    ```
+
+   ```bash
+   oc apply -f ./k1te-server-pvc.yaml
+   ```
+
    The command creates a PVC named **k1te-server-pvc**. To verify the creation of this resource, execute the following
    command:
-    ```bash
-    oc get pvc
-    ```
+
+   ```bash
+   oc get pvc
+   ```
+
    This will display the PVC resource named **k1te-server-pvc**.
 
 4. **Checking application.properties file for OpenShift**:
@@ -144,24 +152,24 @@ To deploy this application on the OpenShift platform, follow these steps:
 
    Execute the following command, replacing the example values with your own:
 
-    ```bash
-    ./mvnw install -Dquarkus.kubernetes.deploy=true \
-                   -P standalone \
-                   -Dquarkus.openshift.env.vars.secret=your-secret \
-                   -Dquarkus.openshift.env.vars.telegram-bot-token=your-bot-token \
-                   -DHOST_NAME=your-host-name
-    ```
+   ```bash
+   ./mvnw install -Dquarkus.kubernetes.deploy=true \
+                  -P standalone \
+                  -Dquarkus.openshift.env.vars.secret=your-secret \
+                  -Dquarkus.openshift.env.vars.telegram-bot-token=your-bot-token \
+                  -DHOST_NAME=your-host-name
+   ```
 
    This command performs an S2I binary build, where the input is the locally built JAR, and the output is an ImageStream
    configured to automatically trigger a deployment.
 
    After some time, necessary resources will be created. You can verify this using the CLI:
 
-    - `oc get pods` should display a single generated Pod with **k1te-server-*** as its name.
-    - `oc get statefulSet` should show a single generated StatefulSet with **k1te-server** as its name.
-    - `oc get svc` should present a single generated Service named **k1te-server** with Port **80**.
-    - `oc get routes` should exhibit a single generated Route named **k1te-server**, attached to the **k1te-server**
-      Service.
+   - `oc get pods` should display a single generated Pod with **k1te-server-\*** as its name.
+   - `oc get statefulSet` should show a single generated StatefulSet with **k1te-server** as its name.
+   - `oc get svc` should present a single generated Service named **k1te-server** with Port **80**.
+   - `oc get routes` should exhibit a single generated Route named **k1te-server**, attached to the **k1te-server**
+     Service.
 
    Additional properties can be added or modified for this deployment as needed. Refer to
    this [resource](https://quarkus.io/guides/deploying-to-openshift#configuration-reference) for more information.
@@ -216,15 +224,11 @@ dependencies `./mvnw versions:use-latest-releases`
 
 ### TODO
 
-- ✅`/leave` does not work **Cannot dispatch request, no route found**, then simply **Not found**
-- if I send an image it responds with error message `text`
-- After I add a member to the support chat, got ⛔ Not found member
-
 - support for interactive inputs (like telegram keyboards / inline keyboards)
 - typing indicator `sendChatAction`
 - prototype using forum topics for threads
 - telegram login for web client. Other ways to verify user's contact (email validation, social login)
-- deep links to start conversation in Telegram immediately
+- ✅deep links to start conversation in Telegram immediately
 - check error handling
 - localization (uk, en); message bundles
 - document creating group in Telegram. Requires to turn off privacy mode for https://t.me/k1techatbot
@@ -234,6 +238,8 @@ dependencies `./mvnw versions:use-latest-releases`
 - messages sent in telegram needs to be rewritten by bot (removed and added again with the dialog id hashtag)
 - ttl
 - Throttling (waf, api gw) https://github.com/aws-samples/fine-grained-rate-limit-demo/
+- captcha or https://blog.cloudflare.com/turnstile-private-captcha-alternative/
+
 - Authentication - blockchain like message ids signing idea? keep hashed userid using site's domain name? Add
   telegrambot token signature protection. Put s3 behind api gw for throttling and custom lambda auth
 - For web - use js challenge - respond web client with random uri to which it can connect, rather than connecting always
@@ -263,6 +269,3 @@ dependencies `./mvnw versions:use-latest-releases`
   websocket.
 - trunk based development, feature flags
 - ipv6 (not supported in ip gw currently)
-- captcha or https://blog.cloudflare.com/turnstile-private-captcha-alternative/
-- / bot menu
-- CI/CD
