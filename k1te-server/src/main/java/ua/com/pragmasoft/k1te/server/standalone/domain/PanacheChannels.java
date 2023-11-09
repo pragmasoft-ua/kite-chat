@@ -82,18 +82,18 @@ public class PanacheChannels implements Channels {
     Objects.requireNonNull(connection, "connection");
     Objects.requireNonNull(userName, "user name");
 
+    PanacheChannel channel = PanacheChannel.findById(channelName);
+    if (channel == null) throw new NotFoundException();
+
     PanacheMember existingMember = PanacheMember.findByMemberId(memberId);
     if (existingMember != null) {
       if (existingMember.getConnectionUri().equals(connection))
-        throw new ConflictException("You can't have more than one open chat");
+        throw new ConflictException("You can't have more than one open Channel");
 
       existingMember.setConnectionUri(connection);
       existingMember.persistAndFlush();
       return existingMember;
     }
-
-    PanacheChannel channel = PanacheChannel.findById(channelName);
-    if (channel == null) throw new NotFoundException();
 
     PanacheMember member =
         PanacheMember.of(memberId, channelName, userName, false, connection, channel.getHostId());

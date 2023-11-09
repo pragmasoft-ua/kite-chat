@@ -2,13 +2,8 @@
 package ua.com.pragmasoft.k1te.backend.tg;
 
 import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.model.File;
-import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.model.MessageEntity;
+import com.pengrad.telegrambot.model.*;
 import com.pengrad.telegrambot.model.MessageEntity.Type;
-import com.pengrad.telegrambot.model.PhotoSize;
-import com.pengrad.telegrambot.model.Update;
-import com.pengrad.telegrambot.model.User;
 import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.AbstractSendRequest;
 import com.pengrad.telegrambot.request.ContentTypes;
@@ -49,6 +44,7 @@ public class TelegramConnector implements Connector, Closeable {
   private static final String UNSUPPORTED_PAYLOAD = "Unsupported payload ";
   private static final String TG = "tg";
   private static final String OK = "ok";
+  private static final String SUCCESS = "✅ ";
   private static final String HELP =
       """
       This bot allows to set up support channel in the current chat as a host
@@ -60,6 +56,7 @@ public class TelegramConnector implements Connector, Closeable {
       /join *channel* start conversation with support channel named *channel*
       /leave leave current support channel
 
+      /info show the information about your current Channel
       *channel* name should contain only alphanumeric letters, -(minus), \\_(underline)
       and be 8..32 characters long.
 
@@ -69,6 +66,23 @@ public class TelegramConnector implements Connector, Closeable {
 
       Use ↰ (Reply To) to respond to other messages.
       """;
+  private static final String ANONYMOUS_INFO =
+      """
+    You don't have any channels at the moment.
+    To join one, use /join channelName.
+    For more information about possible actions, use /help.
+    """;
+  private static final String INFO =
+      """
+    Hello %s!
+
+    You are a %s of the %s channel.
+
+    As a %s, you have the following privileges:
+    - Manage channel settings
+    - Moderate discussions and activities
+    If you need any further information or assistance use /help.
+    """;
 
   private final TelegramBot bot;
   private final Router router;
@@ -132,10 +146,34 @@ public class TelegramConnector implements Connector, Closeable {
     if (null == message) {
       message = u.editedChannelPost();
     }
+    if (isBotMember(u)) {
+      log.debug("Bot {} was added to the Group", parseBotName(u));
+      return new SendMessage(
+              u.myChatMember().chat().id(), SUCCESS + "You successfully added " + parseBotName(u))
+          .toWebhookResponse();
+    }
+    if (isBotLeft(u)) {
+      return onBotLeft(u);
+    }
     if (null == message) return this.onUnhandledUpdate(u);
     try {
       if (isCommand(message)) {
         return this.onCommand(message);
+      } else if (message.groupChatCreated() != null && message.groupChatCreated()) {
+        log.debug("GroupChat {} was created with Bot", message.chat().title());
+        return OK;
+      } else if (isNewChatMember(message)) {
+        log.debug(
+            "{} members were added to Group {}",
+            message.newChatMembers().length,
+            message.chat().title());
+        return OK;
+      } else if (isMemberLeft(message)) {
+        log.debug(
+            "Member {} has left the Group {}",
+            message.leftChatMember().username(),
+            message.chat().title());
+        return OK;
       } else {
         return this.onMessage(message, isEdited);
       }
@@ -210,6 +248,20 @@ public class TelegramConnector implements Connector, Closeable {
     String originConnection = this.connectionUri(memberId);
     String response;
 
+    if ("/info".equals(command)) {
+      try {
+        Member member = channels.find(originConnection);
+        String memberType = member.isHost() ? "Host" : "Member";
+        String text =
+            INFO.formatted(member.getUserName(), memberType, member.getChannelName(), memberType);
+
+        return new SendMessage(rawChatId, text).parseMode(ParseMode.Markdown).toWebhookResponse();
+      } catch (Exception e) {
+        return new SendMessage(rawChatId, ANONYMOUS_INFO)
+            .parseMode(ParseMode.Markdown)
+            .toWebhookResponse();
+      }
+    }
     if ("/start".equals(command)) {
       if (cmd.args.isEmpty())
         return new SendMessage(rawChatId, HELP).parseMode(ParseMode.Markdown).toWebhookResponse();
@@ -344,6 +396,16 @@ public class TelegramConnector implements Connector, Closeable {
     return OK;
   }
 
+  private String onBotLeft(Update update) {
+    Long rawChatId = update.myChatMember().chat().id();
+    String memberId = fromLong(rawChatId);
+    String connectionUri = this.connectionUri(memberId);
+    channels.dropChannel(connectionUri);
+
+    log.debug("Bot has left the Group");
+    return OK;
+  }
+
   private String onUnhandledUpdate(final Update u) {
     log.warn("Unhandled update {}", u);
     return OK;
@@ -354,11 +416,52 @@ public class TelegramConnector implements Connector, Closeable {
     final var entities = message.entities();
     if (null != entities && entities.length > 0) {
       final MessageEntity entity = entities[0];
-      if (Type.bot_command == entity.type()) {
-        return true;
-      }
+      return Type.bot_command == entity.type();
     }
     return false;
+  }
+
+  /** Returns true if bot was not in the Chat/Group before and was added to one. */
+  private static boolean isBotMember(Update update) {
+    if (update.myChatMember() == null) return false;
+
+    ChatMember newChatMember = update.myChatMember().newChatMember();
+    ChatMember oldChatMember = update.myChatMember().oldChatMember();
+    return oldChatMember.status() == ChatMember.Status.left
+        && newChatMember.status() == ChatMember.Status.member;
+  }
+
+  /**
+   * Returns true if Bot has left the Chat/Group because the Group/Chat was deleted or Bot was
+   * removed from it.
+   */
+  private static boolean isBotLeft(Update update) {
+    if (update.myChatMember() == null) return false;
+
+    ChatMember newChatMember = update.myChatMember().newChatMember();
+    ChatMember oldChatMember = update.myChatMember().oldChatMember();
+    return oldChatMember.status() == ChatMember.Status.member
+        && newChatMember.status() == ChatMember.Status.left;
+  }
+
+  /**
+   * Returns true if Member or Members were added to the Chat/Group. Be-careful- also returns true
+   * if Bot was added to the Chat/Group. Should not use alongside isBotMember().
+   */
+  private static boolean isNewChatMember(Message message) {
+    return message.newChatMembers() != null && message.newChatMembers().length > 0;
+  }
+
+  /**
+   * Returns true when User or Bot has left the Chat/Group. Be-careful shouldn't use alongside
+   * isBotLeft().
+   */
+  private static boolean isMemberLeft(Message message) {
+    return message.leftChatMember() != null;
+  }
+
+  private static String parseBotName(Update update) {
+    return update.myChatMember().newChatMember().user().username();
   }
 
   private static CommandWithArgs parseCommand(final Message message) {

@@ -1,6 +1,7 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
+import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,10 +10,8 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
-import software.amazon.awssdk.enhanced.dynamodb.model.TransactPutItemEnhancedRequest;
-import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.*;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 import ua.com.pragmasoft.k1te.backend.router.domain.ChannelName;
 import ua.com.pragmasoft.k1te.backend.router.domain.Channels;
@@ -35,6 +34,15 @@ public class DynamoDbChannels implements Channels {
       Expression.builder()
           .expression("attribute_not_exists(#attr)")
           .putExpressionName("#attr", "name") // name is a dynamodb keyword
+          .build();
+
+  private static Expression pkAndSkNotExistsCondition =
+      Expression.builder()
+          .expression("attribute_not_exists(#pk) AND attribute_not_exists(#sk)")
+          .expressionNames(
+              Map.of(
+                  "#pk", "ChannelName",
+                  "#sk", "id"))
           .build();
 
   private final String channelsTableName;
@@ -150,11 +158,16 @@ public class DynamoDbChannels implements Channels {
     DynamoDbMember clientMember =
         new DynamoDbMember(memberId, channelName, userName, memberConnection, false, hostId);
 
+    var putMemberRequest =
+        PutItemEnhancedRequest.builder(DynamoDbMember.class)
+            .item(clientMember)
+            .conditionExpression(pkAndSkNotExistsCondition)
+            .build();
     try {
-      this.membersTable.putItem(clientMember);
+      this.membersTable.putItem(putMemberRequest);
       return clientMember;
-    } catch (Exception e) {
-      throw new KiteException(e.getMessage(), e);
+    } catch (ConditionalCheckFailedException e) {
+      throw new KiteException("You can't /join the same Channel", e);
     }
   }
 
