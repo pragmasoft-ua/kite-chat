@@ -56,6 +56,7 @@ public class TelegramConnector implements Connector, Closeable {
       /join *channel* start conversation with support channel named *channel*
       /leave leave current support channel
 
+      /info show the information about your current Channel
       *channel* name should contain only alphanumeric letters, -(minus), \\_(underline)
       and be 8..32 characters long.
 
@@ -65,6 +66,23 @@ public class TelegramConnector implements Connector, Closeable {
 
       Use ↰ (Reply To) to respond to other messages.
       """;
+  private static final String ANONYMOUS_INFO =
+      """
+    You don't have any channels at the moment.
+    To join one, use /join channelName.
+    For more information about possible actions, use /help.
+    """;
+  private static final String INFO =
+      """
+    Hello %s!
+
+    You are a %s of the %s channel.
+
+    As a %s, you have the following privileges:
+    - Manage channel settings
+    - Moderate discussions and activities
+    If you need any further information or assistance use /help.
+    """;
 
   private final TelegramBot bot;
   private final Router router;
@@ -230,6 +248,20 @@ public class TelegramConnector implements Connector, Closeable {
     String originConnection = this.connectionUri(memberId);
     String response;
 
+    if ("/info".equals(command)) {
+      try {
+        Member member = channels.find(originConnection);
+        String memberType = member.isHost() ? "Host" : "Member";
+        String text =
+            INFO.formatted(member.getUserName(), memberType, member.getChannelName(), memberType);
+
+        return new SendMessage(rawChatId, text).parseMode(ParseMode.Markdown).toWebhookResponse();
+      } catch (Exception e) {
+        return new SendMessage(rawChatId, ANONYMOUS_INFO)
+            .parseMode(ParseMode.Markdown)
+            .toWebhookResponse();
+      }
+    }
     if ("/start".equals(command)) {
       if (cmd.args.isEmpty())
         return new SendMessage(rawChatId, HELP).parseMode(ParseMode.Markdown).toWebhookResponse();

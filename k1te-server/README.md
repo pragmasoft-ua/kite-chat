@@ -174,6 +174,19 @@ To deploy this application on the OpenShift platform, follow these steps:
    Additional properties can be added or modified for this deployment as needed. Refer to
    this [resource](https://quarkus.io/guides/deploying-to-openshift#configuration-reference) for more information.
 
+#### Destroy the Deployment
+
+After using the application, you can remove it using the following commands:
+
+- `oc delete statefulSet k1te-server`: Deletes the created StatefulSet.
+- `oc delete svc k1te-server`: Deletes the created Service.
+- `oc delete route k1te-server`: Deletes the created Route.
+- `oc delete pvc k1te-server-pvc`: Deletes the created Persistent Volume Claim (PVC).
+- `oc delete buildConfigs k1te-server`: Deletes the created Build Configs.
+- `oc delete is k1te-server`: Deletes the created ImageStream.
+
+Make sure to execute these commands cautiously as they will permanently remove the associated resources in your OpenShift environment.
+
 ## Packaging and running the application
 
 The application can be packaged using:
