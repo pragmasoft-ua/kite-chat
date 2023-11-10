@@ -33,6 +33,8 @@ Kite chat server supports both containerized and serverless deployments.
 
 ### Containerized backend
 
+<img src="./Containerized architecture.svg" width="960" alt="Containerized architecture"/>
+
 Containerized backend mode is more suited for VPS, OpenShift, Kubernetes, ECS and standalone local deployments. It is also more convenient for local development and debugging.
 
 `k1te-server` module supports building standalone or containerized server and deploy it
@@ -44,6 +46,8 @@ It uses StatefulSet to mount persistent volume for both H2 database and filesyst
 More detailed build documentation and deployment instructions are available in the `k1te-server\README.md`
 
 ### Serverless backend
+
+<img src="./Serverless architecture.svg" width="960" alt="Serverless architecture"/>
 
 Serverless mode uses AWS Lambda and AWS API Gateway as a deployment target.
 

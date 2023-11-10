@@ -74,7 +74,7 @@ During working Local file system implementation you may encounter to problem how
    of **[ModHeader](https://chrome.google.com/webstore/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj)**
    Chrome extension and specify **ngrok-skip-browser-warning** for all Http requests.
 
-### Deploy on OpenShift
+## Deploy on OpenShift
 
 To deploy this application on the OpenShift platform, follow these steps:
 
