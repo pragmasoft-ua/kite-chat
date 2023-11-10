@@ -11,7 +11,7 @@
 
 # 🪁 Kite Chat Backend
 
-![Screenshot](./Screenshot.png)
+<img src="./Screenshot.png" width="960" alt="K1te chat mobile screenshot"/>
 
 ## About
 
