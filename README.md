@@ -1,9 +1,6 @@
 # 🪁🗨️ Kite Chat Server
 
-
-https://github.com/pragmasoft-ua/kite-chat/assets/1993065/bead6059-a0d2-44d2-abdd-9843f6327204
-
-
+![зображення](https://github.com/pragmasoft-ua/kite-chat/assets/1993065/fd96412a-ef37-4835-a405-fd79f31692cd)
 
 ## About
 
