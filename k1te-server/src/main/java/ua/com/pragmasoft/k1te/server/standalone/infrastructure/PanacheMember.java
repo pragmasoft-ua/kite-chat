@@ -129,6 +129,30 @@ public class PanacheMember extends PanacheEntityBase implements Member {
     return channel;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    PanacheMember member = (PanacheMember) o;
+
+    if (host != member.host) return false;
+    if (!Objects.equals(memberPK, member.memberPK)) return false;
+    if (!Objects.equals(userName, member.userName)) return false;
+    if (!Objects.equals(connectionUri, member.connectionUri)) return false;
+    return Objects.equals(peerMemberId, member.peerMemberId);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = memberPK != null ? memberPK.hashCode() : 0;
+    result = 31 * result + (userName != null ? userName.hashCode() : 0);
+    result = 31 * result + (host ? 1 : 0);
+    result = 31 * result + (connectionUri != null ? connectionUri.hashCode() : 0);
+    result = 31 * result + (peerMemberId != null ? peerMemberId.hashCode() : 0);
+    return result;
+  }
+
   @Embeddable
   public static class MemberPK implements Serializable {
 
