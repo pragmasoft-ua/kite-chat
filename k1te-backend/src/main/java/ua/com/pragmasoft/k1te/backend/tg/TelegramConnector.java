@@ -5,14 +5,7 @@ import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.*;
 import com.pengrad.telegrambot.model.MessageEntity.Type;
 import com.pengrad.telegrambot.model.request.ParseMode;
-import com.pengrad.telegrambot.request.AbstractSendRequest;
-import com.pengrad.telegrambot.request.ContentTypes;
-import com.pengrad.telegrambot.request.DeleteWebhook;
-import com.pengrad.telegrambot.request.GetFile;
-import com.pengrad.telegrambot.request.SendDocument;
-import com.pengrad.telegrambot.request.SendMessage;
-import com.pengrad.telegrambot.request.SendPhoto;
-import com.pengrad.telegrambot.request.SetWebhook;
+import com.pengrad.telegrambot.request.*;
 import com.pengrad.telegrambot.response.GetFileResponse;
 import java.io.Closeable;
 import java.net.URI;
@@ -23,6 +16,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ua.com.pragmasoft.k1te.backend.router.domain.Channels;
@@ -40,6 +34,9 @@ import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
 public class TelegramConnector implements Connector, Closeable {
 
   private static final Logger log = LoggerFactory.getLogger(TelegramConnector.class);
+
+  private static final boolean PIN_FEATURE_FLAG = true;
+  private final ConcurrentHashMap<Member, Integer> pinners = new ConcurrentHashMap<>();
 
   private static final String UNSUPPORTED_PAYLOAD = "Unsupported payload ";
   private static final String TG = "tg";
@@ -68,21 +65,21 @@ public class TelegramConnector implements Connector, Closeable {
       """;
   private static final String ANONYMOUS_INFO =
       """
-    You don't have any channels at the moment.
-    To join one, use /join channelName.
-    For more information about possible actions, use /help.
-    """;
+      You don't have any channels at the moment.
+      To join one, use /join channelName.
+      For more information about possible actions, use /help.
+      """;
   private static final String INFO =
       """
-    Hello %s!
+      Hello %s!
 
-    You are a %s of the %s channel.
+      You are a %s of the %s channel.
 
-    As a %s, you have the following privileges:
-    - Manage channel settings
-    - Moderate discussions and activities
-    If you need any further information or assistance use /help.
-    """;
+      As a %s, you have the following privileges:
+      - Manage channel settings
+      - Moderate discussions and activities
+      If you need any further information or assistance use /help.
+      """;
 
   private final TelegramBot bot;
   private final Router router;
@@ -174,6 +171,12 @@ public class TelegramConnector implements Connector, Closeable {
             message.leftChatMember().username(),
             message.chat().title());
         return OK;
+      } else if (isPinnedMessage(message)) {
+        bot.execute(
+            new DeleteMessage(
+                message.chat().id(),
+                message.messageId())); // Delete notification that message was pinned
+        return OK;
       } else {
         return this.onMessage(message, isEdited);
       }
@@ -230,6 +233,19 @@ public class TelegramConnector implements Connector, Closeable {
           "%s connector error: (%d) %s"
               .formatted(this.id(), sendResponse.errorCode(), sendResponse.description()));
     }
+
+    if (PIN_FEATURE_FLAG) {
+      pinners.computeIfAbsent(
+          from,
+          member -> {
+            PinChatMessage pinChatMessage =
+                new PinChatMessage(destinationChatId, sendResponse.message().messageId())
+                    .disableNotification(true);
+            bot.execute(pinChatMessage);
+            return sendResponse.message().messageId();
+          });
+    }
+
     ctx.response =
         new MessageAck(
             ctx.request.messageId(),
@@ -391,6 +407,16 @@ public class TelegramConnector implements Connector, Closeable {
             .withTo(to)
             .withRequest(request);
     this.router.dispatch(ctx);
+
+    if (PIN_FEATURE_FLAG) {
+      Integer messageId = pinners.get(to);
+      if (messageId != null) {
+        UnpinChatMessage unpinChatMessage = new UnpinChatMessage(rawChatId).messageId(messageId);
+        bot.execute(unpinChatMessage);
+        pinners.remove(to);
+      }
+    }
+
     MessageAck ack = ctx.response;
     log.debug("Message #{} delivered", ack.messageId());
     return OK;
@@ -458,6 +484,14 @@ public class TelegramConnector implements Connector, Closeable {
    */
   private static boolean isMemberLeft(Message message) {
     return message.leftChatMember() != null;
+  }
+
+  /**
+   * Returns true if Message is a PinnedMessage. Used alongside Pin Feature because when we Pin
+   * message WebHook sends Update about it
+   */
+  private static boolean isPinnedMessage(Message message) {
+    return message.pinnedMessage() != null;
   }
 
   private static String parseBotName(Update update) {
