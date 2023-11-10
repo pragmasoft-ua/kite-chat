@@ -1,13 +1,21 @@
-# 🪁🗨️ Kite Chat Server
+```
+ █████   ████  ███   █████                         █████                 █████
+░░███   ███░  ░░░   ░░███                         ░░███                 ░░███
+ ░███  ███    ████  ███████    ██████      ██████  ░███████    ██████   ███████
+ ░███████    ░░███ ░░░███░    ███░░███    ███░░███ ░███░░███  ░░░░░███ ░░░███░
+ ░███░░███    ░███   ░███    ░███████    ░███ ░░░  ░███ ░███   ███████   ░███
+ ░███ ░░███   ░███   ░███ ███░███░░░     ░███  ███ ░███ ░███  ███░░███   ░███ ███
+ █████ ░░████ █████  ░░█████ ░░██████    ░░██████  ████ █████░░████████  ░░█████
+░░░░░   ░░░░ ░░░░░    ░░░░░   ░░░░░░      ░░░░░░  ░░░░ ░░░░░  ░░░░░░░░    ░░░░░
+```
 
+# 🪁 Kite Chat Backend
 
-https://github.com/pragmasoft-ua/kite-chat/assets/1993065/bead6059-a0d2-44d2-abdd-9843f6327204
-
-
+<img src="./Screenshot.png" width="960" alt="K1te chat mobile screenshot"/>
 
 ## About
 
-Kite chat allows to add live web chat widget on any static or dynamic web site and use Telegram channel as a support team's backend to respond to live chat messages.
+Kite chat allows to add live web chat widget on any static or dynamic web site and use Telegram channel as a support team's backend to provide instant support feedback.
 
 ## License
 
@@ -65,3 +73,9 @@ Currently spotless is configured to ratchett mode and only formats files changed
 from those in the main branch
 
 Comment out this spotless option to format all files instead.
+
+### Upgrade dependencies
+
+First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade quarkus` (on Linux), then
+use `quarkus upgrade` to upgrade Quarkus BOM in the pom, then upgrade other
+dependencies `./mvnw versions:use-latest-releases`

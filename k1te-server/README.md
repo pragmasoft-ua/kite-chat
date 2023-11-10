@@ -1,23 +1,6 @@
-```
- █████   ████  ███   █████                         █████                 █████
-░░███   ███░  ░░░   ░░███                         ░░███                 ░░███
- ░███  ███    ████  ███████    ██████      ██████  ░███████    ██████   ███████
- ░███████    ░░███ ░░░███░    ███░░███    ███░░███ ░███░░███  ░░░░░███ ░░░███░
- ░███░░███    ░███   ░███    ░███████    ░███ ░░░  ░███ ░███   ███████   ░███
- ░███ ░░███   ░███   ░███ ███░███░░░     ░███  ███ ░███ ░███  ███░░███   ░███ ███
- █████ ░░████ █████  ░░█████ ░░██████    ░░██████  ████ █████░░████████  ░░█████
-░░░░░   ░░░░ ░░░░░    ░░░░░   ░░░░░░      ░░░░░░  ░░░░ ░░░░░  ░░░░░░░░    ░░░░░
-```
+# 🪁Kite Chat Server
 
-# 🪁🗨️ Kite Chat Server
-
-Kite chat allows to add live web chat widget to any web site and use Telegram channel as a support team's backend
-to reply live chat requests.
-
-Kite chat backend provides websocket endpoint for webchat widget and telegram bot webhook to forward messages to the
-Telegram channels.
-
-This project uses Quarkus. If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
+Kite chat server provides websocket endpoint for webchat widget and telegram bot webhook to forward messages to Telegram channels.
 
 ## Running the application in dev mode
 
@@ -228,57 +211,3 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 You can then execute your native executable with: `./target/k1te-chat-backend-1.0.0-SNAPSHOT-runner`
 
 If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.
-
-### Upgrade dependencies
-
-First, upgrade Quarkus with `choco upgrade quarkus` (on Windows) or `sdk upgrade quarkus` (on Linux), then
-use `quarkus upgrade` to upgrade Quarkus BOM in the pom, then upgrade other
-dependencies `./mvnw versions:use-latest-releases`
-
-### TODO
-
-- support for interactive inputs (like telegram keyboards / inline keyboards)
-- typing indicator `sendChatAction`
-- prototype using forum topics for threads
-- telegram login for web client. Other ways to verify user's contact (email validation, social login)
-- ✅deep links to start conversation in Telegram immediately
-- check error handling
-- localization (uk, en); message bundles
-- document creating group in Telegram. Requires to turn off privacy mode for https://t.me/k1techatbot
-- stop exposing real chat ids and websocket ids as member ids
-- https://quarkus.io/guides/smallrye-fault-tolerance (timeouts? circuit breaker?)
-- suport of message editing
-- messages sent in telegram needs to be rewritten by bot (removed and added again with the dialog id hashtag)
-- ttl
-- Throttling (waf, api gw) https://github.com/aws-samples/fine-grained-rate-limit-demo/
-- captcha or https://blog.cloudflare.com/turnstile-private-captcha-alternative/
-
-- Authentication - blockchain like message ids signing idea? keep hashed userid using site's domain name? Add
-  telegrambot token signature protection. Put s3 behind api gw for throttling and custom lambda auth
-- For web - use js challenge - respond web client with random uri to which it can connect, rather than connecting always
-  to the same uri
-- ✅Serverless
-- AnsweringMachineConnector - try AI chatbot. https://github.com/langchain4j/langchain4j
-- MessageRecorderListener
-- ❌@nxrocks/nx-quarkus
-- https://github.com/schnatterer/moby-names-generator-java
-- ✅initialize lambda based webhook - ~~local-exec provisioner using curl~~ used lambda invocation instead
-- ✅SnapStart
-- GraalVM native image
-- /info command - am I joined or hosted ? or amend /help
-- /join alias of /start
-- WhatsApp, Facebook messenger bots
-- when channel is dropped by host, all clients have to leave as well
-- pin unanswered messages? Maybe make this configurable.
-- telegram throttling sometimes will be a concern. Consider using dedicated bot tokens for commercial clients. Also,
-  research aws lambda retry mechanism as a solution to tg throttling for other clients.
-- ✅proxy or vpn may cause ws connection closed after a minute of inactivity. Send ping from server every 30s or so and
-  await for pong.
-- API Gateway supports message payloads up to 128 KB with a maximum frame size of 32 KB. If a message exceeds 32 KB, you
-  must split it into multiple frames, each 32 KB or smaller. If a larger message is received, the connection is closed
-  with code 1009. Consider sending text larger than 4K (see below) as files.
-- tg api largest text message is 4kb. Larger ones need to be split (or sent as file attachements).
-- ✅it is better to send files with http put/post rather than websocket. Presigned s3 for large files. Only send url over
-  websocket.
-- trunk based development, feature flags
-- ipv6 (not supported in ip gw currently)
