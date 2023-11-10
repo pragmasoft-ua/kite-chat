@@ -149,7 +149,7 @@ export class KiteStack extends TerraformStack {
       },
       architectures: isNative ? ["arm64"] : ["x86_64"],
       memorySize,
-      timeout: 20,
+      timeout: 30,
     });
 
     wsApiStage.addDefaultRoutes(mainHandler, apiGatewayPrincipal);

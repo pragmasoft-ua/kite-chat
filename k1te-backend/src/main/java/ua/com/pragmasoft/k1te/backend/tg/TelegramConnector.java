@@ -249,18 +249,7 @@ public class TelegramConnector implements Connector, Closeable {
     String response;
 
     if ("/info".equals(command)) {
-      try {
-        Member member = channels.find(originConnection);
-        String memberType = member.isHost() ? "Host" : "Member";
-        String text =
-            INFO.formatted(member.getUserName(), memberType, member.getChannelName(), memberType);
-
-        return new SendMessage(rawChatId, text).parseMode(ParseMode.Markdown).toWebhookResponse();
-      } catch (Exception e) {
-        return new SendMessage(rawChatId, ANONYMOUS_INFO)
-            .parseMode(ParseMode.Markdown)
-            .toWebhookResponse();
-      }
+      return onInfoCommand(rawChatId, originConnection);
     }
     if ("/start".equals(command)) {
       if (cmd.args.isEmpty())
@@ -318,6 +307,21 @@ public class TelegramConnector implements Connector, Closeable {
       throw new ValidationException("Unsupported command " + command);
     }
     return new SendMessage(rawChatId, response).toWebhookResponse();
+  }
+
+  private String onInfoCommand(Long rawChatId, String originConnection) {
+    try {
+      Member member = channels.find(originConnection);
+      String memberType = member.isHost() ? "Host" : "Member";
+      String text =
+          INFO.formatted(member.getUserName(), memberType, member.getChannelName(), memberType);
+
+      return new SendMessage(rawChatId, text).parseMode(ParseMode.Markdown).toWebhookResponse();
+    } catch (Exception e) {
+      return new SendMessage(rawChatId, ANONYMOUS_INFO)
+        .parseMode(ParseMode.Markdown)
+        .toWebhookResponse();
+    }
   }
 
   private String onHostCommand(
