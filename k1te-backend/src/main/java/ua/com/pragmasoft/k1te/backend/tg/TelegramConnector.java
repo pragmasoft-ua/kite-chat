@@ -208,7 +208,7 @@ public class TelegramConnector implements Connector, Closeable {
               : binaryPayload.uri().toString();
 
       var binaryMessage =
-          binaryPayload.isImage()
+          binaryPayload.isImage() && !binaryPayload.fileType().equals("image/gif")
               ? new SendPhoto(destinationChatId, fileIdOrUri)
               : new SendDocument(destinationChatId, fileIdOrUri);
 
