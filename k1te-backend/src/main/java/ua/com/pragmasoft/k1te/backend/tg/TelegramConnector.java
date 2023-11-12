@@ -2,10 +2,26 @@
 package ua.com.pragmasoft.k1te.backend.tg;
 
 import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.model.*;
+import com.pengrad.telegrambot.model.ChatMember;
+import com.pengrad.telegrambot.model.File;
+import com.pengrad.telegrambot.model.Message;
+import com.pengrad.telegrambot.model.MessageEntity;
 import com.pengrad.telegrambot.model.MessageEntity.Type;
+import com.pengrad.telegrambot.model.PhotoSize;
+import com.pengrad.telegrambot.model.Update;
+import com.pengrad.telegrambot.model.User;
 import com.pengrad.telegrambot.model.request.ParseMode;
-import com.pengrad.telegrambot.request.*;
+import com.pengrad.telegrambot.request.AbstractSendRequest;
+import com.pengrad.telegrambot.request.ContentTypes;
+import com.pengrad.telegrambot.request.DeleteMessage;
+import com.pengrad.telegrambot.request.DeleteWebhook;
+import com.pengrad.telegrambot.request.GetFile;
+import com.pengrad.telegrambot.request.PinChatMessage;
+import com.pengrad.telegrambot.request.SendDocument;
+import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.request.SendPhoto;
+import com.pengrad.telegrambot.request.SetWebhook;
+import com.pengrad.telegrambot.request.UnpinChatMessage;
 import com.pengrad.telegrambot.response.GetFileResponse;
 import java.io.Closeable;
 import java.net.URI;
@@ -35,7 +51,7 @@ public class TelegramConnector implements Connector, Closeable {
 
   private static final Logger log = LoggerFactory.getLogger(TelegramConnector.class);
 
-  private static final boolean PIN_FEATURE_FLAG = true;
+  private static final boolean PIN_FEATURE_FLAG = false;
   private final ConcurrentHashMap<Member, Integer> pinners = new ConcurrentHashMap<>();
 
   private static final String UNSUPPORTED_PAYLOAD = "Unsupported payload ";
@@ -335,8 +351,8 @@ public class TelegramConnector implements Connector, Closeable {
       return new SendMessage(rawChatId, text).parseMode(ParseMode.Markdown).toWebhookResponse();
     } catch (Exception e) {
       return new SendMessage(rawChatId, ANONYMOUS_INFO)
-        .parseMode(ParseMode.Markdown)
-        .toWebhookResponse();
+          .parseMode(ParseMode.Markdown)
+          .toWebhookResponse();
     }
   }
 

@@ -1,33 +1,194 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="kite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>&lt;kite-chat> Demo</title>
+    <title>CodeShift 2023 🪁K1te chat demo</title>
     <style>
       :root {
-        --kite-primary-color: #808080;
+        --kite-primary-color: #0284c7;
         font-family: sans-serif;
+        accent-color: var(--kite-primary-color);
       }
-      /*image*/
+      html,
+      body {
+        padding: 0;
+        margin: 0;
+      }
+      h1,
+      footer {
+        padding: 1em;
+        text-align: center;
+        margin: 0;
+      }
+      a,
+      em {
+        color: var(--kite-primary-color);
+      }
+      main {
+        padding: 1em;
+        max-width: 50em;
+        margin: 0 auto 3em;
+      }
+      footer {
+        width: 100vw;
+        position: fixed;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+      button {
+        color: white;
+        background-color: var(--kite-primary-color);
+        border: none;
+      }
+      button,
+      input#channel {
+        padding: 0.5em;
+        width: 32em;
+      }
+      pre {
+        overflow-x: scroll;
+        padding: 1em;
+        background-color: #666;
+        color: white;
+      }
+      .hidden {
+        display: none;
+      }
       @media (prefers-color-scheme: dark) {
         body {
           background-color: #333;
           color: white;
         }
+        footer {
+          background-color: rgba(255, 255, 255, 0.5);
+        }
       }
     </style>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@highlightjs/cdn-assets/styles/github-dark.min.css"
+    />
+    <script type="module">
+      const ESM_MODULE =
+        "https://unpkg.com/@pragmasoft-ukraine/kite-chat/dist/kite-chat.js";
+      const DEFAULT_HOSTNAME = "openshift.k1te.chat";
+      const DEFAULT_BOTNAME = "k1tebot";
+      import highlight from "https://unpkg.com/@highlightjs/cdn-assets@11.9.0/es/highlight.min.js";
+      import {
+        uniqueNamesGenerator,
+        adjectives,
+        colors,
+        animals,
+      } from "https://cdn.jsdelivr.net/npm/@joaomoreno/unique-names-generator@5.1.0/+esm";
+      import { KiteChat } from "https://www.k1te.chat/test/kite-chat.js";
+      let { search, hostname } = document.location;
+      const qry = new URLSearchParams(search);
+      if (!hostname || hostname === "localhost") {
+        hostname = DEFAULT_HOSTNAME;
+      }
+      let channel = qry.get("channel");
+      if (channel) {
+        const output = document.querySelector("output");
+        output.classList.remove("hidden");
+        document.querySelector("strong#channel").textContent = channel;
+        // create websocket link and KiteChat protocol driver
+        const endpoint = `wss://${hostname}/channels?c=${channel}`;
+        const kiteChat = new KiteChat({
+          endpoint,
+          createIfMissing: true,
+        });
+        addEventListener("beforeunload", () => kiteChat.disconnect());
+        // prettier-ignore
+        let snippet = `${"<"}script type="module">
+  import { KiteChat } from "${ESM_MODULE}";
+  const endpoint = "wss://${hostname}/channels?c=${channel}";
+  new KiteChat({ endpoint, createIfMissing: true });
+${"<"}/script>`;
+        snippet = highlight.highlightAuto(snippet).value;
+        const code = document.querySelector("code");
+        code.innerHTML = snippet;
+      } else {
+        const form = document.querySelector("form");
+        form.classList.remove("hidden");
+        const bot = qry.get("bot") ?? DEFAULT_BOTNAME;
+        channel = uniqueNamesGenerator({
+          dictionaries: [colors, adjectives, animals],
+        });
+        document.querySelector("input#channel").value = channel;
+        form.addEventListener("submit", (e) => {
+          // get channel name
+          const channel = e.target["channel"].value;
+          const telegramDeepLink = `https://t.me/${bot}?start=host__${channel}`;
+          console.debug(telegramDeepLink);
+          open(telegramDeepLink, "_blank");
+        });
+      }
+    </script>
   </head>
   <body>
-    <h1>&lt;kite-chat&gt; demo</h1>
-    <script type="module">
-      import {KiteChat} from 'https://unpkg.com/@pragmasoft-ukraine/kite-chat@2023.10.2/dist/kite-chat.js';
-      const kiteChat = new KiteChat({
-        endpoint: 'wss://openshift.k1te.chat//channels?c=pragmasoft',
-        createIfMissing: true,
-      });
-      addEventListener('beforeunload', () => kiteChat.disconnect());
-    </script>
+    <header>
+      <h1>CodeShift 2023 🪁K1te chat demo</h1>
+    </header>
+    <main>
+      <form class="hidden">
+        <p>
+          This interactive demo lets you instantly create your support channel
+          in Telegram and start exchanging messages with Kite chat widget on
+          this page.
+        </p>
+        <p>
+          This demo expects you to have a
+          <a href="https://telegram.org/">Telegram</a> client installed and
+          connected on your desktop or mobile phone. If you don't have one,
+          <a href="https://telegram.org/apps">download</a> it first.
+        </p>
+        <p>
+          Provide a name for your channel. Use 8 to 32 english alphanumeric
+          symbols or underscore
+        </p>
+        <p>
+          <label for="channel">Channel name *</label>
+          <input
+            id="channel"
+            name="channel"
+            placeholder="codeshift"
+            required
+            autofocus
+            minlength="8"
+            maxlength="32"
+            pattern="[A-Za-z0-9_]+"
+          />
+        </p>
+        <p>
+          When you click <em>Create channel</em> button below, you will be
+          redirected to your Telegram client. Press <em>START</em>
+          there to create support channel for you with the name you provided
+          above.
+        </p>
+        <p>
+          <button type="submit">Create channel</button>
+        </p>
+      </form>
+      <output class="hidden">
+        <p>Your support channel name is <strong id="channel"></strong></p>
+        <p>
+          After channel is successfully created ✅ you should be able to use
+          🪁K1te widget at the bottom right corner of this page ↘️ to
+          communicate with your support channel. Enjoy.
+        </p>
+        <p>
+          To add this support channel to your site, copy the snippet below to
+          your web page template.
+        </p>
+        <pre><code></code></pre>
+      </output>
+    </main>
+    <footer>
+      &copy; Pragmasoft, 2023
+      <a href="https://u24.gov.ua/"> Support Ukraine! 🇺🇦</a>
+    </footer>
+    <kite-chat></kite-chat>
   </body>
 </html>

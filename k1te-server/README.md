@@ -6,13 +6,18 @@ Kite chat server provides websocket endpoint for webchat widget and telegram bot
 
 ### Public URL
 
-In order to test telegram webhooks, you need public url. One way to obtain it for local development
-is [ngrok](https://ngrok.com/download). Install it with `choco install ngrok` on Windows, `snap install ngrok` on
-Linux, `brew install ngrok/ngrok/ngrok` on Mac. Then run command `ngrok http 8080` from the command line. Ngrok writes
-public url to its output like
+In order to test telegram webhooks, you need public https url. One way to obtain it for local development is [ngrok](https://ngrok.com/download).
+Install it with `choco install ngrok` on Windows, `snap install ngrok` on
+Linux, `brew install ngrok/ngrok/ngrok` on Mac. Then run command `ngrok http 8080` from the command line. Ngrok writes public url to its output like
 `Forwarding https://71d6-185-235-173-207.eu.ngrok.io -> http://localhost:8080`. Copy the **host name** from the first
 url and use it as a value of the `%dev.host.name=71d6-185-235-173-207.eu.ngrok.io` property in the `.env` config file.
 If you don't have `.env` config file, first create it by copying from `.env.example.txt`
+
+❗`ngrok` requires you to create a free account and authenticate its cli.
+
+⛔ https://ngrok.com/abuse Browser Warning section explains that `ngrok` may block
+first request from the browser. This particularly may prevent proper file downloading.
+You can use [ModHeader](https://chrome.google.com/webstore/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj) Chrome extension to add `ngrok-skip-browser-warning` header to all requests, which solves this problem.
 
 Alternatively, you can use
 Microsoft [devtunnels](https://learn.microsoft.com/ru-ru/azure/developer/dev-tunnels/overview) for the same purpose,
@@ -31,15 +36,23 @@ curl https://sw1r28pt-8080.euw.devtunnels.ms/
 
 ### Local DynamoDb database
 
-Kite chat uses DynamoDB as its NoSQL database. For development purposes you need docker container
-running `amazon/dynamodb-local` image.
+Kite chat uses DynamoDB as its NoSQL database when built with the default profile.
 
-`k1te-serverless-stack-cdktf` folder contains CDKTF local stack which launches dynamodb-local container and initializes
-DynamoDB database schema in it. Shortly, you need switch to the `k1te-serverless-stack-cdktf` folder and run
+For development purposes you can run DynamoDB locally using docker container with `amazon/dynamodb-local` image.
+
+`k1te-serverless-stack-cdktf` folder contains CDKTF local stack which launches dynamodb-local container and initializes database schema in it.
+
+To start local stack, switch to the `k1te-serverless-stack-cdktf` folder and run
 
 `npm init` followed by `npm run deploy-local`.
 
-Then once you're done, you can shut down local dynamodb with `npm run destroy-local`
+When local DynamoDB container starts, you need to uncomment the following line in your `.env` file, to let DynamoDB client know it needs to connect to the local endpoint:
+
+`%dev.quarkus.dynamodb.endpoint-override=http://localhost:8000`
+
+If you don't have `.env` file, create it first by copying `.env.example.txt` and updating accordingly.
+
+Once you're done, you can shut down local dynamodb with `npm run destroy-local`
 
 For more details see README.md in the `k1te-serverless-stack-cdktf` folder.
 
@@ -51,113 +64,124 @@ Then you can run your application in dev mode that enables live coding using:
 ./mvnw compile quarkus:dev
 ```
 
-> **NOTE:** Quarkus now ships with a Dev UI, which is available in dev mode only at http://localhost:8080/q/dev/.
+> **NOTE:** Quarkus now ships with a Dev UI, which is available in dev mode only at http://localhost:8080/q/dev-ui/.
 
-### Run the Application with local H2 DataBase and Local filesystem
+### Run backend in dev mode with local H2 DataBase and local filesystem
 
-In order to do so, you need run Quarkus app with a **standalone** profile specified
-for Maven. It can be done by the following command.
+Run with a **standalone** and **dev** Maven profiles:
 
 ```bash
-mvn quarkus:dev -P standalone
+mvn quarkus:dev -Pstandalone,dev
 ```
 
-You also need to check **.env.example.txt** file to specify all the necessary properties.
-
-#### Additional information that you should know before running the app
-
-During working Local file system implementation you may encounter to problem how **Ngrok** works.
-
-1. It may **ask** you to register account (It's for free)
-2. It may also **block** file downloading that happens when you send any file from Telegram
-   to WS and get .**htm** file with an error as a result. In order to solve this problem you can make use
-   of **[ModHeader](https://chrome.google.com/webstore/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj)**
-   Chrome extension and specify **ngrok-skip-browser-warning** for all Http requests.
+If you don't have `.env` file, create it first by copying `.env.example.txt` and updating as explained in the Build Configuration section
 
 ## Deploy on OpenShift
 
 To deploy this application on the OpenShift platform, follow these steps:
 
-1. **Install OpenShift CLI**: Ensure you have the OpenShift CLI installed on your computer. You can find installation
-   instructions [here](https://docs.openshift.com/container-platform/4.9/cli_reference/openshift_cli/getting-started-cli.html)
-   .
-2. **Sign in to your OpenShift account via CLI**:
+### Install OpenShift CLI
 
-   ```bash
-   oc login -u myUsername
-   ```
+Ensure you have the OpenShift CLI installed on your computer. You can find installation
+instructions [here](https://docs.openshift.com/container-platform/4.14/cli_reference/openshift_cli/getting-started-cli.html)
 
-   or
+### Sign in to your OpenShift account via CLI
 
-   ```bash
-   oc login --token=myToken --server=myServerUrl
-   ```
+```bash
+oc login --web
+```
 
-   You can obtain the token via the "Copy Login Command" link in the OpenShift web console.
+```bash
+oc login -u myUsername
+```
 
-3. **Set up Persistent Volume Claim (PVC)**:
+```bash
+oc login --token=myToken --server=myServerUrl
+```
 
-   To ensure your application's data persistence, you need to utilize a Persistent Volume Claim (PVC). This allows the
-   app to save files to a chosen Persistent Volume, which can be either manually selected or dynamically generated via
-   StorageClass provided by OpenShift. It allows you re-deploy the Pod without risking to lose your data, because for
-   OpenShift we use
-   **standalone** Maven Profile that utilizes H2 as a DataBase and Local FileSystem for saving chats' files.
-   <br/>
-   To create the PVC resource, run the following command:
+You can obtain the token via the "Copy Login Command" link in the OpenShift web console.
 
-   ```bash
-   oc apply -f ./k1te-server-pvc.yaml
-   ```
+### Create Persistent Volume Claim (PVC)
 
-   The command creates a PVC named **k1te-server-pvc**. To verify the creation of this resource, execute the following
-   command:
+To store application state (messages, images, files, channels) backend needs a persistent volume.
 
-   ```bash
-   oc get pvc
-   ```
+To create the Persistent Volume Claim resource, run the following command:
 
-   This will display the PVC resource named **k1te-server-pvc**.
+```bash
+oc apply -f ./k1te-server-pvc.yaml
+```
 
-4. **Checking application.properties file for OpenShift**:
+The command creates a PVC named **k1te-server-pvc**.
 
-   Before going further you should check application.properties file, OpenShift section.
-   <br/>
-   As the main resource we use StatefulSet, because with simple Deployment it will be difficult to re-deploy
-   the app, because we use PVC, and it provides us with ReadWriteOnce AccessMode that doesn't work with Rolling Update (
-   during re-deploy new Pod is created and only afterwards the old one is destroyed, but new one can't be created
-   because
-   PVC is already attached). But you can also fix it via **Recreate** Strategy type for Deployment.
-   <br/>
-   You also need to specify HOST_NAME as env to make the app works, because Telegram WebHook works only with https.
-   As a solution to it, we use CloudFlare that allows us to proxy one of the OpenShift Routes and attach domain to it.
+To verify PVC was created successfully, use:
 
-5. **Deploy the application**:
+```bash
+oc get pvc
+```
 
-   Execute the following command, replacing the example values with your own:
+### Build and install dependency
 
-   ```bash
-   ./mvnw install -Dquarkus.kubernetes.deploy=true \
-                  -P standalone \
-                  -Dquarkus.openshift.env.vars.secret=your-secret \
-                  -Dquarkus.openshift.env.vars.telegram-bot-token=your-bot-token \
-                  -DHOST_NAME=your-host-name
-   ```
+This project depends on the `k1te-backend` peer project, so you need to build and install it first:
 
-   This command performs an S2I binary build, where the input is the locally built JAR, and the output is an ImageStream
-   configured to automatically trigger a deployment.
+```bash
+cd ../k1te-backend
+./mvnw clean install
+cd ../k1te-server
+```
 
-   After some time, necessary resources will be created. You can verify this using the CLI:
+### Configuring server build
 
-   - `oc get pods` should display a single generated Pod with **k1te-server-\*** as its name.
-   - `oc get statefulSet` should show a single generated StatefulSet with **k1te-server** as its name.
-   - `oc get svc` should present a single generated Service named **k1te-server** with Port **80**.
-   - `oc get routes` should exhibit a single generated Route named **k1te-server**, attached to the **k1te-server**
-     Service.
+If you don't have `.env` file, create it first by copying `.env.example.txt` and updating as explained in the Build Configuration section
 
-   Additional properties can be added or modified for this deployment as needed. Refer to
-   this [resource](https://quarkus.io/guides/deploying-to-openshift#configuration-reference) for more information.
+`.env` file should contain the following mandatory configuration properties:
 
-#### Destroy the Deployment
+`telegram.bot.token` You need to create your Telegram bot with
+https://t.me/BotFather and add here its token.
+
+`%standalone.host.name` On start K1te server should register webhook on Telegram Bot API in order to receive updates. Only secure (https) webhooks are supported. This means, application should know its domain name before it's deployed and OpenShift
+Route is created.
+
+Our domain `k1te.chat` is hosted on the Cloudflare. Cloudflare also terminates TLS and provides CDN.
+
+I was unable to find an easy way to obtain canonical domain name from OpenShift router before Route is created, which makes it kind of chicken and egg problem.
+
+Canonical hostname looks like `router-default.apps.sandbox-m2.ll9k.p1.openshiftapps.com`
+where `router-default` is prefixed to your sandbox app domain name you can take from your OpenShift admin dashboard address bar.
+
+You need to create CNAME DNS record in your DNS provider like:
+
+`CNAME openshift.k1te.com router-default.apps.sandbox-m2.ll9k.p1.openshiftapps.com`
+
+and then configure host name in `.env` as:
+
+`%standalone.host.name=openshift.k1te.com`
+
+Once OpenShift Route is created, you can get canonical hostname from the Route details in admin dashboard
+
+If you will have problems configuring hostname, please contact me pragmasoft@gmail.com or https://t.me/pragmasoft and I'll create for you temporary domain name in our zone.
+
+`%standalone.jwt.secret` Arbitrary long string you keep in secret, used to sign and verify jwt tokens.
+
+### Deploy the application
+
+```bash
+./mvnw deploy "-Dquarkus.kubernetes.deploy=true" -Pstandalone
+```
+
+This command performs an S2I binary build, where the input is the locally built JAR, and the output is an ImageStream configured to automatically trigger a deployment.
+
+After some time, necessary resources will be created. You can verify this using the CLI:
+
+- `oc get pods` should display a single generated Pod with **k1te-server-\*** as its name.
+- `oc get statefulSet` should show a single generated StatefulSet with **k1te-server** as its name.
+- `oc get svc` should present a single generated Service named **k1te-server** with Port **80**.
+- `oc get routes` should exhibit a single generated Route named **k1te-server**, attached to the **k1te-server**
+  Service.
+
+Additional properties can be added or modified for this deployment as needed. Refer to
+this [resource](https://quarkus.io/guides/deploying-to-openshift#configuration-reference) for more information.
+
+### Destroy the Deployment
 
 After using the application, you can remove it using the following commands:
 
