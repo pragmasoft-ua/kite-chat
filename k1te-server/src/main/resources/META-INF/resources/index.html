@@ -15,6 +15,9 @@
       body {
         padding: 0;
         margin: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
       }
       h1,
       footer {
@@ -27,14 +30,14 @@
         color: var(--kite-primary-color);
       }
       main {
+        box-sizing: border-box;
         padding: 1em;
+        width: 100vw;
         max-width: 50em;
         margin: 0 auto 3em;
+        flex: 1;
       }
       footer {
-        width: 100vw;
-        position: fixed;
-        bottom: 0;
         background-color: rgba(0, 0, 0, 0.5);
       }
       button {
@@ -45,13 +48,12 @@
       button,
       input#channel {
         padding: 0.5em;
-        width: 32em;
       }
       pre {
-        overflow-x: scroll;
-        padding: 1em;
         background-color: #666;
         color: white;
+        padding: 1em;
+        overflow-x: auto;
       }
       .hidden {
         display: none;
@@ -119,7 +121,7 @@ ${"<"}/script>`;
         document.querySelector("input#channel").value = channel;
         form.addEventListener("submit", (e) => {
           // get channel name
-          const channel = e.target["channel"].value;
+          const channel = e.target["channel"].value.toLowerCase();
           const telegramDeepLink = `https://t.me/${bot}?start=host__${channel}`;
           console.debug(telegramDeepLink);
           open(telegramDeepLink, "_blank");
@@ -184,11 +186,11 @@ ${"<"}/script>`;
         </p>
         <pre><code></code></pre>
       </output>
+      <kite-chat></kite-chat>
     </main>
     <footer>
       &copy; Pragmasoft, 2023
       <a href="https://u24.gov.ua/"> Support Ukraine! 🇺🇦</a>
     </footer>
-    <kite-chat></kite-chat>
   </body>
 </html>

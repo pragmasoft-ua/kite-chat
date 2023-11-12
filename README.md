@@ -4,7 +4,7 @@
 
 ## About
 
-Kite chat allows to add live web chat widget on any static or dynamic web site and use Telegram channel as a support team's backend to provide instant support feedback.
+K1te chat is a customizable live web chat widget that can be easily embedded into any static or dynamic website. It uses private Telegram groups as support channels to provide instant feedback to your website visitors.
 
 ## License
 

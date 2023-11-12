@@ -80,6 +80,16 @@ If you don't have `.env` file, create it first by copying `.env.example.txt` and
 
 To deploy this application on the OpenShift platform, follow these steps:
 
+### Prerequisites
+
+- jdk 17+
+- maven
+- docker
+- `oc` OpenShift command line tool
+- DNS zone, ideally in CloudFlare account. Domain name
+- desktop Telegram client and valid user account
+- web browser
+
 ### Install OpenShift CLI
 
 Ensure you have the OpenShift CLI installed on your computer. You can find installation
@@ -155,6 +165,8 @@ You need to create CNAME DNS record in your DNS provider like:
 and then configure host name in `.env` as:
 
 `%standalone.host.name=openshift.k1te.com`
+
+You should turn on proxying in Cloudflare DNS record above, so that CloudFlare can terminate TLS with its own free certificate.
 
 Once OpenShift Route is created, you can get canonical hostname from the Route details in admin dashboard
 
