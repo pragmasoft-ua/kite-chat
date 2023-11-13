@@ -7,6 +7,7 @@ import com.pengrad.telegrambot.model.MessageEntity.Type;
 import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.*;
 import com.pengrad.telegrambot.response.GetFileResponse;
+
 import java.io.Closeable;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -17,6 +18,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ua.com.pragmasoft.k1te.backend.router.domain.Channels;
@@ -43,7 +45,7 @@ public class TelegramConnector implements Connector, Closeable {
   private static final String OK = "ok";
   private static final String SUCCESS = "✅ ";
   private static final String HELP =
-      """
+    """
       This bot allows to set up support channel in the current chat as a host
       or call existing support channel as a client.
 
@@ -64,13 +66,13 @@ public class TelegramConnector implements Connector, Closeable {
       Use ↰ (Reply To) to respond to other messages.
       """;
   private static final String ANONYMOUS_INFO =
-      """
+    """
       You don't have any channels at the moment.
       To join one, use /join channelName.
       For more information about possible actions, use /help.
       """;
   private static final String INFO =
-      """
+    """
       Hello %s!
 
       You are a %s of the %s channel.
@@ -88,11 +90,11 @@ public class TelegramConnector implements Connector, Closeable {
   private final URI wsApi;
 
   public TelegramConnector(
-      final TelegramBot bot,
-      final Router router,
-      final Channels channels,
-      final URI base,
-      URI wsApi) {
+    final TelegramBot bot,
+    final Router router,
+    final Channels channels,
+    final URI base,
+    URI wsApi) {
     this.bot = bot;
     this.router = router;
     this.router.registerConnector(this);
@@ -146,8 +148,8 @@ public class TelegramConnector implements Connector, Closeable {
     if (isBotMember(u)) {
       log.debug("Bot {} was added to the Group", parseBotName(u));
       return new SendMessage(
-              u.myChatMember().chat().id(), SUCCESS + "You successfully added " + parseBotName(u))
-          .toWebhookResponse();
+        u.myChatMember().chat().id(), SUCCESS + "You successfully added " + parseBotName(u))
+        .toWebhookResponse();
     }
     if (isBotLeft(u)) {
       return onBotLeft(u);
@@ -161,21 +163,21 @@ public class TelegramConnector implements Connector, Closeable {
         return OK;
       } else if (isNewChatMember(message)) {
         log.debug(
-            "{} members were added to Group {}",
-            message.newChatMembers().length,
-            message.chat().title());
+          "{} members were added to Group {}",
+          message.newChatMembers().length,
+          message.chat().title());
         return OK;
       } else if (isMemberLeft(message)) {
         log.debug(
-            "Member {} has left the Group {}",
-            message.leftChatMember().username(),
-            message.chat().title());
+          "Member {} has left the Group {}",
+          message.leftChatMember().username(),
+          message.chat().title());
         return OK;
       } else if (isPinnedMessage(message)) {
         bot.execute(
-            new DeleteMessage(
-                message.chat().id(),
-                message.messageId())); // Delete notification that message was pinned
+          new DeleteMessage(
+            message.chat().id(),
+            message.messageId())); // Delete notification that message was pinned
         return OK;
       } else {
         return this.onMessage(message, isEdited);
@@ -206,19 +208,19 @@ public class TelegramConnector implements Connector, Closeable {
     } else if (ctx.request instanceof BinaryPayload binaryPayload) {
 
       var fileIdOrUri =
-          (binaryPayload instanceof TelegramBinaryMessage telegramBinaryPayload)
-              ? telegramBinaryPayload.fileId()
-              : binaryPayload.uri().toString();
+        (binaryPayload instanceof TelegramBinaryMessage telegramBinaryPayload)
+          ? telegramBinaryPayload.fileId()
+          : binaryPayload.uri().toString();
 
       var binaryMessage =
-          binaryPayload.isImage()
-                  && !binaryPayload.fileType().equals("image/gif")
-                  && !binaryPayload.fileType().equals("image/webp")
-              ? new SendPhoto(destinationChatId, fileIdOrUri)
-              : new SendDocument(destinationChatId, fileIdOrUri);
+        binaryPayload.isImage()
+          && !binaryPayload.fileType().equals("image/gif")
+          && !binaryPayload.fileType().equals("image/webp")
+          ? new SendPhoto(destinationChatId, fileIdOrUri)
+          : new SendDocument(destinationChatId, fileIdOrUri);
 
       sendMessage =
-          binaryMessage.fileName(binaryPayload.fileName()).contentType(binaryPayload.fileType());
+        binaryMessage.fileName(binaryPayload.fileName()).contentType(binaryPayload.fileType());
 
     } else {
       throw new RoutingException(UNSUPPORTED_PAYLOAD + ctx.request.getClass().getSimpleName());
@@ -232,27 +234,36 @@ public class TelegramConnector implements Connector, Closeable {
     }
     if (!sendResponse.isOk()) {
       throw new RoutingException(
-          "%s connector error: (%d) %s"
-              .formatted(this.id(), sendResponse.errorCode(), sendResponse.description()));
+        "%s connector error: (%d) %s"
+          .formatted(this.id(), sendResponse.errorCode(), sendResponse.description()));
     }
 
     if (PIN_FEATURE_FLAG) {
-      pinners.computeIfAbsent(
-          from,
-          member -> {
-            PinChatMessage pinChatMessage =
-                new PinChatMessage(destinationChatId, sendResponse.message().messageId())
-                    .disableNotification(true);
-            bot.execute(pinChatMessage);
-            return sendResponse.message().messageId();
-          });
+      String text = sendResponse.message().text();
+      boolean isJoinMessage = text != null && text.contains(SUCCESS) && text.contains("joined channel");
+      boolean isLeaveMessage = text != null && text.contains(SUCCESS) && text.contains("left channel");
+
+      if (from.getPinnedMessageId() == null) {
+        if (!isJoinMessage && !isLeaveMessage) {
+          PinChatMessage pinChatMessage = new PinChatMessage(destinationChatId, sendResponse.message().messageId())
+            .disableNotification(true);
+          bot.execute(pinChatMessage);
+
+          channels.updatePinnedMessageId(from, sendResponse.message().messageId());
+        }
+      } else {
+        if (isLeaveMessage) {
+          UnpinChatMessage unpinChatMessage = new UnpinChatMessage(destinationChatId).messageId(from.getPinnedMessageId());
+          bot.execute(unpinChatMessage);
+        }
+      }
     }
 
     ctx.response =
-        new MessageAck(
-            ctx.request.messageId(),
-            fromLong(sendResponse.message().messageId().longValue()),
-            Instant.ofEpochSecond(sendResponse.message().date()));
+      new MessageAck(
+        ctx.request.messageId(),
+        fromLong(sendResponse.message().messageId().longValue()),
+        Instant.ofEpochSecond(sendResponse.message().date()));
   }
 
   private String onCommand(final Message message) {
@@ -280,19 +291,19 @@ public class TelegramConnector implements Connector, Closeable {
         String channelName = subCommand.args[0];
 
         response =
-            switch (subCommand.type) {
-              case HOST -> onHostCommand(
-                  channelName, message.chat().title(), memberId, originConnection);
-              case JOIN -> {
-                if (subCommand.args.length > 1) { // /join channelName userId
-                  String userId = subCommand.args[1];
-                  memberName = "%s #%s".formatted(memberName, userId);
-                }
-                yield onStartCommand(channelName, memberId, originConnection, memberName);
+          switch (subCommand.type) {
+            case HOST -> onHostCommand(
+              channelName, message.chat().title(), memberId, originConnection);
+            case JOIN -> {
+              if (subCommand.args.length > 1) { // /join channelName userId
+                String userId = subCommand.args[1];
+                memberName = "%s #%s".formatted(memberName, userId);
               }
-              default -> throw new ValidationException(
-                  "Unsupported subCommand type " + subCommand.type);
-            };
+              yield onStartCommand(channelName, memberId, originConnection, memberName);
+            }
+            default -> throw new ValidationException(
+              "Unsupported subCommand type " + subCommand.type);
+          };
       } else {
         String channelName = cmd.args;
         response = onStartCommand(channelName, memberId, originConnection, memberName);
@@ -308,13 +319,13 @@ public class TelegramConnector implements Connector, Closeable {
     } else if ("/leave".equals(command)) {
       Member client = this.channels.leaveChannel(originConnection);
       this.router.dispatch(
-          RoutingContext.create()
-              .withOriginConnection(originConnection)
-              .withFrom(client)
-              .withRequest(
-                  new PlaintextMessage(
-                      "✅ %s left channel %s"
-                          .formatted(client.getUserName(), client.getChannelName()))));
+        RoutingContext.create()
+          .withOriginConnection(originConnection)
+          .withFrom(client)
+          .withRequest(
+            new PlaintextMessage(
+              "✅ %s left channel %s"
+                .formatted(client.getUserName(), client.getChannelName()))));
       response = "✅ You left channel %s".formatted(client.getChannelName());
 
     } else if ("/drop".equals(command)) {
@@ -332,34 +343,34 @@ public class TelegramConnector implements Connector, Closeable {
       Member member = channels.find(originConnection);
       String memberType = member.isHost() ? "Host" : "Member";
       String text =
-          INFO.formatted(member.getUserName(), memberType, member.getChannelName(), memberType);
+        INFO.formatted(member.getUserName(), memberType, member.getChannelName(), memberType);
 
       return new SendMessage(rawChatId, text).parseMode(ParseMode.Markdown).toWebhookResponse();
     } catch (Exception e) {
       return new SendMessage(rawChatId, ANONYMOUS_INFO)
-          .parseMode(ParseMode.Markdown)
-          .toWebhookResponse();
+        .parseMode(ParseMode.Markdown)
+        .toWebhookResponse();
     }
   }
 
   private String onHostCommand(
-      String channelName, String title, String memberId, String originConnection) {
+    String channelName, String title, String memberId, String originConnection) {
     this.channels.hostChannel(channelName, memberId, originConnection, title);
     String channelPublicUrl =
-        this.wsApi.toString() + "?c=" + URLEncoder.encode(channelName, StandardCharsets.UTF_8);
+      this.wsApi.toString() + "?c=" + URLEncoder.encode(channelName, StandardCharsets.UTF_8);
     return "✅ Created channel %s. Use URL %s to configure k1te chat frontend"
-        .formatted(channelName, channelPublicUrl);
+      .formatted(channelName, channelPublicUrl);
   }
 
   private String onStartCommand(
-      String channelName, String memberId, String originConnection, String memberName) {
+    String channelName, String memberId, String originConnection, String memberName) {
     Member client = this.channels.joinChannel(channelName, memberId, originConnection, memberName);
     var ctx =
-        RoutingContext.create()
-            .withOriginConnection(originConnection)
-            .withFrom(client)
-            .withRequest(
-                new PlaintextMessage("✅ %s joined channel %s".formatted(memberName, channelName)));
+      RoutingContext.create()
+        .withOriginConnection(originConnection)
+        .withFrom(client)
+        .withRequest(
+          new PlaintextMessage("✅ %s joined channel %s".formatted(memberName, channelName)));
     this.router.dispatch(ctx);
     return "✅ You joined channel %s".formatted(channelName);
   }
@@ -369,10 +380,10 @@ public class TelegramConnector implements Connector, Closeable {
     String originConnection = this.connectionUri(fromLong(rawChatId));
     Member from = this.channels.find(originConnection);
     final String toMemberId =
-        Optional.ofNullable(message.replyToMessage())
-            .flatMap(TelegramConnector::memberIdFromHashTag)
-            .or(() -> Optional.ofNullable(from.getPeerMemberId()))
-            .orElseThrow(RoutingException::new);
+      Optional.ofNullable(message.replyToMessage())
+        .flatMap(TelegramConnector::memberIdFromHashTag)
+        .or(() -> Optional.ofNullable(from.getPeerMemberId()))
+        .orElseThrow(RoutingException::new);
     Member to = this.channels.find(from.getChannelName(), toMemberId);
     String msgId = fromLong(message.messageId().longValue());
     Instant messageTimestamp = Instant.ofEpochSecond(message.date());
@@ -380,25 +391,25 @@ public class TelegramConnector implements Connector, Closeable {
     var document = message.document();
     if (null != document) {
       request =
-          new TelegramBinaryMessage(
-              msgId,
-              document.fileId(),
-              document.fileName(),
-              document.mimeType(),
-              document.fileSize(),
-              messageTimestamp);
+        new TelegramBinaryMessage(
+          msgId,
+          document.fileId(),
+          document.fileName(),
+          document.mimeType(),
+          document.fileSize(),
+          messageTimestamp);
     } else if (null != message.photo() && message.photo().length > 0) {
       PhotoSize photo = largestPhoto(message.photo());
       var photoFileName =
-          Optional.ofNullable(message.caption()).orElse(ContentTypes.PHOTO_FILE_NAME);
+        Optional.ofNullable(message.caption()).orElse(ContentTypes.PHOTO_FILE_NAME);
       request =
-          new TelegramBinaryMessage(
-              msgId,
-              photo.fileId(),
-              photoFileName,
-              ContentTypes.PHOTO_MIME_TYPE,
-              photo.fileSize(),
-              messageTimestamp);
+        new TelegramBinaryMessage(
+          msgId,
+          photo.fileId(),
+          photoFileName,
+          ContentTypes.PHOTO_MIME_TYPE,
+          photo.fileSize(),
+          messageTimestamp);
     } else if (null != message.text()) {
       request = new PlaintextMessage(message.text(), msgId, messageTimestamp);
     } else {
@@ -406,20 +417,20 @@ public class TelegramConnector implements Connector, Closeable {
     }
 
     var ctx =
-        RoutingContext.create()
-            .withOriginConnection(originConnection)
-            .withDestinationConnection(to.getConnectionUri())
-            .withFrom(from)
-            .withTo(to)
-            .withRequest(request);
+      RoutingContext.create()
+        .withOriginConnection(originConnection)
+        .withDestinationConnection(to.getConnectionUri())
+        .withFrom(from)
+        .withTo(to)
+        .withRequest(request);
     this.router.dispatch(ctx);
 
     if (PIN_FEATURE_FLAG) {
-      Integer messageId = pinners.get(to);
-      if (messageId != null) {
-        UnpinChatMessage unpinChatMessage = new UnpinChatMessage(rawChatId).messageId(messageId);
+      if (to.getPinnedMessageId() != null) {
+        UnpinChatMessage unpinChatMessage =
+          new UnpinChatMessage(rawChatId).messageId(to.getPinnedMessageId());
         bot.execute(unpinChatMessage);
-        pinners.remove(to);
+        channels.updatePinnedMessageId(to, null);
       }
     }
 
@@ -453,14 +464,16 @@ public class TelegramConnector implements Connector, Closeable {
     return false;
   }
 
-  /** Returns true if bot was not in the Chat/Group before and was added to one. */
+  /**
+   * Returns true if bot was not in the Chat/Group before and was added to one.
+   */
   private static boolean isBotMember(Update update) {
     if (update.myChatMember() == null) return false;
 
     ChatMember newChatMember = update.myChatMember().newChatMember();
     ChatMember oldChatMember = update.myChatMember().oldChatMember();
     return oldChatMember.status() == ChatMember.Status.left
-        && newChatMember.status() == ChatMember.Status.member;
+      && newChatMember.status() == ChatMember.Status.member;
   }
 
   /**
@@ -473,7 +486,7 @@ public class TelegramConnector implements Connector, Closeable {
     ChatMember newChatMember = update.myChatMember().newChatMember();
     ChatMember oldChatMember = update.myChatMember().oldChatMember();
     return oldChatMember.status() == ChatMember.Status.member
-        && newChatMember.status() == ChatMember.Status.left;
+      && newChatMember.status() == ChatMember.Status.left;
   }
 
   /**
@@ -520,7 +533,7 @@ public class TelegramConnector implements Connector, Closeable {
       for (var e : entities) {
         if (e.type() == Type.hashtag) {
           final var hashTagString =
-              replyTo.text().substring(e.offset() + 1, e.offset() + e.length());
+            replyTo.text().substring(e.offset() + 1, e.offset() + e.length());
           return Optional.of(hashTagString);
         }
       }
@@ -615,12 +628,12 @@ public class TelegramConnector implements Connector, Closeable {
     private final Instant created;
 
     private TelegramBinaryMessage(
-        String messageId,
-        String fileId,
-        String fileName,
-        String fileType,
-        long fileSize,
-        Instant created) {
+      String messageId,
+      String fileId,
+      String fileName,
+      String fileType,
+      long fileSize,
+      Instant created) {
       this.messageId = messageId;
       this.fileId = fileId;
       this.fileName = fileName;
@@ -634,7 +647,9 @@ public class TelegramConnector implements Connector, Closeable {
       return this.messageId;
     }
 
-    /** Lazily retrieves URI. */
+    /**
+     * Lazily retrieves URI.
+     */
     @Override
     public URI uri() {
       if (null == this.uri) {

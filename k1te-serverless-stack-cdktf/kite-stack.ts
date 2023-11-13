@@ -119,7 +119,7 @@ export class KiteStack extends TerraformStack {
       TELEGRAM_BOT_TOKEN: telegramBotToken.value,
       TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
       BUCKET_NAME: objectStore.bucket.bucket,
-      DISABLE_SIGNAL_HANDLERS: "true",
+      DISABLE_SIGNAL_HANDLERS: isNative ? "true" : "false",
     };
 
     const memorySize = 256;

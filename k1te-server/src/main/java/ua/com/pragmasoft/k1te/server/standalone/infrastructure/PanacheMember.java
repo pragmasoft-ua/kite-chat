@@ -33,6 +33,8 @@ public class PanacheMember extends PanacheEntityBase implements Member {
 
   private String peerMemberId;
 
+  private Integer pinnedMessageId;
+
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "channelName", nullable = false, insertable = false, updatable = false)
   private PanacheChannel channel;
@@ -99,6 +101,15 @@ public class PanacheMember extends PanacheEntityBase implements Member {
 
   public MemberPK getMemberPK() {
     return memberPK;
+  }
+
+  @Override
+  public Integer getPinnedMessageId() {
+    return pinnedMessageId;
+  }
+
+  public void setPinnedMessageId(Integer pinnedMessageId) {
+    this.pinnedMessageId = pinnedMessageId;
   }
 
   public void setMemberPK(MemberPK memberPK) {

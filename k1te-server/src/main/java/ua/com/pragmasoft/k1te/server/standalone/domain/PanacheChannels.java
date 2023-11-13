@@ -85,10 +85,14 @@ public class PanacheChannels implements Channels {
     PanacheChannel channel = PanacheChannel.findById(channelName);
     if (channel == null) throw new NotFoundException();
 
-    PanacheMember existingMember = PanacheMember.findByMemberId(memberId);
+    PanacheMember maybeHost = PanacheMember.findByMemberId(memberId);
+    if (maybeHost != null && maybeHost.isHost())
+      throw new ValidationException("You are Host in another Channel. To check the channel use /info");
+
+    PanacheMember existingMember = PanacheMember.findById(buildId(memberId, channelName));
     if (existingMember != null) {
       if (existingMember.getConnectionUri().equals(connection))
-        throw new ConflictException("You can't have more than one open Channel");
+        throw new ConflictException("You already in this Channel");
 
       existingMember.setConnectionUri(connection);
       existingMember.persistAndFlush();
@@ -119,7 +123,7 @@ public class PanacheChannels implements Channels {
   }
 
   @Override
-  public Member find(String memberConnection) {
+  public PanacheMember find(String memberConnection) {
     Objects.requireNonNull(memberConnection, "connection");
     PanacheMember member = PanacheMember.find("connectionUri", memberConnection).firstResult();
     if (member == null) throw new NotFoundException();
@@ -127,7 +131,7 @@ public class PanacheChannels implements Channels {
   }
 
   @Override
-  public Member find(String channelName, String memberId) {
+  public PanacheMember find(String channelName, String memberId) {
     PanacheMember member = PanacheMember.findById(buildId(memberId, channelName));
 
     if (member == null) throw new NotFoundException();
@@ -145,5 +149,14 @@ public class PanacheChannels implements Channels {
         PanacheMember.findById(buildId(recipientMember.getId(), recipientMember.getChannelName()));
     member.setPeerMemberId(peerMemberId);
     member.persistAndFlush();
+  }
+
+  @Override
+  public void updatePinnedMessageId(Member member, Integer pinnedMessageId) {
+    PanacheMember oldMember = (PanacheMember) member;
+    PanacheMember newMember = PanacheMember.findById(oldMember.getMemberPK());
+    newMember.setPinnedMessageId(pinnedMessageId);
+
+    newMember.persistAndFlush();
   }
 }

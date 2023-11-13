@@ -208,6 +208,18 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
+  public void updatePinnedMessageId(Member old, Integer pinnedMessagedId) {
+    try {
+      DynamoDbMember member = (DynamoDbMember) old;
+
+      member.setPinnedMessageId(pinnedMessagedId);
+      this.membersTable.updateItem(member);
+    } catch (Exception e) {
+      throw new ValidationException(e.getMessage(), e);
+    }
+  }
+
+  @Override
   public DynamoDbMember find(String memberConnection) {
     Key secondaryKey = Key.builder().partitionValue(memberConnection).build();
     QueryConditional qc = QueryConditional.keyEqualTo(secondaryKey);

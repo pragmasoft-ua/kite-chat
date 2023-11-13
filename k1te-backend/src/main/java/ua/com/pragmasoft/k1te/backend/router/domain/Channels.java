@@ -16,4 +16,6 @@ public interface Channels {
   Member find(String channel, String memberId);
 
   void updatePeer(Member member, String peerMemberId);
+
+  void updatePinnedMessageId(Member old, Integer pinnedMessagedId);
 }

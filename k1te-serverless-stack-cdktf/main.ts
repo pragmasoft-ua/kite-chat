@@ -12,7 +12,7 @@ new S3Backend(kiteStack, {
   region: "eu-north-1",
 });
 
-const kiteStackLocal = new KiteStack(app, "kite-local", undefined, true);
+const kiteStackLocal = new KiteStack(app, "kite-local", undefined);
 new LocalBackend(kiteStackLocal);
 
 new LocalStack(app, "local");

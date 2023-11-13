@@ -19,6 +19,7 @@ public class DynamoDbMember implements Member {
   private String userName;
   private boolean host;
   private String peerMemberId;
+  private Integer pinnedMessageId;
 
   public DynamoDbMember(
       String id,
@@ -86,6 +87,16 @@ public class DynamoDbMember implements Member {
 
   public void setPeerMemberId(String peerConnectionId) {
     this.peerMemberId = peerConnectionId;
+  }
+
+  @Override
+  @DynamoDbIgnoreNulls
+  public Integer getPinnedMessageId() {
+    return pinnedMessageId;
+  }
+
+  public void setPinnedMessageId(Integer pinnedMessageId) {
+    this.pinnedMessageId = pinnedMessageId;
   }
 
   @DynamoDbSecondaryPartitionKey(indexNames = BY_CONNECTION)

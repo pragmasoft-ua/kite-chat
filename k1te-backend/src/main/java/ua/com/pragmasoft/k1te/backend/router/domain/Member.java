@@ -14,4 +14,6 @@ public interface Member {
   public String getConnectionUri();
 
   public String getPeerMemberId();
+
+  public Integer getPinnedMessageId();
 }
