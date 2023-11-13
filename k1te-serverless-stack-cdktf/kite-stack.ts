@@ -22,15 +22,27 @@ import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 
+export type KiteStackProps = {
+  domainName?: string;
+  architecture?: "x86_64" | "arm64";
+  runtime?: "provided.al2" | "java17";
+  handler?:
+    | "hello.handler"
+    | "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest";
+  memorySize?: number;
+};
+
 export class KiteStack extends TerraformStack {
-  constructor(
-    scope: Construct,
-    id: string,
-    domainName?: string,
-    isNative?: boolean
-  ) {
+  constructor(scope: Construct, id: string, props: KiteStackProps = {}) {
     super(scope, id);
     this.node.setContext(ALLOW_TAGS, true);
+    const {
+      domainName = "k1te.chat",
+      architecture = "x86_64",
+      runtime = "provided.al2",
+      handler = "hello.handler",
+      memorySize = 256,
+    } = props;
 
     new AwsProvider(this, "AWS");
     new ArchiveProvider(this, "archive-provider");
@@ -119,17 +131,13 @@ export class KiteStack extends TerraformStack {
       TELEGRAM_BOT_TOKEN: telegramBotToken.value,
       TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
       BUCKET_NAME: objectStore.bucket.bucket,
-      DISABLE_SIGNAL_HANDLERS: isNative ? "true" : "false",
+      DISABLE_SIGNAL_HANDLERS: "true",
     };
-
-    const memorySize = 256;
 
     const quarkusAsset = new LambdaAsset(this, "k1te-serverless-quarkus", {
       relativeProjectPath: "../k1te-serverless",
-      handler: isNative
-        ? "hello.handler"
-        : "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest",
-      runtime: isNative ? "provided.al2" : "java17",
+      handler,
+      runtime,
     });
 
     const archiveResource = new ArchiveResource(
@@ -147,7 +155,7 @@ export class KiteStack extends TerraformStack {
       environment: {
         ...PROD_ENV,
       },
-      architectures: isNative ? ["arm64"] : ["x86_64"],
+      architecture,
       memorySize,
       timeout: 30,
     });
@@ -163,7 +171,7 @@ export class KiteStack extends TerraformStack {
         TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
       },
       memorySize: 128,
-      architectures: ["arm64"],
+      architecture: "arm64",
     });
 
     const lifecycle = new LambdaInvocation(this, "lifecycle-invocation", {

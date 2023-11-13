@@ -15,7 +15,7 @@ export const LAMBDA_SERVICE_PRINCIPAL = "lambda.amazonaws.com";
 export type LambdaProps = {
   asset: Resource;
   isSnapStart?: boolean;
-  architectures?: string[];
+  architecture?: string;
   role?: Role;
 
   /**
@@ -43,7 +43,7 @@ const DEFAULT_PROPS: Partial<LambdaProps> = {
   logRetentionInDays: 7,
   timeout: 15,
   memorySize: 256,
-  architectures: ["x86_64"],
+  architecture: "x86_64",
 };
 
 export class Lambda extends Construct {
@@ -61,7 +61,7 @@ export class Lambda extends Construct {
       memorySize,
       timeout,
       environment,
-      architectures,
+      architecture,
       isSnapStart = false,
     } = {
       ...DEFAULT_PROPS,
@@ -89,7 +89,7 @@ export class Lambda extends Construct {
           },
         }) as unknown as Record<string, string>,
       },
-      architectures,
+      architectures: [architecture!],
       snapStart,
       publish,
       filename: asset.path,

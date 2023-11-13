@@ -1,21 +1,10 @@
-```
- █████   ████  ███   █████                         █████                 █████
-░░███   ███░  ░░░   ░░███                         ░░███                 ░░███
- ░███  ███    ████  ███████    ██████      ██████  ░███████    ██████   ███████
- ░███████    ░░███ ░░░███░    ███░░███    ███░░███ ░███░░███  ░░░░░███ ░░░███░
- ░███░░███    ░███   ░███    ░███████    ░███ ░░░  ░███ ░███   ███████   ░███
- ░███ ░░███   ░███   ░███ ███░███░░░     ░███  ███ ░███ ░███  ███░░███   ░███ ███
- █████ ░░████ █████  ░░█████ ░░██████    ░░██████  ████ █████░░████████  ░░█████
-░░░░░   ░░░░ ░░░░░    ░░░░░   ░░░░░░      ░░░░░░  ░░░░ ░░░░░  ░░░░░░░░    ░░░░░
-```
-
 # 🪁 Kite Chat Backend
 
 <img src="./Screenshot.png" width="960" alt="K1te chat mobile screenshot"/>
 
 ## About
 
-Kite chat allows to add live web chat widget on any static or dynamic web site and use Telegram channel as a support team's backend to provide instant support feedback.
+K1te chat is a customizable live web chat widget that can be easily embedded into any static or dynamic website. It uses private Telegram groups as support channels to provide instant feedback to your website visitors.
 
 ## License
 
@@ -33,6 +22,8 @@ Kite chat server supports both containerized and serverless deployments.
 
 ### Containerized backend
 
+<img src="./Containerized architecture.svg" width="960" alt="Containerized architecture"/>
+
 Containerized backend mode is more suited for VPS, OpenShift, Kubernetes, ECS and standalone local deployments. It is also more convenient for local development and debugging.
 
 `k1te-server` module supports building standalone or containerized server and deploy it
@@ -44,6 +35,8 @@ It uses StatefulSet to mount persistent volume for both H2 database and filesyst
 More detailed build documentation and deployment instructions are available in the `k1te-server\README.md`
 
 ### Serverless backend
+
+<img src="./Serverless architecture.svg" width="960" alt="Serverless architecture"/>
 
 Serverless mode uses AWS Lambda and AWS API Gateway as a deployment target.
 

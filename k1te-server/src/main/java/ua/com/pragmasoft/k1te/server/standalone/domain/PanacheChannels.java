@@ -87,7 +87,8 @@ public class PanacheChannels implements Channels {
 
     PanacheMember maybeHost = PanacheMember.findByMemberId(memberId);
     if (maybeHost != null && maybeHost.isHost())
-      throw new ValidationException("You are Host in another Channel. To check the channel use /info");
+      throw new ValidationException(
+          "You are Host in another Channel. To check the channel use /info");
 
     PanacheMember existingMember = PanacheMember.findById(buildId(memberId, channelName));
     if (existingMember != null) {

@@ -20,9 +20,6 @@ public class TgWebhook implements RequestHandler<APIGatewayV2HTTPEvent, APIGatew
 
   private final TelegramConnector connector;
 
-  /**
-   * @param connections
-   */
   public TgWebhook(final TelegramConnector connector) {
     this.connector = connector;
   }

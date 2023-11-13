@@ -183,6 +183,16 @@
           <groupId>io.quarkus</groupId>
           <artifactId>quarkus-jdbc-h2</artifactId>
         </dependency>
+        <dependency>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>dynamodb-enhanced</artifactId>
+          <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>s3</artifactId>
+          <scope>provided</scope>
+        </dependency>
       </dependencies>
     </profile>
   </profiles>
