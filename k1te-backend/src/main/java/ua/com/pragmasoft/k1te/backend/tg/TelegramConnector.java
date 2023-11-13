@@ -211,7 +211,9 @@ public class TelegramConnector implements Connector, Closeable {
               : binaryPayload.uri().toString();
 
       var binaryMessage =
-          binaryPayload.isImage() && !binaryPayload.fileType().equals("image/gif")
+          binaryPayload.isImage()
+                  && !binaryPayload.fileType().equals("image/gif")
+                  && !binaryPayload.fileType().equals("image/webp")
               ? new SendPhoto(destinationChatId, fileIdOrUri)
               : new SendDocument(destinationChatId, fileIdOrUri);
 
@@ -335,8 +337,8 @@ public class TelegramConnector implements Connector, Closeable {
       return new SendMessage(rawChatId, text).parseMode(ParseMode.Markdown).toWebhookResponse();
     } catch (Exception e) {
       return new SendMessage(rawChatId, ANONYMOUS_INFO)
-        .parseMode(ParseMode.Markdown)
-        .toWebhookResponse();
+          .parseMode(ParseMode.Markdown)
+          .toWebhookResponse();
     }
   }
 
