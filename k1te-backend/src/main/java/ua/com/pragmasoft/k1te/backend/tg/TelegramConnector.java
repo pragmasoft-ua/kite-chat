@@ -3,6 +3,7 @@ package ua.com.pragmasoft.k1te.backend.tg;
 
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.ChatMember;
+import com.pengrad.telegrambot.model.ChatMember.Status;
 import com.pengrad.telegrambot.model.File;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.MessageEntity;
@@ -43,6 +44,7 @@ import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryPayload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessagePayload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
+import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
 import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
 
@@ -50,7 +52,7 @@ public class TelegramConnector implements Connector, Closeable {
 
   private static final Logger log = LoggerFactory.getLogger(TelegramConnector.class);
 
-  private static final boolean PIN_FEATURE_FLAG = false;
+  private static final boolean PIN_FEATURE_FLAG = true;
 
   private static final String UNSUPPORTED_PAYLOAD = "Unsupported payload ";
   private static final String TG = "tg";
@@ -163,8 +165,18 @@ public class TelegramConnector implements Connector, Closeable {
               u.myChatMember().chat().id(), SUCCESS + "You successfully added " + parseBotName(u))
           .toWebhookResponse();
     }
+    if (isBotAdmin(u)) {
+      log.debug("Bot has been made an administrator");
+      new SendMessage(u.myChatMember().chat().id(),SUCCESS+"Bot is an Administrator now");
+      return OK;
+    }
     if (isBotLeft(u)) {
-      return onBotLeft(u);
+      try {
+        return onBotLeft(u);
+      } catch (NotFoundException e) {
+        log.debug("Bot left the Group, but there were no Channels assigned to this Group");
+        return OK;
+      }
     }
     if (null == message) return this.onUnhandledUpdate(u);
     try {
@@ -482,12 +494,11 @@ public class TelegramConnector implements Connector, Closeable {
 
   /** Returns true if bot was not in the Chat/Group before and was added to one. */
   private static boolean isBotMember(Update update) {
-    if (update.myChatMember() == null) return false;
+    return whoIsBot(update, Status.left, Status.member);
+  }
 
-    ChatMember newChatMember = update.myChatMember().newChatMember();
-    ChatMember oldChatMember = update.myChatMember().oldChatMember();
-    return oldChatMember.status() == ChatMember.Status.left
-        && newChatMember.status() == ChatMember.Status.member;
+  private static boolean isBotAdmin(Update update) {
+    return whoIsBot(update, Status.member, Status.administrator);
   }
 
   /**
@@ -495,12 +506,16 @@ public class TelegramConnector implements Connector, Closeable {
    * removed from it.
    */
   private static boolean isBotLeft(Update update) {
+    return whoIsBot(update, Status.member, Status.left)
+        || whoIsBot(update, Status.administrator, Status.left);
+  }
+
+  private static boolean whoIsBot(Update update, Status oldStatus, Status newStatus) {
     if (update.myChatMember() == null) return false;
 
     ChatMember newChatMember = update.myChatMember().newChatMember();
     ChatMember oldChatMember = update.myChatMember().oldChatMember();
-    return oldChatMember.status() == ChatMember.Status.member
-        && newChatMember.status() == ChatMember.Status.left;
+    return oldChatMember.status() == oldStatus && newChatMember.status() == newStatus;
   }
 
   /**
@@ -536,8 +551,11 @@ public class TelegramConnector implements Connector, Closeable {
     final var start = e.offset();
     final var end = e.offset() + e.length();
     final var text = message.text();
-    final var command = text.substring(start, end).toLowerCase();
+    var command = text.substring(start, end).toLowerCase();
     final var args = text.substring(end).toLowerCase().trim();
+    if (command.contains("@")) {
+      command = command.split("@")[0];
+    }
     return new CommandWithArgs(command, SubCommand.of(args), args);
   }
 
