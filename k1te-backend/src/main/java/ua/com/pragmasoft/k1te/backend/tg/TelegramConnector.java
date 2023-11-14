@@ -55,7 +55,7 @@ public class TelegramConnector implements Connector, Closeable {
   private static final boolean PIN_FEATURE_FLAG = true;
 
   private static final String UNSUPPORTED_PAYLOAD = "Unsupported payload ";
-  private static final String TG = "tg";
+  public static final String TG = "tg";
   private static final String OK = "ok";
   private static final String SUCCESS = "✅ ";
   private static final String HELP =
@@ -167,7 +167,7 @@ public class TelegramConnector implements Connector, Closeable {
     }
     if (isBotAdmin(u)) {
       log.debug("Bot has been made an administrator");
-      new SendMessage(u.myChatMember().chat().id(),SUCCESS+"Bot is an Administrator now");
+      new SendMessage(u.myChatMember().chat().id(), SUCCESS + "Bot is an Administrator now");
       return OK;
     }
     if (isBotLeft(u)) {
@@ -219,7 +219,7 @@ public class TelegramConnector implements Connector, Closeable {
 
   @Override
   public void dispatch(RoutingContext ctx) {
-    Long destinationChatId = toLong(this.rawConnection(ctx.destinationConnection));
+    Long destinationChatId = toLong(Connector.rawConnection(ctx.destinationConnection));
     Member from = ctx.from;
     Member to = ctx.to;
     AbstractSendRequest<?> sendMessage;
@@ -447,7 +447,6 @@ public class TelegramConnector implements Connector, Closeable {
     var ctx =
         RoutingContext.create()
             .withOriginConnection(originConnection)
-            .withDestinationConnection(to.getConnectionUri())
             .withFrom(from)
             .withTo(to)
             .withRequest(request);

@@ -37,7 +37,7 @@ export class KiteStack extends TerraformStack {
     super(scope, id);
     this.node.setContext(ALLOW_TAGS, true);
     const {
-      domainName = "k1te.chat",
+      domainName,
       architecture = "x86_64",
       runtime = "provided.al2",
       handler = "hello.handler",

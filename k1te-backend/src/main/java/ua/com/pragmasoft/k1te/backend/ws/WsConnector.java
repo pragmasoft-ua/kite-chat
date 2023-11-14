@@ -19,7 +19,7 @@ public class WsConnector implements Connector {
 
   public static final String SUBPROTOCOL = "k1te.chat.v1";
 
-  private static final String WS = "ws";
+  public static final String WS = "ws";
 
   private final Router router;
 
@@ -193,7 +193,7 @@ public class WsConnector implements Connector {
   }
 
   private WsConnection requiredConnection(String uri) {
-    var connection = this.connections.getConnection(this.rawConnection(uri));
+    var connection = this.connections.getConnection(Connector.rawConnection(uri));
     if (null == connection) {
       throw new RoutingException("Web client disconnected");
     }

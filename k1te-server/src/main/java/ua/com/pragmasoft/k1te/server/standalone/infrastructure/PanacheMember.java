@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.io.Serializable;
+import java.time.Instant;
 import java.util.Objects;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 
@@ -90,6 +91,50 @@ public class PanacheMember extends PanacheEntityBase implements Member {
   }
 
   @Override
+  public String getTgUri() {
+    return null;
+  }
+
+  @Override
+  public Instant getTgLastTime() {
+    return null;
+  }
+
+  @Override
+  public Integer getTgLastMessageId() {
+    return null;
+  }
+
+  @Override
+  public String getWsUri() {
+    return null;
+  }
+
+  @Override
+  public Instant getWsLastTime() {
+    return null;
+  }
+
+  @Override
+  public Integer getWsLastMessageId() {
+    return null;
+  }
+
+  @Override
+  public String getAiUri() {
+    return null;
+  }
+
+  @Override
+  public Instant getAiLastTime() {
+    return null;
+  }
+
+  @Override
+  public Integer getAiLastMessageId() {
+    return null;
+  }
+
   public String getConnectionUri() {
     return this.connectionUri;
   }

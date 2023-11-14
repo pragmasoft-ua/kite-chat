@@ -34,7 +34,7 @@ export class DynamoDbSchema extends Construct {
       },
       billingMode,
       pointInTimeRecovery: {
-        enabled: pointInTimeRecovery,
+        enabled: pointInTimeRecovery!,
       },
       ttl: {
         enabled: true,
@@ -52,25 +52,35 @@ export class DynamoDbSchema extends Construct {
       },
       billingMode,
       pointInTimeRecovery: {
-        enabled: pointInTimeRecovery,
+        enabled: pointInTimeRecovery!,
       },
       hashKey: "channelName",
       rangeKey: "id",
       attribute: [
         { name: "channelName", type: STRING },
         { name: "id", type: STRING },
-        { name: "connectionUri", type: STRING },
-      ],
-      globalSecondaryIndex: [
-        {
-          name: "ByConnection",
-          hashKey: "connectionUri",
-          projectionType: "ALL",
-        },
       ],
     });
 
-    this.tables = [channels, members];
+    const connections = new DynamodbTable(this, "Connections", {
+      name: `${id}.Connections`,
+      dependsOn: [members],
+      lifecycle: {
+        preventDestroy,
+      },
+      billingMode,
+      pointInTimeRecovery: {
+        enabled: pointInTimeRecovery!,
+      },
+      hashKey: "connector",
+      rangeKey: "rawId",
+      attribute: [
+        { name: "connector", type: STRING },
+        { name: "rawId", type: STRING },
+      ],
+    });
+
+    this.tables = [channels, members, connections];
   }
   public allowAll(to: Grantable) {
     const policyStatement = new Dynamodb()
