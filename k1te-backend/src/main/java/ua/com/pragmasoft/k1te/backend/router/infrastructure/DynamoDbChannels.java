@@ -1,6 +1,7 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -285,6 +286,26 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
+  public void updateUri(
+      Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {
+    try {
+      Objects.requireNonNull(connectionUri);
+      Objects.requireNonNull(messageId);
+      Objects.requireNonNull(usageTime);
+
+      String connectorId = Connector.connectorId(connectionUri);
+      String rawConnection = Connector.rawConnection(connectionUri);
+
+      DynamoDbMember member = (DynamoDbMember) memberToUpdate;
+
+      member.updateConnectionUri(connectorId, rawConnection, messageId, usageTime);
+      this.membersTable.updateItem(member);
+    } catch (Exception e) {
+      throw new ValidationException(e.getMessage(), e);
+    }
+  }
+
+  @Override
   public DynamoDbMember find(String memberConnection) {
     Objects.requireNonNull(memberConnection, "connection");
 
@@ -307,6 +328,27 @@ public class DynamoDbChannels implements Channels {
     DynamoDbMember member = this.membersTable.getItem(memberKey);
     if (null == member) {
       throw new NotFoundException("Not found member");
+    }
+    return member;
+  }
+
+  @Override
+  public Member switchConnection(String channelName, String memberId, String newConnection) {
+    DynamoDbMember member = find(channelName, memberId);
+
+    String connectorId = Connector.connectorId(newConnection);
+    String rawConnection = Connector.rawConnection(newConnection);
+
+    member.resolveConnectionUri(connectorId, rawConnection);
+
+    DynamoDBConnection dbConnection =
+        new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
+
+    try {
+      this.enhancedDynamo.transactWriteItems(
+          tx -> tx.addUpdateItem(membersTable, member).addPutItem(connectionsTable, dbConnection));
+    } catch (TransactionCanceledException e) {
+      throw new KiteException(e.getMessage(), e);
     }
     return member;
   }

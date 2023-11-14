@@ -101,7 +101,7 @@ public class PanacheMember extends PanacheEntityBase implements Member {
   }
 
   @Override
-  public Integer getTgLastMessageId() {
+  public String getTgLastMessageId() {
     return null;
   }
 
@@ -116,7 +116,7 @@ public class PanacheMember extends PanacheEntityBase implements Member {
   }
 
   @Override
-  public Integer getWsLastMessageId() {
+  public String getWsLastMessageId() {
     return null;
   }
 
@@ -131,7 +131,7 @@ public class PanacheMember extends PanacheEntityBase implements Member {
   }
 
   @Override
-  public Integer getAiLastMessageId() {
+  public String getAiLastMessageId() {
     return null;
   }
 

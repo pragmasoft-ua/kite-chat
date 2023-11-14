@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.shared.KiteException;
 import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
@@ -64,9 +65,15 @@ public class KiteRouter implements Router {
     }
     Connector connector = requiredConnector(Connector.connectorId(ctx.destinationConnection));
     connector.dispatch(ctx);
-    if (null == ctx.response) {
+    MessageAck response = ctx.response;
+    if (null == response) {
       throw new RoutingException("missing response from connector " + connector.id());
     }
+    String messageId = response.messageId();
+    if (Connector.connectorId(ctx.originConnection).equals(WsConnector.WS)) {
+      messageId = response.destiationMessageId();
+    }
+    this.channels.updateUri(ctx.from, ctx.originConnection, messageId, response.delivered());
     this.channels.updatePeer(ctx.to, ctx.from.getId());
     this.channels.updatePeer(ctx.from, ctx.to.getId());
   }

@@ -17,13 +17,13 @@ public class DynamoDbMember implements Member {
   private String channelName;
   private String tgUri;
   private Instant tgLastTime;
-  private Integer tgLastMessageId;
+  private String tgLastMessageId;
   private String wsUri;
   private Instant wsLastTime;
-  private Integer wsLastMessageId;
+  private String wsLastMessageId;
   private String aiUri;
   private Instant aiLastTime;
-  private Integer aiLastMessageId;
+  private String aiLastMessageId;
   private String userName;
   private boolean host;
   private String peerMemberId;
@@ -34,13 +34,13 @@ public class DynamoDbMember implements Member {
       String channelName,
       String tgUri,
       Instant tgLastTime,
-      Integer tgLastMessageId,
+      String tgLastMessageId,
       String wsUri,
       Instant wsLastTime,
-      Integer wsLastMessageId,
+      String wsLastMessageId,
       String aiUri,
       Instant aiLastTime,
-      Integer aiLastMessageId,
+      String aiLastMessageId,
       String userName,
       boolean host,
       String peerMemberId,
@@ -67,18 +67,27 @@ public class DynamoDbMember implements Member {
   }
 
   public void resolveConnectionUri(String connectorId, String connectionUri) {
+    updateConnectionUri(connectorId, connectionUri, null, null);
+  }
+
+  public void updateConnectionUri(
+      String connectorId, String connectionUri, String messageId, Instant usageTime) {
+    Instant time = usageTime != null ? usageTime : Instant.now();
     switch (connectorId) {
       case (TelegramConnector.TG) -> {
         this.setTgUri(connectionUri);
-        this.setTgLastTime(Instant.now());
+        this.setTgLastTime(time);
+        this.setTgLastMessageId(messageId);
       }
       case (WsConnector.WS) -> {
         this.setWsUri(connectionUri);
-        this.setWsLastTime(Instant.now());
+        this.setWsLastTime(time);
+        this.setWsLastMessageId(messageId);
       }
       case ("ai") -> {
         this.setAiUri(connectionUri);
-        this.setAiLastTime(Instant.now());
+        this.setAiLastTime(time);
+        this.setAiLastMessageId(messageId);
       }
       default -> throw new IllegalStateException("Unsupported connector id");
     }
@@ -126,11 +135,11 @@ public class DynamoDbMember implements Member {
 
   @Override
   @DynamoDbIgnoreNulls
-  public Integer getTgLastMessageId() {
+  public String getTgLastMessageId() {
     return tgLastMessageId;
   }
 
-  public void setTgLastMessageId(Integer tgLastMessageId) {
+  public void setTgLastMessageId(String tgLastMessageId) {
     this.tgLastMessageId = tgLastMessageId;
   }
 
@@ -156,11 +165,11 @@ public class DynamoDbMember implements Member {
 
   @Override
   @DynamoDbIgnoreNulls
-  public Integer getWsLastMessageId() {
+  public String getWsLastMessageId() {
     return wsLastMessageId;
   }
 
-  public void setWsLastMessageId(Integer wsLastMessageId) {
+  public void setWsLastMessageId(String wsLastMessageId) {
     this.wsLastMessageId = wsLastMessageId;
   }
 
@@ -186,11 +195,11 @@ public class DynamoDbMember implements Member {
 
   @Override
   @DynamoDbIgnoreNulls
-  public Integer getAiLastMessageId() {
+  public String getAiLastMessageId() {
     return aiLastMessageId;
   }
 
-  public void setAiLastMessageId(Integer aiLastMessageId) {
+  public void setAiLastMessageId(String aiLastMessageId) {
     this.aiLastMessageId = aiLastMessageId;
   }
 
@@ -308,7 +317,7 @@ public class DynamoDbMember implements Member {
       return this;
     }
 
-    public DynamoDbMemberBuilder withTgLastMessageId(Integer tgLastMessageId) {
+    public DynamoDbMemberBuilder withTgLastMessageId(String tgLastMessageId) {
       this.member.setTgLastMessageId(tgLastMessageId);
       return this;
     }
@@ -323,7 +332,7 @@ public class DynamoDbMember implements Member {
       return this;
     }
 
-    public DynamoDbMemberBuilder withWsLastMessageId(Integer wsLastMessageId) {
+    public DynamoDbMemberBuilder withWsLastMessageId(String wsLastMessageId) {
       this.member.setWsLastMessageId(wsLastMessageId);
       return this;
     }
@@ -338,7 +347,7 @@ public class DynamoDbMember implements Member {
       return this;
     }
 
-    public DynamoDbMemberBuilder withAiLastMessageId(Integer aiLastMessageId) {
+    public DynamoDbMemberBuilder withAiLastMessageId(String aiLastMessageId) {
       this.member.setAiLastMessageId(aiLastMessageId);
       return this;
     }

@@ -17,19 +17,19 @@ public interface Member {
 
   public Instant getTgLastTime();
 
-  public Integer getTgLastMessageId();
+  public String getTgLastMessageId();
 
   public String getWsUri();
 
   public Instant getWsLastTime();
 
-  public Integer getWsLastMessageId();
+  public String getWsLastMessageId();
 
   public String getAiUri();
 
   public Instant getAiLastTime();
 
-  public Integer getAiLastMessageId();
+  public String getAiLastMessageId();
 
   public String getPeerMemberId();
 

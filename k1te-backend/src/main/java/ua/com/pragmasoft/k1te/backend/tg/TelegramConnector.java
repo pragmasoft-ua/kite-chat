@@ -52,7 +52,7 @@ public class TelegramConnector implements Connector, Closeable {
 
   private static final Logger log = LoggerFactory.getLogger(TelegramConnector.class);
 
-  private static final boolean PIN_FEATURE_FLAG = true;
+  private static final boolean PIN_FEATURE_FLAG = false;
 
   private static final String UNSUPPORTED_PAYLOAD = "Unsupported payload ";
   public static final String TG = "tg";
@@ -325,7 +325,7 @@ public class TelegramConnector implements Connector, Closeable {
               case JOIN -> {
                 if (subCommand.args.length > 1) { // /join channelName userId
                   String userId = subCommand.args[1];
-                  memberName = "%s #%s".formatted(memberName, userId);
+                  yield onSwitchConnection(channelName, userId, originConnection);
                 }
                 yield onStartCommand(channelName, memberId, originConnection, memberName);
               }
@@ -401,6 +401,18 @@ public class TelegramConnector implements Connector, Closeable {
                 new PlaintextMessage("✅ %s joined channel %s".formatted(memberName, channelName)));
     this.router.dispatch(ctx);
     return "✅ You joined channel %s".formatted(channelName);
+  }
+
+  private String onSwitchConnection(String channelName, String memberId, String originConnection) {
+    Member member = this.channels.switchConnection(channelName, memberId, originConnection);
+    var ctx =
+        RoutingContext.create()
+            .withOriginConnection(originConnection)
+            .withFrom(member)
+            .withRequest(
+                new PlaintextMessage("✅ %s switched to Telegram".formatted(member.getUserName())));
+    this.router.dispatch(ctx);
+    return "✅ You switched to Telegram";
   }
 
   private String onMessage(final Message message, boolean isEdited) {
@@ -551,7 +563,7 @@ public class TelegramConnector implements Connector, Closeable {
     final var end = e.offset() + e.length();
     final var text = message.text();
     var command = text.substring(start, end).toLowerCase();
-    final var args = text.substring(end).toLowerCase().trim();
+    final var args = text.substring(end).trim();
     if (command.contains("@")) {
       command = command.split("@")[0];
     }
