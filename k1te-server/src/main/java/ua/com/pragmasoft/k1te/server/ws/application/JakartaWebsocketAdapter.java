@@ -39,7 +39,8 @@ public class JakartaWebsocketAdapter {
 
   @OnOpen
   public void onOpen(Session session, EndpointConfig config) throws IOException {
-    session.setMaxIdleTimeout(60L * 1000L);
+    var timeout = 3; // 3x client side ping interval
+    session.setMaxIdleTimeout(timeout * 60L * 1000L);
     JakartaWebsocketConnection connection = this.connectionRegistry.createConnection(session);
     this.connectionRegistry.registerConnection(connection);
     var response = wsConnector.onOpen(connection);

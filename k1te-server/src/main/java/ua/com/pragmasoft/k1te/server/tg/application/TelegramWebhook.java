@@ -25,7 +25,6 @@ public class TelegramWebhook {
   public static final String WEBHOOK_PATH = "/api/telegram";
   private final TelegramConnector connector;
 
-  /** */
   @Inject
   public TelegramWebhook(final TelegramConnector connector) {
     this.connector = connector;

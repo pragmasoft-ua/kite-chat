@@ -2,10 +2,27 @@
 package ua.com.pragmasoft.k1te.backend.tg;
 
 import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.model.*;
+import com.pengrad.telegrambot.model.ChatMember;
+import com.pengrad.telegrambot.model.ChatMember.Status;
+import com.pengrad.telegrambot.model.File;
+import com.pengrad.telegrambot.model.Message;
+import com.pengrad.telegrambot.model.MessageEntity;
 import com.pengrad.telegrambot.model.MessageEntity.Type;
+import com.pengrad.telegrambot.model.PhotoSize;
+import com.pengrad.telegrambot.model.Update;
+import com.pengrad.telegrambot.model.User;
 import com.pengrad.telegrambot.model.request.ParseMode;
-import com.pengrad.telegrambot.request.*;
+import com.pengrad.telegrambot.request.AbstractSendRequest;
+import com.pengrad.telegrambot.request.ContentTypes;
+import com.pengrad.telegrambot.request.DeleteMessage;
+import com.pengrad.telegrambot.request.DeleteWebhook;
+import com.pengrad.telegrambot.request.GetFile;
+import com.pengrad.telegrambot.request.PinChatMessage;
+import com.pengrad.telegrambot.request.SendDocument;
+import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.request.SendPhoto;
+import com.pengrad.telegrambot.request.SetWebhook;
+import com.pengrad.telegrambot.request.UnpinChatMessage;
 import com.pengrad.telegrambot.response.GetFileResponse;
 import java.io.Closeable;
 import java.net.URI;
@@ -27,6 +44,7 @@ import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryPayload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessagePayload;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
+import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
 import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
 
@@ -36,8 +54,9 @@ public class TelegramConnector implements Connector, Closeable {
 
   private static final boolean PIN_FEATURE_FLAG = true;
 
+
   private static final String UNSUPPORTED_PAYLOAD = "Unsupported payload ";
-  private static final String TG = "tg";
+  public static final String TG = "tg";
   private static final String OK = "ok";
   private static final String SUCCESS = "✅ ";
   private static final String HELP =
@@ -147,8 +166,18 @@ public class TelegramConnector implements Connector, Closeable {
               u.myChatMember().chat().id(), SUCCESS + "You successfully added " + parseBotName(u))
           .toWebhookResponse();
     }
+    if (isBotAdmin(u)) {
+      log.debug("Bot has been made an administrator");
+      new SendMessage(u.myChatMember().chat().id(), SUCCESS + "Bot is an Administrator now");
+      return OK;
+    }
     if (isBotLeft(u)) {
-      return onBotLeft(u);
+      try {
+        return onBotLeft(u);
+      } catch (NotFoundException e) {
+        log.debug("Bot left the Group, but there were no Channels assigned to this Group");
+        return OK;
+      }
     }
     if (null == message) return this.onUnhandledUpdate(u);
     try {
@@ -191,7 +220,7 @@ public class TelegramConnector implements Connector, Closeable {
 
   @Override
   public void dispatch(RoutingContext ctx) {
-    Long destinationChatId = toLong(this.rawConnection(ctx.destinationConnection));
+    Long destinationChatId = toLong(Connector.rawConnection(ctx.destinationConnection));
     Member from = ctx.from;
     Member to = ctx.to;
     AbstractSendRequest<?> sendMessage;
@@ -304,7 +333,7 @@ public class TelegramConnector implements Connector, Closeable {
               case JOIN -> {
                 if (subCommand.args.length > 1) { // /join channelName userId
                   String userId = subCommand.args[1];
-                  memberName = "%s #%s".formatted(memberName, userId);
+                  yield onSwitchConnection(channelName, userId, originConnection);
                 }
                 yield onStartCommand(channelName, memberId, originConnection, memberName);
               }
@@ -382,6 +411,18 @@ public class TelegramConnector implements Connector, Closeable {
     return "✅ You joined channel %s".formatted(channelName);
   }
 
+  private String onSwitchConnection(String channelName, String memberId, String originConnection) {
+    Member member = this.channels.switchConnection(channelName, memberId, originConnection);
+    var ctx =
+        RoutingContext.create()
+            .withOriginConnection(originConnection)
+            .withFrom(member)
+            .withRequest(
+                new PlaintextMessage("✅ %s switched to Telegram".formatted(member.getUserName())));
+    this.router.dispatch(ctx);
+    return "✅ You switched to Telegram";
+  }
+
   private String onMessage(final Message message, boolean isEdited) {
     Long rawChatId = message.chat().id();
     String originConnection = this.connectionUri(fromLong(rawChatId));
@@ -426,7 +467,6 @@ public class TelegramConnector implements Connector, Closeable {
     var ctx =
         RoutingContext.create()
             .withOriginConnection(originConnection)
-            .withDestinationConnection(to.getConnectionUri())
             .withFrom(from)
             .withTo(to)
             .withRequest(request);
@@ -475,12 +515,11 @@ public class TelegramConnector implements Connector, Closeable {
 
   /** Returns true if bot was not in the Chat/Group before and was added to one. */
   private static boolean isBotMember(Update update) {
-    if (update.myChatMember() == null) return false;
+    return whoIsBot(update, Status.left, Status.member);
+  }
 
-    ChatMember newChatMember = update.myChatMember().newChatMember();
-    ChatMember oldChatMember = update.myChatMember().oldChatMember();
-    return oldChatMember.status() == ChatMember.Status.left
-        && newChatMember.status() == ChatMember.Status.member;
+  private static boolean isBotAdmin(Update update) {
+    return whoIsBot(update, Status.member, Status.administrator);
   }
 
   /**
@@ -488,12 +527,16 @@ public class TelegramConnector implements Connector, Closeable {
    * removed from it.
    */
   private static boolean isBotLeft(Update update) {
+    return whoIsBot(update, Status.member, Status.left)
+        || whoIsBot(update, Status.administrator, Status.left);
+  }
+
+  private static boolean whoIsBot(Update update, Status oldStatus, Status newStatus) {
     if (update.myChatMember() == null) return false;
 
     ChatMember newChatMember = update.myChatMember().newChatMember();
     ChatMember oldChatMember = update.myChatMember().oldChatMember();
-    return oldChatMember.status() == ChatMember.Status.member
-        && newChatMember.status() == ChatMember.Status.left;
+    return oldChatMember.status() == oldStatus && newChatMember.status() == newStatus;
   }
 
   /**
@@ -529,8 +572,11 @@ public class TelegramConnector implements Connector, Closeable {
     final var start = e.offset();
     final var end = e.offset() + e.length();
     final var text = message.text();
-    final var command = text.substring(start, end).toLowerCase();
-    final var args = text.substring(end).toLowerCase().trim();
+    var command = text.substring(start, end).toLowerCase();
+    final var args = text.substring(end).trim();
+    if (command.contains("@")) {
+      command = command.split("@")[0];
+    }
     return new CommandWithArgs(command, SubCommand.of(args), args);
   }
 

@@ -6,6 +6,7 @@ import static ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheMem
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+import java.time.Instant;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,6 +154,10 @@ public class PanacheChannels implements Channels {
     return pinnedMessage != null ? pinnedMessage.getMessageId() : null;
   }
 
+  public Member switchConnection(String channelName, String memberId, String newConnection) {
+    return null;
+  }
+
   @Override
   public void updatePeer(Member recipientMember, String peerMemberId) {
     Objects.requireNonNull(peerMemberId, "peer Member");
@@ -186,4 +191,8 @@ public class PanacheChannels implements Channels {
     var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
     PanachePinnedMessage.deleteById(pinnedMessagePK);
   }
+
+  @Override
+  public void updateUri(
+    Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {}
 }
