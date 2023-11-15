@@ -194,5 +194,5 @@ public class PanacheChannels implements Channels {
 
   @Override
   public void updateUri(
-    Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {}
+      Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {}
 }

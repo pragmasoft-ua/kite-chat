@@ -28,5 +28,4 @@ public interface Channels {
   void updateUri(Member memberToUpdate, String connectionUri, String messageId, Instant usageTime);
 
   void deletePinnedMessage(Member from, Member to);
-
 }

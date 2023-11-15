@@ -14,6 +14,7 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.*;
 import software.amazon.awssdk.services.dynamodb.model.CancellationReason;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 import ua.com.pragmasoft.k1te.backend.router.domain.ChannelName;
 import ua.com.pragmasoft.k1te.backend.router.domain.Channels;
@@ -47,6 +48,15 @@ public class DynamoDbChannels implements Channels {
           .expressionNames(
               Map.of(
                   "#pk", "ChannelName",
+                  "#sk", "id"))
+          .build();
+
+  private static final Expression pkAndSkExistCondition =
+      Expression.builder()
+          .expression("attribute_exists(#pk) AND attribute_exists(#sk)")
+          .expressionNames(
+              Map.of(
+                  "#pk", "channelName",
                   "#sk", "id"))
           .build();
 
@@ -258,45 +268,20 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
-  public void updatePeer(Member myMember, String peerMember) {
-    Objects.requireNonNull(peerMember, "peer Member");
-    if (peerMember.equals(myMember.getPeerMemberId())) {
-      return;
+  public DynamoDbMember find(String channel, String id) {
+    Key memberKey = Key.builder().partitionValue(channel).sortValue(id).build();
+    DynamoDbMember member = this.membersTable.getItem(memberKey);
+    if (null == member) {
+      throw new NotFoundException("Not found member");
     }
-    try {
-      DynamoDbMember member = (DynamoDbMember) myMember;
-
-      member.setPeerMemberId(peerMember);
-      this.membersTable.updateItem(member);
-    } catch (Exception e) {
-      throw new ValidationException(e.getMessage(), e);
-    }
+    return member;
   }
 
   @Override
-  public void updatePinnedMessageId(Member from, Member to, Integer pinnedMessagedId) {}
-
-  @Override
-  public void deletePinnedMessage(Member from, Member to) {}
-
-  @Override
-  public void updateUri(
-      Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {
-    try {
-      Objects.requireNonNull(connectionUri);
-      Objects.requireNonNull(messageId);
-      Objects.requireNonNull(usageTime);
-
-      String connectorId = Connector.connectorId(connectionUri);
-      String rawConnection = Connector.rawConnection(connectionUri);
-
-      DynamoDbMember member = (DynamoDbMember) memberToUpdate;
-
-      member.updateConnectionUri(connectorId, rawConnection, messageId, usageTime);
-      this.membersTable.updateItem(member);
-    } catch (Exception e) {
-      throw new ValidationException(e.getMessage(), e);
-    }
+  public Integer findPinnedMessage(Member from, Member to) {
+    DynamoDbMember member = (DynamoDbMember) from;
+    Map<String, Integer> pinnedMessages = member.getPinnedMessages();
+    return pinnedMessages.get(to.getId());
   }
 
   @Override
@@ -314,21 +299,6 @@ public class DynamoDbChannels implements Channels {
     String memberId = dbConnection.getMemberId();
 
     return find(channelName, memberId);
-  }
-
-  @Override
-  public DynamoDbMember find(String channel, String id) {
-    Key memberKey = Key.builder().partitionValue(channel).sortValue(id).build();
-    DynamoDbMember member = this.membersTable.getItem(memberKey);
-    if (null == member) {
-      throw new NotFoundException("Not found member");
-    }
-    return member;
-  }
-
-  @Override
-  public Integer findPinnedMessage(Member from, Member to) {
-    return null;
   }
 
   public Member switchConnection(String channelName, String memberId, String newConnection) {
@@ -349,5 +319,64 @@ public class DynamoDbChannels implements Channels {
       throw new KiteException(e.getMessage(), e);
     }
     return member;
+  }
+
+  @Override
+  public void updatePeer(Member myMember, String peerMember) {
+    Objects.requireNonNull(peerMember, "peer Member");
+    if (peerMember.equals(myMember.getPeerMemberId())) {
+      return;
+    }
+    DynamoDbMember member = (DynamoDbMember) myMember;
+    member.setPeerMemberId(peerMember);
+
+    this.updateMemberIfExist(member);
+  }
+
+  @Override
+  public void updateUri(
+      Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {
+    Objects.requireNonNull(connectionUri);
+    Objects.requireNonNull(messageId);
+    Objects.requireNonNull(usageTime);
+
+    String connectorId = Connector.connectorId(connectionUri);
+    String rawConnection = Connector.rawConnection(connectionUri);
+
+    DynamoDbMember member = (DynamoDbMember) memberToUpdate;
+
+    member.updateConnectionUri(connectorId, rawConnection, messageId, usageTime);
+    this.updateMemberIfExist(member);
+  }
+
+  @Override
+  public void updatePinnedMessageId(Member from, Member to, Integer pinnedMessagedId) {
+    DynamoDbMember member = (DynamoDbMember) from;
+    member.addPinnedMessage(to.getId(), pinnedMessagedId);
+
+    this.updateMemberIfExist(member);
+  }
+
+  @Override
+  public void deletePinnedMessage(Member from, Member to) {
+    DynamoDbMember member = (DynamoDbMember) from;
+    member.deletePinnedMessage(to.getId());
+
+    this.updateMemberIfExist(member);
+  }
+
+  private void updateMemberIfExist(DynamoDbMember member) {
+    var updateRequest =
+        UpdateItemEnhancedRequest.builder(DynamoDbMember.class)
+            .item(member)
+            .conditionExpression(pkAndSkExistCondition)
+            .build();
+    try {
+      this.membersTable.updateItem(updateRequest);
+    } catch (ConditionalCheckFailedException conditionalException) {
+      log.debug("Member has already left the Channel");
+    } catch (Exception e) {
+      throw new ValidationException(e.getMessage(), e);
+    }
   }
 }

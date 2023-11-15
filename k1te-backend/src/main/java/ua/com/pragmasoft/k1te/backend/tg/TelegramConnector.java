@@ -54,7 +54,6 @@ public class TelegramConnector implements Connector, Closeable {
 
   private static final boolean PIN_FEATURE_FLAG = true;
 
-
   private static final String UNSUPPORTED_PAYLOAD = "Unsupported payload ";
   public static final String TG = "tg";
   private static final String OK = "ok";

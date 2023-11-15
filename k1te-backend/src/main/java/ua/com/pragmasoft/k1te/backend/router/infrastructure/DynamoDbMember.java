@@ -2,6 +2,8 @@
 package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnoreNulls;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
@@ -27,7 +29,7 @@ public class DynamoDbMember implements Member {
   private String userName;
   private boolean host;
   private String peerMemberId;
-  private Integer pinnedMessageId;
+  private Map<String, Integer> pinnedMessages = new HashMap<>();
 
   public DynamoDbMember(
       String id,
@@ -44,7 +46,7 @@ public class DynamoDbMember implements Member {
       String userName,
       boolean host,
       String peerMemberId,
-      Integer pinnedMessageId) {
+      Map<String, Integer> pinnedMessageId) {
     this.id = id;
     this.channelName = channelName;
     this.tgUri = tgUri;
@@ -59,7 +61,7 @@ public class DynamoDbMember implements Member {
     this.userName = userName;
     this.host = host;
     this.peerMemberId = peerMemberId;
-    this.pinnedMessageId = pinnedMessageId;
+    this.pinnedMessages = pinnedMessageId;
   }
 
   public DynamoDbMember() {
@@ -231,14 +233,21 @@ public class DynamoDbMember implements Member {
     this.peerMemberId = peerConnectionId;
   }
 
-  // TODO: 15.11.2023
   @DynamoDbIgnoreNulls
-  public Integer getPinnedMessageId() {
-    return pinnedMessageId;
+  public Map<String, Integer> getPinnedMessages() {
+    return pinnedMessages;
   }
 
-  public void setPinnedMessageId(Integer pinnedMessageId) {
-    this.pinnedMessageId = pinnedMessageId;
+  public void setPinnedMessages(Map<String, Integer> pinnedMessages) {
+    this.pinnedMessages = pinnedMessages;
+  }
+
+  public void addPinnedMessage(String memberId, Integer pinnedMessageId) {
+    this.pinnedMessages.put(memberId, pinnedMessageId);
+  }
+
+  public void deletePinnedMessage(String memberId) {
+    this.pinnedMessages.remove(memberId);
   }
 
   @Override
@@ -286,7 +295,7 @@ public class DynamoDbMember implements Member {
         + peerMemberId
         + '\''
         + ", pinnedMessageId="
-        + pinnedMessageId
+        + pinnedMessages
         + '}';
   }
 
@@ -367,8 +376,8 @@ public class DynamoDbMember implements Member {
       return this;
     }
 
-    public DynamoDbMemberBuilder withPinnedMessageId(Integer pinnedMessageId) {
-      this.member.setPinnedMessageId(pinnedMessageId);
+    public DynamoDbMemberBuilder withPinnedMessageId(Map<String, Integer> pinnedMessageId) {
+      this.member.setPinnedMessages(pinnedMessageId);
       return this;
     }
 
