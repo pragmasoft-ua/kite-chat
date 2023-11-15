@@ -89,7 +89,7 @@ public class DynamoDbMember implements Member {
     this.peerMemberId = peerConnectionId;
   }
 
-  @Override
+  // TODO: 15.11.2023
   @DynamoDbIgnoreNulls
   public Integer getPinnedMessageId() {
     return pinnedMessageId;

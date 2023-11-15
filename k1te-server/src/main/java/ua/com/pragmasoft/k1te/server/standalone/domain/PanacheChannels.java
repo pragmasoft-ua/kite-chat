@@ -17,6 +17,7 @@ import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
 import ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheChannel;
 import ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheMember;
+import ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanachePinnedMessage;
 
 @IfBuildProfile("standalone")
 @ApplicationScoped
@@ -87,7 +88,8 @@ public class PanacheChannels implements Channels {
 
     PanacheMember maybeHost = PanacheMember.findByMemberId(memberId);
     if (maybeHost != null && maybeHost.isHost())
-      throw new ValidationException("You are Host in another Channel. To check the channel use /info");
+      throw new ValidationException(
+          "You are Host in another Channel. To check the channel use /info");
 
     PanacheMember existingMember = PanacheMember.findById(buildId(memberId, channelName));
     if (existingMember != null) {
@@ -140,6 +142,18 @@ public class PanacheChannels implements Channels {
   }
 
   @Override
+  public Integer findPinnedMessage(Member from, Member to) {
+    Objects.requireNonNull(from);
+    Objects.requireNonNull(to);
+
+    PanacheMember member = (PanacheMember) from;
+    var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
+    PanachePinnedMessage pinnedMessage = PanachePinnedMessage.findById(pinnedMessagePK);
+
+    return pinnedMessage != null ? pinnedMessage.getMessageId() : null;
+  }
+
+  @Override
   public void updatePeer(Member recipientMember, String peerMemberId) {
     Objects.requireNonNull(peerMemberId, "peer Member");
     if (peerMemberId.equals(recipientMember.getPeerMemberId())) {
@@ -152,11 +166,24 @@ public class PanacheChannels implements Channels {
   }
 
   @Override
-  public void updatePinnedMessageId(Member member, Integer pinnedMessageId) {
-    PanacheMember oldMember = (PanacheMember) member;
-    PanacheMember newMember = PanacheMember.findById(oldMember.getMemberPK());
-    newMember.setPinnedMessageId(pinnedMessageId);
+  public void updatePinnedMessageId(Member from, Member to, Integer pinnedMessageId) {
+    Objects.requireNonNull(from);
+    Objects.requireNonNull(to);
+    Objects.requireNonNull(pinnedMessageId);
 
-    newMember.persistAndFlush();
+    PanacheMember member = (PanacheMember) from;
+    var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
+    PanachePinnedMessage pinnedMessage = new PanachePinnedMessage(pinnedMessagePK, pinnedMessageId);
+    PanachePinnedMessage.getEntityManager().merge(pinnedMessage);
+  }
+
+  @Override
+  public void deletePinnedMessage(Member from, Member to) {
+    Objects.requireNonNull(from);
+    Objects.requireNonNull(to);
+
+    PanacheMember member = (PanacheMember) from;
+    var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
+    PanachePinnedMessage.deleteById(pinnedMessagePK);
   }
 }

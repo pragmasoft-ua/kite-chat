@@ -3,15 +3,9 @@ package ua.com.pragmasoft.k1te.server.standalone.infrastructure;
 
 import io.quarkus.arc.profile.IfBuildProfile;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.EmbeddedId;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Objects;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 
@@ -33,11 +27,12 @@ public class PanacheMember extends PanacheEntityBase implements Member {
 
   private String peerMemberId;
 
-  private Integer pinnedMessageId;
-
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "channelName", nullable = false, insertable = false, updatable = false)
   private PanacheChannel channel;
+
+  @OneToMany(mappedBy = "member", fetch = FetchType.LAZY)
+  private List<PanachePinnedMessage> pinnedMessages;
 
   public static PanacheMember of(
       String memberId,
@@ -101,15 +96,6 @@ public class PanacheMember extends PanacheEntityBase implements Member {
 
   public MemberPK getMemberPK() {
     return memberPK;
-  }
-
-  @Override
-  public Integer getPinnedMessageId() {
-    return pinnedMessageId;
-  }
-
-  public void setPinnedMessageId(Integer pinnedMessageId) {
-    this.pinnedMessageId = pinnedMessageId;
   }
 
   public void setMemberPK(MemberPK memberPK) {

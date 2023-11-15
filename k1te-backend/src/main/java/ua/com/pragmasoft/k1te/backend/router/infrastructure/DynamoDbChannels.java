@@ -208,16 +208,22 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
-  public void updatePinnedMessageId(Member old, Integer pinnedMessagedId) {
-    try {
-      DynamoDbMember member = (DynamoDbMember) old;
+  public void updatePinnedMessageId(Member from, Member to, Integer pinnedMessagedId) {}
 
-      member.setPinnedMessageId(pinnedMessagedId);
-      this.membersTable.updateItem(member);
-    } catch (Exception e) {
-      throw new ValidationException(e.getMessage(), e);
-    }
-  }
+  @Override
+  public void deletePinnedMessage(Member from, Member to) {}
+
+  //  @Override
+  //  public void updatePinnedMessageId(Member old,  Member to,Integer pinnedMessagedId) {
+  //    try {
+  //      DynamoDbMember member = (DynamoDbMember) old;
+  //
+  //      member.setPinnedMessageId(pinnedMessagedId);
+  //      this.membersTable.updateItem(member);
+  //    } catch (Exception e) {
+  //      throw new ValidationException(e.getMessage(), e);
+  //    }
+  //  }
 
   @Override
   public DynamoDbMember find(String memberConnection) {
@@ -244,5 +250,10 @@ public class DynamoDbChannels implements Channels {
       throw new NotFoundException("Not found member");
     }
     return member;
+  }
+
+  @Override
+  public Integer findPinnedMessage(Member from, Member to) {
+    return null;
   }
 }
