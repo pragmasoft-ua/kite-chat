@@ -1,7 +1,6 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -11,7 +10,6 @@ import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.shared.KiteException;
 import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
-import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 
 public class KiteRouter implements Router {
@@ -61,7 +59,7 @@ public class KiteRouter implements Router {
       throw new RoutingException();
     }
     if (null == ctx.destinationConnection) {
-      ctx.destinationConnection = this.getConnectionUri(ctx.to);
+      ctx.destinationConnection = ctx.to.getConnectionUri();
     }
     Connector connector = requiredConnector(Connector.connectorId(ctx.destinationConnection));
     connector.dispatch(ctx);
@@ -81,29 +79,5 @@ public class KiteRouter implements Router {
   private synchronized Connector requiredConnector(String connectorId) throws NotFoundException {
     return Optional.ofNullable(this.connectors.get(connectorId))
         .orElseThrow(() -> new NotFoundException("No connector with id " + connectorId));
-  }
-
-  private String getConnectionUri(Member member) {
-    String tgUri =
-        member.getTgUri() != null ? TelegramConnector.TG + ":" + member.getTgUri() : null;
-    String wsUri = member.getWsUri() != null ? WsConnector.WS + ":" + member.getWsUri() : null;
-    String aiUri = member.getAiUri() != null ? "ai:" + member.getAiUri() : null;
-
-    String[] uris = {tgUri, wsUri, aiUri};
-    Instant[] lastTimes = {member.getTgLastTime(), member.getWsLastTime(), member.getAiLastTime()};
-
-    String connectionUri = null;
-    Instant mostRecentTime = null;
-
-    for (int i = 0; i < uris.length; i++) {
-      if (uris[i] != null && (mostRecentTime == null || lastTimes[i].isAfter(mostRecentTime))) {
-        connectionUri = uris[i];
-        mostRecentTime = lastTimes[i];
-      }
-    }
-
-    if (connectionUri == null) throw new RoutingException("missing connectionUri");
-
-    return connectionUri;
   }
 }

@@ -9,6 +9,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnor
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
+import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 
@@ -68,6 +69,30 @@ public class DynamoDbMember implements Member {
     super();
   }
 
+  @Override
+  public String getConnectionUri() {
+    String maybeTgUri = this.tgUri != null ? TelegramConnector.TG + ":" + this.tgUri : null;
+    String maybeWsUri = this.wsUri != null ? WsConnector.WS + ":" + this.wsUri : null;
+    String maybeAiUri = this.aiUri != null ? "ai:" + this.aiUri : null;
+
+    String[] uris = {maybeTgUri, maybeWsUri, maybeAiUri};
+    Instant[] lastTimes = {this.tgLastTime, this.wsLastTime, this.aiLastTime};
+
+    String connectionUri = null;
+    Instant mostRecentTime = null;
+
+    for (int i = 0; i < uris.length; i++) {
+      if (uris[i] != null && (mostRecentTime == null || lastTimes[i].isAfter(mostRecentTime))) {
+        connectionUri = uris[i];
+        mostRecentTime = lastTimes[i];
+      }
+    }
+
+    if (connectionUri == null) throw new RoutingException("missing connectionUri");
+
+    return connectionUri;
+  }
+
   public void resolveConnectionUri(String connectorId, String connectionUri) {
     updateConnectionUri(connectorId, connectionUri, null, null);
   }
@@ -115,7 +140,6 @@ public class DynamoDbMember implements Member {
     this.channelName = channel;
   }
 
-  @Override
   @DynamoDbIgnoreNulls
   public String getTgUri() {
     return tgUri;
@@ -125,7 +149,6 @@ public class DynamoDbMember implements Member {
     this.tgUri = tgUri;
   }
 
-  @Override
   @DynamoDbIgnoreNulls
   public Instant getTgLastTime() {
     return tgLastTime;
@@ -135,7 +158,6 @@ public class DynamoDbMember implements Member {
     this.tgLastTime = tgLastTime;
   }
 
-  @Override
   @DynamoDbIgnoreNulls
   public String getTgLastMessageId() {
     return tgLastMessageId;
@@ -145,7 +167,6 @@ public class DynamoDbMember implements Member {
     this.tgLastMessageId = tgLastMessageId;
   }
 
-  @Override
   @DynamoDbIgnoreNulls
   public String getWsUri() {
     return wsUri;
@@ -155,7 +176,6 @@ public class DynamoDbMember implements Member {
     this.wsUri = wsUri;
   }
 
-  @Override
   @DynamoDbIgnoreNulls
   public Instant getWsLastTime() {
     return wsLastTime;
@@ -165,7 +185,6 @@ public class DynamoDbMember implements Member {
     this.wsLastTime = wsLastTime;
   }
 
-  @Override
   @DynamoDbIgnoreNulls
   public String getWsLastMessageId() {
     return wsLastMessageId;
@@ -175,7 +194,6 @@ public class DynamoDbMember implements Member {
     this.wsLastMessageId = wsLastMessageId;
   }
 
-  @Override
   @DynamoDbIgnoreNulls
   public String getAiUri() {
     return aiUri;
@@ -185,7 +203,6 @@ public class DynamoDbMember implements Member {
     this.aiUri = aiUri;
   }
 
-  @Override
   @DynamoDbIgnoreNulls
   public Instant getAiLastTime() {
     return aiLastTime;
@@ -195,7 +212,6 @@ public class DynamoDbMember implements Member {
     this.aiLastTime = aiLastTime;
   }
 
-  @Override
   @DynamoDbIgnoreNulls
   public String getAiLastMessageId() {
     return aiLastMessageId;
