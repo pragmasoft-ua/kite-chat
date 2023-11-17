@@ -1,6 +1,7 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -23,12 +24,14 @@ public class KiteRouter implements Router {
 
   private final Map<String, Connector> connectors = new HashMap<>(8);
   private final Channels channels;
+  private final Messages messages;
 
   /**
    * @param channels
    */
-  public KiteRouter(Channels channels) {
+  public KiteRouter(Channels channels, Messages messages) {
     this.channels = channels;
+    this.messages = messages;
   }
 
   @Override
@@ -67,13 +70,38 @@ public class KiteRouter implements Router {
     if (null == response) {
       throw new RoutingException("missing response from connector " + connector.id());
     }
+
     String messageId = response.messageId();
-    if (Connector.connectorId(ctx.originConnection).equals(WsConnector.WS)) {
-      messageId = response.destiationMessageId();
+    String destinationMessageId = response.destinationMessageId();
+    if (!ctx.isIdle) { // if isIdle is true does nothing
+      if (!messageId.equals("-")) { // do nothing if it's join/left/switch/selfMessage messages
+        String ownerMessageId;
+        String toMessageId;
+        if (Connector.connectorId(ctx.originConnection).equals(WsConnector.WS)) {
+          ownerMessageId = destinationMessageId;
+          toMessageId = destinationMessageId;
+        } else if (Connector.connectorId(ctx.destinationConnection).equals(WsConnector.WS)) {
+          ownerMessageId = messageId;
+          toMessageId = messageId;
+        } else {
+          ownerMessageId = messageId;
+          toMessageId = destinationMessageId;
+        }
+
+        this.channels.updateUri(ctx.from, ctx.originConnection, ownerMessageId, Instant.now());
+        this.channels.updateUri(ctx.to, ctx.destinationConnection, toMessageId, Instant.now());
+
+        String content = HistoryMessage.encode(ctx.request);
+        if (ctx.from.isHost()) {
+          this.messages.persist(ctx.to, toMessageId, content, response.delivered(), true);
+        } else {
+          this.messages.persist(ctx.from, ownerMessageId, content, response.delivered(), false);
+        }
+      }
+
+      this.channels.updatePeer(ctx.to, ctx.from.getId());
+      this.channels.updatePeer(ctx.from, ctx.to.getId());
     }
-    this.channels.updateUri(ctx.from, ctx.originConnection, messageId, response.delivered());
-    this.channels.updatePeer(ctx.to, ctx.from.getId());
-    this.channels.updatePeer(ctx.from, ctx.to.getId());
   }
 
   private synchronized Connector requiredConnector(String connectorId) throws NotFoundException {

@@ -89,6 +89,11 @@ public class PanacheMember extends PanacheEntityBase implements Member {
   }
 
   @Override
+  public String getLastMessageId() {
+    return null;
+  }
+
+  @Override
   public String getPeerMemberId() {
     return this.peerMemberId;
   }

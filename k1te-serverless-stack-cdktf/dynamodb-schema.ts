@@ -80,7 +80,29 @@ export class DynamoDbSchema extends Construct {
       ],
     });
 
-    this.tables = [channels, members, connections];
+    const messages = new DynamodbTable(this, "Messages", {
+      name: `${id}.Messages`,
+      dependsOn: [members],
+      lifecycle: {
+        preventDestroy,
+      },
+      billingMode,
+      pointInTimeRecovery: {
+        enabled: pointInTimeRecovery!,
+      },
+      ttl: {
+        enabled: true,
+        attributeName: "ttl",
+      },
+      hashKey: "id",
+      rangeKey: "messageId",
+      attribute: [
+        { name: "id", type: STRING },
+        { name: "messageId", type: STRING },
+      ],
+    });
+
+    this.tables = [channels, members, connections, messages];
   }
   public allowAll(to: Grantable) {
     const policyStatement = new Dynamodb()

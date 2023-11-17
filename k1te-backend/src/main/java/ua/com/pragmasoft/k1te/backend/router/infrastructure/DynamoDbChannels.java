@@ -110,7 +110,7 @@ public class DynamoDbChannels implements Channels {
             .withUserName(title)
             .withHost(true)
             .build();
-    hostMember.resolveConnectionUri(connectorId, rawConnection);
+    hostMember.updateConnectionUri(connectorId, rawConnection);
 
     if (AI_FEATURE_FLAG) {
       hostMember.setAiUri("Ai URI");
@@ -160,7 +160,6 @@ public class DynamoDbChannels implements Channels {
 
   @Override
   public Member dropChannel(String memberConnection) {
-
     Objects.requireNonNull(memberConnection, "member connection");
 
     DynamoDbMember member = this.find(memberConnection);
@@ -176,13 +175,20 @@ public class DynamoDbChannels implements Channels {
         Key.builder().partitionValue(REVERSE_CHANNEL_KEY_PREFIX + member.getId()).build();
     Key connectionKey = Key.builder().partitionValue(connectorId).sortValue(rawConnection).build();
 
-    // TODO: 14.11.2023 Delete all members of the Channel
+    TransactWriteItemsEnhancedRequest.Builder builder = TransactWriteItemsEnhancedRequest.builder();
+    this.membersTable
+        .query(query -> query.queryConditional(QueryConditional.keyEqualTo(channelKey)))
+        .items()
+        .forEach(
+            dynamoDbMember ->
+                builder.addDeleteItem(
+                    this.membersTable, dynamoDbMember)); // Deletes all members in channel
+
     this.enhancedDynamo.transactWriteItems(
-        TransactWriteItemsEnhancedRequest.builder()
+        builder
             .addDeleteItem(this.channelsTable, channelKey)
             .addDeleteItem(this.channelsTable, reverseChannelKey)
             .addDeleteItem(this.connectionsTable, connectionKey)
-            .addDeleteItem(this.membersTable, member)
             .build());
 
     return member;
@@ -191,22 +197,40 @@ public class DynamoDbChannels implements Channels {
   @Override
   public Member joinChannel(
       String channelName, String memberId, String memberConnection, String userName) {
-
     ChannelName.validate(channelName);
     Objects.requireNonNull(memberId, "member id");
     Objects.requireNonNull(memberConnection, "connection");
     Objects.requireNonNull(userName, "user name");
-
-    String connectorId = Connector.connectorId(memberConnection);
-    String rawConnection = Connector.rawConnection(memberConnection);
 
     Key channelKey = Key.builder().partitionValue(channelName).build();
     DynamoDbChannel channel = this.channelsTable.getItem(channelKey);
     if (null == channel) {
       throw new NotFoundException("Channel not found");
     }
-    final String hostId = channel.getHost();
+    String connectorId = Connector.connectorId(memberConnection);
+    String rawConnection = Connector.rawConnection(memberConnection);
 
+    Key memberKey = Key.builder().partitionValue(channelName).sortValue(memberId).build();
+    DynamoDbMember maybeMember = this.membersTable.getItem(memberKey);
+    if (maybeMember != null) {
+      if (maybeMember.hasConnection(memberConnection)) {
+        throw new ValidationException("You are already in this Channel");
+      }
+      DynamoDBConnection dbConnection =
+          new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
+      maybeMember.updateConnectionUri(connectorId, rawConnection);
+      try {
+        this.enhancedDynamo.transactWriteItems(
+            tx ->
+                tx.addUpdateItem(this.membersTable, maybeMember)
+                    .addPutItem(this.connectionsTable, dbConnection));
+        return maybeMember;
+      } catch (Exception e) {
+        throw new KiteException(e.getMessage(), e);
+      }
+    }
+
+    final String hostId = channel.getHost();
     DynamoDbMember member =
         new DynamoDbMember.DynamoDbMemberBuilder()
             .withChannelName(channelName)
@@ -215,7 +239,7 @@ public class DynamoDbChannels implements Channels {
             .withHost(false)
             .withPeerMemberId(hostId)
             .build();
-    member.resolveConnectionUri(connectorId, rawConnection);
+    member.updateConnectionUri(connectorId, rawConnection);
     DynamoDBConnection dbConnection =
         new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
 
@@ -250,11 +274,21 @@ public class DynamoDbChannels implements Channels {
     if (member.isHost()) {
       throw new ValidationException("Host member cannot leave channel. You can only drop it");
     }
-
     String connectorId = Connector.connectorId(memberConnection);
     String rawConnection = Connector.rawConnection(memberConnection);
-
     Key connectionKey = Key.builder().partitionValue(connectorId).sortValue(rawConnection).build();
+
+    if (!member.getConnectionUri().equals(memberConnection)) {
+      member.deleteConnection(connectorId);
+      this.enhancedDynamo.transactWriteItems(
+          tx ->
+              tx.addDeleteItem(
+                      this.connectionsTable,
+                      connectionKey) // Deletes only connection because it's not the most recent one
+                  .addUpdateItem(this.membersTable, member));
+      return member;
+    }
+
     try {
       this.enhancedDynamo.transactWriteItems(
           tx ->
@@ -278,13 +312,6 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
-  public Integer findPinnedMessage(Member from, Member to) {
-    DynamoDbMember member = (DynamoDbMember) from;
-    Map<String, Integer> pinnedMessages = member.getPinnedMessages();
-    return pinnedMessages.get(to.getId());
-  }
-
-  @Override
   public DynamoDbMember find(String memberConnection) {
     Objects.requireNonNull(memberConnection, "connection");
 
@@ -301,13 +328,20 @@ public class DynamoDbChannels implements Channels {
     return find(channelName, memberId);
   }
 
+  @Override
+  public Integer findPinnedMessage(Member from, Member to) {
+    DynamoDbMember member = (DynamoDbMember) from;
+    Map<String, Integer> pinnedMessages = member.getPinnedMessages();
+    return pinnedMessages.get(to.getId());
+  }
+
   public Member switchConnection(String channelName, String memberId, String newConnection) {
     DynamoDbMember member = find(channelName, memberId);
 
     String connectorId = Connector.connectorId(newConnection);
     String rawConnection = Connector.rawConnection(newConnection);
 
-    member.resolveConnectionUri(connectorId, rawConnection);
+    member.updateConnectionUri(connectorId, rawConnection);
 
     DynamoDBConnection dbConnection =
         new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
@@ -374,7 +408,7 @@ public class DynamoDbChannels implements Channels {
     try {
       this.membersTable.updateItem(updateRequest);
     } catch (ConditionalCheckFailedException conditionalException) {
-      log.debug("Member has already left the Channel");
+      log.warn("Member has already left the Channel");
     } catch (Exception e) {
       throw new ValidationException(e.getMessage(), e);
     }

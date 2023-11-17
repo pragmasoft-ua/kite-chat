@@ -48,7 +48,7 @@ public class PayloadEncoder implements Function<Payload, String> {
         Json.createArrayBuilder()
             .add(payload.type().name())
             .add(ack.messageId())
-            .add(ack.destiationMessageId())
+            .add(ack.destinationMessageId())
             .add(ack.delivered().toString())
             .build();
     jw.writeArray(array);

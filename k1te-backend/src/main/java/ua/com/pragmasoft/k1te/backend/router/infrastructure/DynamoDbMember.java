@@ -8,6 +8,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnoreNulls;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
+import ua.com.pragmasoft.k1te.backend.router.domain.Connector;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
@@ -93,8 +94,47 @@ public class DynamoDbMember implements Member {
     return connectionUri;
   }
 
-  public void resolveConnectionUri(String connectorId, String connectionUri) {
+  @Override
+  public String getLastMessageId() {
+    String connectionUri = this.getConnectionUri();
+    String connectorId = Connector.connectorId(connectionUri);
+    return switch (connectorId) {
+      case (TelegramConnector.TG) -> getTgLastMessageId();
+      case (WsConnector.WS) -> getWsLastMessageId();
+      case ("ai") -> getAiLastMessageId();
+      default -> throw new RoutingException("missing connectionUri");
+    };
+  }
+
+  public void updateConnectionUri(String connectorId, String connectionUri) {
     updateConnectionUri(connectorId, connectionUri, null, null);
+  }
+
+  public void deleteConnection(String connectorId) {
+    switch (connectorId) {
+      case (TelegramConnector.TG) -> {
+        this.setTgUri(null);
+        this.setTgLastTime(null);
+        this.setTgLastMessageId(null);
+      }
+      case (WsConnector.WS) -> {
+        this.setWsUri(null);
+        this.setWsLastTime(null);
+        this.setWsLastMessageId(null);
+      }
+      case ("ai") -> {
+        this.setAiUri(null);
+        this.setAiLastTime(null);
+        this.setAiLastMessageId(null);
+      }
+      default -> throw new IllegalStateException("Unsupported connector id");
+    }
+  }
+
+  public boolean hasConnection(String connection) {
+    return (this.tgUri != null && this.tgUri.equals(connection))
+        || (this.wsUri != null && this.wsUri.equals(connection))
+        || (this.aiUri != null && this.aiUri.equals(connection));
   }
 
   public void updateConnectionUri(
