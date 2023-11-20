@@ -3,6 +3,8 @@ package ua.com.pragmasoft.k1te.server.router.application;
 
 import io.quarkus.arc.DefaultBean;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.Dependent;
+import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.Produces;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -31,8 +33,21 @@ public class RouterConfiguration {
   }
 
   @Produces
+  @Dependent
+  public PeerUpdatePostProcessor peerUpdatePostProcessor(Channels channels){
+    return new PeerUpdatePostProcessor(channels);
+  }
+
+  @Produces
+  @Dependent
+  public RouterPostProcessor historyPostProcessor(Channels channels, Messages messages){
+    return new HistoryPostProcessor(channels,messages);
+  }
+
+  @Produces
   @ApplicationScoped
-  public Router router(Channels channels, Messages messages) {
-    return new KiteRouter(channels, messages);
+  public Router router(Channels channels, Messages messages,
+                       Instance<RouterPostProcessor> postProcessors) {
+    return new KiteRouter(channels, messages, postProcessors.stream().toList());
   }
 }

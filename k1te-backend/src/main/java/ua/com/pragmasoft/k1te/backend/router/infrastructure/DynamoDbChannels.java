@@ -329,7 +329,7 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
-  public Integer findPinnedMessage(Member from, Member to) {
+  public Integer findUnAnsweredMessage(Member from, Member to) {
     DynamoDbMember member = (DynamoDbMember) from;
     Map<String, Integer> pinnedMessages = member.getPinnedMessages();
     return pinnedMessages.get(to.getId());
@@ -368,7 +368,7 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
-  public void updateUri(
+  public void updateConnection(
       Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {
     Objects.requireNonNull(connectionUri);
     Objects.requireNonNull(messageId);
@@ -384,7 +384,7 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
-  public void updatePinnedMessageId(Member from, Member to, Integer pinnedMessagedId) {
+  public void updateUnAnsweredMessage(Member from, Member to, Integer pinnedMessagedId) {
     DynamoDbMember member = (DynamoDbMember) from;
     member.addPinnedMessage(to.getId(), pinnedMessagedId);
 
@@ -392,7 +392,7 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
-  public void deletePinnedMessage(Member from, Member to) {
+  public void deleteUnAnsweredMessage(Member from, Member to) {
     DynamoDbMember member = (DynamoDbMember) from;
     member.deletePinnedMessage(to.getId());
 

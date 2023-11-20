@@ -41,11 +41,13 @@ import ua.com.pragmasoft.k1te.backend.router.domain.payload.*;
 import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
 import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
+import ua.com.pragmasoft.k1te.backend.ws.PayloadDecoder;
 
 public class TelegramConnector implements Connector, Closeable {
 
   private static final Logger log = LoggerFactory.getLogger(TelegramConnector.class);
 
+  private static final PayloadDecoder DECODER = new PayloadDecoder();
   private static final boolean PIN_FEATURE_FLAG = true;
 
   private static final Integer HISTORY_LIMIT = 10;
@@ -269,14 +271,14 @@ public class TelegramConnector implements Connector, Closeable {
       boolean isSwitchMessage =
           text != null && text.contains(SUCCESS) && text.contains("switched to Telegram");
 
-      Integer pinnedMessageId = this.channels.findPinnedMessage(from, to);
+      Integer pinnedMessageId = this.channels.findUnAnsweredMessage(from, to);
       if (pinnedMessageId == null) {
         if (!isJoinMessage && !isLeaveMessage && !isSwitchMessage) {
           PinChatMessage pinChatMessage =
               new PinChatMessage(destinationChatId, sendResponse.message().messageId())
                   .disableNotification(true);
           bot.execute(pinChatMessage);
-          channels.updatePinnedMessageId(from, to, sendResponse.message().messageId());
+          channels.updateUnAnsweredMessage(from, to, sendResponse.message().messageId());
           log.debug(
               "Member {} pinned message {}", from.getId(), sendResponse.message().messageId());
         }
@@ -285,7 +287,7 @@ public class TelegramConnector implements Connector, Closeable {
           UnpinChatMessage unpinChatMessage =
               new UnpinChatMessage(destinationChatId).messageId(pinnedMessageId);
           bot.execute(unpinChatMessage);
-          this.channels.deletePinnedMessage(from, to);
+          this.channels.deleteUnAnsweredMessage(from, to);
           log.debug(
               "Member {} left the Channel, his pinnedMessage {} was deleted",
               from.getId(),
@@ -425,7 +427,7 @@ public class TelegramConnector implements Connector, Closeable {
     List<HistoryMessage> historyMessages = this.messages.findAll(member, null, HISTORY_LIMIT);
     for (int i = historyMessages.size() - 1; i >= 0; i--) {
       HistoryMessage message = historyMessages.get(i);
-      MessagePayload payload = HistoryMessage.decode(message.getContent());
+      Payload payload = DECODER.apply(message.getContent());
       if (payload instanceof PlaintextMessage plaintextMessage) {
         String prefix = message.isIncoming() ? "#Host \n" : "#You \n";
         payload =
@@ -437,7 +439,7 @@ public class TelegramConnector implements Connector, Closeable {
               .withFrom(member)
               .withTo(member)
               .isIdle(true)
-              .withRequest(payload);
+              .withRequest((MessagePayload) payload);
       this.router.dispatch(context);
     }
     return "✅ You switched to Telegram";
@@ -493,12 +495,12 @@ public class TelegramConnector implements Connector, Closeable {
     this.router.dispatch(ctx);
 
     if (PIN_FEATURE_FLAG) {
-      Integer pinnedMessageId = channels.findPinnedMessage(to, from);
+      Integer pinnedMessageId = channels.findUnAnsweredMessage(to, from);
       if (pinnedMessageId != null) {
         UnpinChatMessage unpinChatMessage =
             new UnpinChatMessage(rawChatId).messageId(pinnedMessageId);
         bot.execute(unpinChatMessage);
-        channels.deletePinnedMessage(to, from);
+        channels.deleteUnAnsweredMessage(to, from);
         log.debug("Member {} unpinned Message {}", to.getId(), pinnedMessageId);
       }
     }

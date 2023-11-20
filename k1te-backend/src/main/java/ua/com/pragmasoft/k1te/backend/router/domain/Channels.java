@@ -17,15 +17,15 @@ public interface Channels {
 
   Member find(String channel, String memberId);
 
-  Integer findPinnedMessage(Member from, Member to);
+  Integer findUnAnsweredMessage(Member from, Member to);
 
   Member switchConnection(String channelName, String memberId, String newConnection);
 
-  void updatePinnedMessageId(Member from, Member to, Integer pinnedMessagedId);
+  void updateUnAnsweredMessage(Member from, Member to, Integer pinnedMessagedId);
 
   void updatePeer(Member member, String peerMemberId);
 
-  void updateUri(Member memberToUpdate, String connectionUri, String messageId, Instant usageTime);
+  void updateConnection(Member memberToUpdate, String connectionUri, String messageId, Instant usageTime);
 
-  void deletePinnedMessage(Member from, Member to);
+  void deleteUnAnsweredMessage(Member from, Member to);
 }
