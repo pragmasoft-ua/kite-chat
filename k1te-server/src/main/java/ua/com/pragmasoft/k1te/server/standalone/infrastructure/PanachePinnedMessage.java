@@ -12,7 +12,7 @@ public class PanachePinnedMessage extends PanacheEntityBase {
 
   @EmbeddedId private PinnedMessagePK messagePK;
 
-  private Integer messageId;
+  private String messageId;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumns(
@@ -31,7 +31,7 @@ public class PanachePinnedMessage extends PanacheEntityBase {
       foreignKey = @ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
   private PanacheMember member;
 
-  public PanachePinnedMessage(PinnedMessagePK messagePK, Integer messageId) {
+  public PanachePinnedMessage(PinnedMessagePK messagePK, String messageId) {
     this.messagePK = messagePK;
     this.messageId = messageId;
   }
@@ -46,11 +46,11 @@ public class PanachePinnedMessage extends PanacheEntityBase {
     this.messagePK = messagePK;
   }
 
-  public Integer getMessageId() {
+  public String getMessageId() {
     return messageId;
   }
 
-  public void setMessageId(Integer messageId) {
+  public void setMessageId(String messageId) {
     this.messageId = messageId;
   }
 

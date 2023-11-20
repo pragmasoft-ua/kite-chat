@@ -5,7 +5,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ua.com.pragmasoft.k1te.backend.router.domain.*;
@@ -28,21 +27,21 @@ public class WsConnector implements Connector {
   private final WsConnectionRegistry connections;
   private final ObjectStore objectStore;
   private final Map<String, Integer> allowedMediaTypes =
-    Map.of(
-      "application/pdf", 20,
-      "application/zip", 20,
-      "application/x-zip-compressed", 20,
-      "image/webp", 20,
-      "image/gif", 20,
-      "video/mp4", 20,
-      "image/jpeg", 5,
-      "image/png", 5);
+      Map.of(
+          "application/pdf", 20,
+          "application/zip", 20,
+          "application/x-zip-compressed", 20,
+          "image/webp", 20,
+          "image/gif", 20,
+          "video/mp4", 20,
+          "image/jpeg", 5,
+          "image/png", 5);
 
   public WsConnector(
-    final Router router,
-    final Channels channels,
-    final WsConnectionRegistry connections,
-    ObjectStore objectStore) {
+      final Router router,
+      final Channels channels,
+      final WsConnectionRegistry connections,
+      ObjectStore objectStore) {
     this.router = router;
     router.registerConnector(this);
     this.channels = channels;
@@ -68,12 +67,12 @@ public class WsConnector implements Connector {
     log.debug("Member disconnected from channel on {}", connectionUri);
     Member client = this.channels.find(connectionUri);
     this.router.dispatch(
-      RoutingContext.create()
-        .withOriginConnection(connectionUri)
-        .withRequest(
-          new PlaintextMessage(
-            "✅ %s left channel %s"
-              .formatted(client.getUserName(), client.getChannelName()))));
+        RoutingContext.create()
+            .withOriginConnection(connectionUri)
+            .withRequest(
+                new PlaintextMessage(
+                    "✅ %s left channel %s"
+                        .formatted(client.getUserName(), client.getChannelName()))));
     this.channels.leaveChannel(connectionUri);
     return null;
   }
@@ -102,7 +101,7 @@ public class WsConnector implements Connector {
       return this.onJoinChannel(joinCommand, connection);
     } else {
       throw new IllegalStateException(
-        "Unsupported payload type %s".formatted(payload.getClass().getSimpleName()));
+          "Unsupported payload type %s".formatted(payload.getClass().getSimpleName()));
     }
   }
 
@@ -127,19 +126,19 @@ public class WsConnector implements Connector {
     log.debug("Join member {} to channel {}", joinChannel.memberId(), joinChannel.channelName());
     String originConnection = this.connectionUriOf(connection);
     Member client =
-      this.channels.joinChannel(
-        joinChannel.channelName(),
-        joinChannel.memberId(),
-        originConnection,
-        joinChannel.memberName());
+        this.channels.joinChannel(
+            joinChannel.channelName(),
+            joinChannel.memberId(),
+            originConnection,
+            joinChannel.memberName());
     var ctx =
-      RoutingContext.create()
-        .withOriginConnection(originConnection)
-        .withFrom(client)
-        .withRequest(
-          new PlaintextMessage(
-            "✅ %s joined channel %s"
-              .formatted(client.getUserName(), client.getChannelName())));
+        RoutingContext.create()
+            .withOriginConnection(originConnection)
+            .withFrom(client)
+            .withRequest(
+                new PlaintextMessage(
+                    "✅ %s joined channel %s"
+                        .formatted(client.getUserName(), client.getChannelName())));
     this.router.dispatch(ctx);
     return new OkResponse();
   }
@@ -150,8 +149,7 @@ public class WsConnector implements Connector {
     if (message.type() == Payload.Type.TXT) {
       PlaintextMessage plaintextMessage = (PlaintextMessage) message;
       byte[] size = plaintextMessage.text().getBytes(StandardCharsets.UTF_8);
-      if (size.length > 4096)
-        throw new TooLargeException(4L, size.length / 1024L);
+      if (size.length > 4096) throw new TooLargeException(4L, size.length / 1024L);
     }
 
     var originConnection = this.connectionUriOf(connection);
@@ -176,8 +174,8 @@ public class WsConnector implements Connector {
        */
       Member recipient = ctx.to;
       messagePayload =
-        this.objectStore.copyTransient(
-          binaryPayload, recipient.getChannelName(), recipient.getId());
+          this.objectStore.copyTransient(
+              binaryPayload, recipient.getChannelName(), recipient.getId());
     }
     WsConnection connection = this.requiredConnection(ctx.destinationConnection);
     try {

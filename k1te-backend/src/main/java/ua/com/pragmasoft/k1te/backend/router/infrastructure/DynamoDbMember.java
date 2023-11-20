@@ -31,7 +31,7 @@ public class DynamoDbMember implements Member {
   private String userName;
   private boolean host;
   private String peerMemberId;
-  private Map<String, Integer> pinnedMessages = new HashMap<>();
+  private Map<String, String> pinnedMessages = new HashMap<>();
 
   public DynamoDbMember(
       String id,
@@ -48,7 +48,7 @@ public class DynamoDbMember implements Member {
       String userName,
       boolean host,
       String peerMemberId,
-      Map<String, Integer> pinnedMessageId) {
+      Map<String, String> pinnedMessageId) {
     this.id = id;
     this.channelName = channelName;
     this.tgUri = tgUri;
@@ -290,15 +290,15 @@ public class DynamoDbMember implements Member {
   }
 
   @DynamoDbIgnoreNulls
-  public Map<String, Integer> getPinnedMessages() {
+  public Map<String, String> getPinnedMessages() {
     return pinnedMessages;
   }
 
-  public void setPinnedMessages(Map<String, Integer> pinnedMessages) {
+  public void setPinnedMessages(Map<String, String> pinnedMessages) {
     this.pinnedMessages = pinnedMessages;
   }
 
-  public void addPinnedMessage(String memberId, Integer pinnedMessageId) {
+  public void addPinnedMessage(String memberId, String pinnedMessageId) {
     this.pinnedMessages.put(memberId, pinnedMessageId);
   }
 
@@ -432,7 +432,7 @@ public class DynamoDbMember implements Member {
       return this;
     }
 
-    public DynamoDbMemberBuilder withPinnedMessageId(Map<String, Integer> pinnedMessageId) {
+    public DynamoDbMemberBuilder withPinnedMessageId(Map<String, String> pinnedMessageId) {
       this.member.setPinnedMessages(pinnedMessageId);
       return this;
     }

@@ -34,20 +34,20 @@ public class RouterConfiguration {
 
   @Produces
   @Dependent
-  public PeerUpdatePostProcessor peerUpdatePostProcessor(Channels channels){
+  public PeerUpdatePostProcessor peerUpdatePostProcessor(Channels channels) {
     return new PeerUpdatePostProcessor(channels);
   }
 
   @Produces
   @Dependent
-  public RouterPostProcessor historyPostProcessor(Channels channels, Messages messages){
-    return new HistoryPostProcessor(channels,messages);
+  public RouterPostProcessor historyPostProcessor(Channels channels, Messages messages) {
+    return new HistoryPostProcessor(channels, messages);
   }
 
   @Produces
   @ApplicationScoped
-  public Router router(Channels channels, Messages messages,
-                       Instance<RouterPostProcessor> postProcessors) {
+  public Router router(
+      Channels channels, Messages messages, Instance<RouterPostProcessor> postProcessors) {
     return new KiteRouter(channels, messages, postProcessors.stream().toList());
   }
 }

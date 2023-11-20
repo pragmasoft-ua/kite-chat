@@ -271,21 +271,22 @@ public class TelegramConnector implements Connector, Closeable {
       boolean isSwitchMessage =
           text != null && text.contains(SUCCESS) && text.contains("switched to Telegram");
 
-      Integer pinnedMessageId = this.channels.findUnAnsweredMessage(from, to);
+      String pinnedMessageId = this.channels.findUnAnsweredMessage(from, to);
       if (pinnedMessageId == null) {
         if (!isJoinMessage && !isLeaveMessage && !isSwitchMessage) {
           PinChatMessage pinChatMessage =
               new PinChatMessage(destinationChatId, sendResponse.message().messageId())
                   .disableNotification(true);
           bot.execute(pinChatMessage);
-          channels.updateUnAnsweredMessage(from, to, sendResponse.message().messageId());
+          channels.updateUnAnsweredMessage(
+              from, to, fromLong(sendResponse.message().messageId().longValue()));
           log.debug(
               "Member {} pinned message {}", from.getId(), sendResponse.message().messageId());
         }
       } else {
         if (isLeaveMessage) {
           UnpinChatMessage unpinChatMessage =
-              new UnpinChatMessage(destinationChatId).messageId(pinnedMessageId);
+              new UnpinChatMessage(destinationChatId).messageId(toLong(pinnedMessageId).intValue());
           bot.execute(unpinChatMessage);
           this.channels.deleteUnAnsweredMessage(from, to);
           log.debug(
@@ -495,10 +496,10 @@ public class TelegramConnector implements Connector, Closeable {
     this.router.dispatch(ctx);
 
     if (PIN_FEATURE_FLAG) {
-      Integer pinnedMessageId = channels.findUnAnsweredMessage(to, from);
+      String pinnedMessageId = channels.findUnAnsweredMessage(to, from);
       if (pinnedMessageId != null) {
         UnpinChatMessage unpinChatMessage =
-            new UnpinChatMessage(rawChatId).messageId(pinnedMessageId);
+            new UnpinChatMessage(rawChatId).messageId(toLong(pinnedMessageId).intValue());
         bot.execute(unpinChatMessage);
         channels.deleteUnAnsweredMessage(to, from);
         log.debug("Member {} unpinned Message {}", to.getId(), pinnedMessageId);

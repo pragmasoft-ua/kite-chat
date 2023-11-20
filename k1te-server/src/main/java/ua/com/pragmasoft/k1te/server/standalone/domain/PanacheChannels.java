@@ -119,7 +119,7 @@ public class PanacheChannels implements Channels {
     if (member.isHost())
       throw new ValidationException("Host can't leave the chat, you can only drop it");
 
-    PanacheMember.deleteById(buildId(member.getChannelName(),member.getId()));
+    PanacheMember.deleteById(buildId(member.getChannelName(), member.getId()));
     PanacheMember.flush();
     log.debug("Member {} left the Channel", member.getId());
     return member;
@@ -135,7 +135,7 @@ public class PanacheChannels implements Channels {
 
   @Override
   public PanacheMember find(String channelName, String memberId) {
-    PanacheMember member = PanacheMember.findById(buildId(channelName,memberId));
+    PanacheMember member = PanacheMember.findById(buildId(channelName, memberId));
 
     if (member == null) throw new NotFoundException();
 
@@ -143,7 +143,7 @@ public class PanacheChannels implements Channels {
   }
 
   @Override
-  public Integer findUnAnsweredMessage(Member from, Member to) {
+  public String findUnAnsweredMessage(Member from, Member to) {
     Objects.requireNonNull(from);
     Objects.requireNonNull(to);
 
@@ -165,13 +165,13 @@ public class PanacheChannels implements Channels {
       return;
     }
     PanacheMember member =
-        PanacheMember.findById(buildId(recipientMember.getChannelName(),recipientMember.getId()));
+        PanacheMember.findById(buildId(recipientMember.getChannelName(), recipientMember.getId()));
     member.setPeerMemberId(peerMemberId);
     member.persistAndFlush();
   }
 
   @Override
-  public void updateUnAnsweredMessage(Member from, Member to, Integer pinnedMessageId) {
+  public void updateUnAnsweredMessage(Member from, Member to, String pinnedMessageId) {
     Objects.requireNonNull(from);
     Objects.requireNonNull(to);
     Objects.requireNonNull(pinnedMessageId);

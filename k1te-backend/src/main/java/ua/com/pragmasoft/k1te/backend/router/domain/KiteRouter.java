@@ -2,7 +2,6 @@
 package ua.com.pragmasoft.k1te.backend.router.domain;
 
 import java.util.*;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
@@ -27,8 +26,9 @@ public class KiteRouter implements Router {
   /**
    * @param channels
    */
-  public KiteRouter(Channels channels, Messages messages, List<RouterPostProcessor> postProcessors) {
-    Objects.requireNonNull(postProcessors,"Post processors");
+  public KiteRouter(
+      Channels channels, Messages messages, List<RouterPostProcessor> postProcessors) {
+    Objects.requireNonNull(postProcessors, "Post processors");
     this.channels = channels;
     this.messages = messages;
     this.postProcessors = postProcessors;

@@ -264,6 +264,7 @@ public class DynamoDbChannels implements Channels {
     }
   }
 
+  // TODO: 20.11.2023 Should delete only connection so that Member could reconnect
   @Override
   public Member leaveChannel(String memberConnection) {
 
@@ -329,9 +330,9 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
-  public Integer findUnAnsweredMessage(Member from, Member to) {
+  public String findUnAnsweredMessage(Member from, Member to) {
     DynamoDbMember member = (DynamoDbMember) from;
-    Map<String, Integer> pinnedMessages = member.getPinnedMessages();
+    Map<String, String> pinnedMessages = member.getPinnedMessages();
     return pinnedMessages.get(to.getId());
   }
 
@@ -384,7 +385,7 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
-  public void updateUnAnsweredMessage(Member from, Member to, Integer pinnedMessagedId) {
+  public void updateUnAnsweredMessage(Member from, Member to, String pinnedMessagedId) {
     DynamoDbMember member = (DynamoDbMember) from;
     member.addPinnedMessage(to.getId(), pinnedMessagedId);
 

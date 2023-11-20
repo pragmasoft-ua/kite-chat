@@ -42,7 +42,7 @@ public class PanacheMember extends PanacheEntityBase implements Member {
       String connectionUri,
       String peerMemberId) {
     return new PanacheMember(
-        buildId(channelName,memberId), userName, host, connectionUri, peerMemberId);
+        buildId(channelName, memberId), userName, host, connectionUri, peerMemberId);
   }
 
   public static MemberPK buildId(String channelName, String memberId) {
