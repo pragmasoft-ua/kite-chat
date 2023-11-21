@@ -9,5 +9,7 @@ public interface Messages {
   HistoryMessage persist(
       Member owner, String messageId, String content, Instant time, boolean incoming);
 
+  HistoryMessage find(Member member, String messageId);
+
   List<HistoryMessage> findAll(Member member, String lastMessageId, Integer limit);
 }

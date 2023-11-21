@@ -90,6 +90,13 @@ export class DynamoDbSchema extends Construct {
       pointInTimeRecovery: {
         enabled: pointInTimeRecovery!,
       },
+      localSecondaryIndex: [
+        {
+          name: "MessageTime",
+          projectionType: "ALL",
+          rangeKey: "time",
+        },
+      ],
       ttl: {
         enabled: true,
         attributeName: "ttl",
@@ -99,6 +106,7 @@ export class DynamoDbSchema extends Construct {
       attribute: [
         { name: "id", type: STRING },
         { name: "messageId", type: STRING },
+        { name: "time", type: STRING },
       ],
     });
 
