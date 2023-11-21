@@ -17,6 +17,8 @@ public interface Channels {
 
   Member find(String channel, String memberId);
 
+  Member findHost(String channelName);
+
   String findUnAnsweredMessage(Member from, Member to);
 
   Member switchConnection(String channelName, String memberId, String newConnection);

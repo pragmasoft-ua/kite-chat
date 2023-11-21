@@ -143,6 +143,12 @@ public class PanacheChannels implements Channels {
   }
 
   @Override
+  public Member findHost(String channelName) {
+    // TODO: 20.11.2023
+    return null;
+  }
+
+  @Override
   public String findUnAnsweredMessage(Member from, Member to) {
     Objects.requireNonNull(from);
     Objects.requireNonNull(to);

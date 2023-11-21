@@ -313,6 +313,19 @@ public class DynamoDbChannels implements Channels {
   }
 
   @Override
+  public Member findHost(String channelName) {
+    Objects.requireNonNull(channelName);
+    ChannelName.validate(channelName);
+
+    Key channelKey = Key.builder().partitionValue(channelName).build();
+    DynamoDbChannel channel = this.channelsTable.getItem(channelKey);
+    if (channel == null)
+      throw new NotFoundException("Channel has not been found by a given channelName");
+
+    return find(channelName, channel.getHost());
+  }
+
+  @Override
   public DynamoDbMember find(String memberConnection) {
     Objects.requireNonNull(memberConnection, "connection");
 

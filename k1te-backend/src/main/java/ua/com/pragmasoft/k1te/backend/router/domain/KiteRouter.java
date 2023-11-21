@@ -21,16 +21,13 @@ public class KiteRouter implements Router {
   private final List<RouterPostProcessor> postProcessors;
   private final Map<String, Connector> connectors = new HashMap<>(8);
   private final Channels channels;
-  private final Messages messages;
 
   /**
    * @param channels
    */
-  public KiteRouter(
-      Channels channels, Messages messages, List<RouterPostProcessor> postProcessors) {
+  public KiteRouter(Channels channels, List<RouterPostProcessor> postProcessors) {
     Objects.requireNonNull(postProcessors, "Post processors");
     this.channels = channels;
-    this.messages = messages;
     this.postProcessors = postProcessors;
   }
 

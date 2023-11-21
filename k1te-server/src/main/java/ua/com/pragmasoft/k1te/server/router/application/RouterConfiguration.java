@@ -46,8 +46,7 @@ public class RouterConfiguration {
 
   @Produces
   @ApplicationScoped
-  public Router router(
-      Channels channels, Messages messages, Instance<RouterPostProcessor> postProcessors) {
-    return new KiteRouter(channels, messages, postProcessors.stream().toList());
+  public Router router(Channels channels, Instance<RouterPostProcessor> postProcessors) {
+    return new KiteRouter(channels, postProcessors.stream().toList());
   }
 }

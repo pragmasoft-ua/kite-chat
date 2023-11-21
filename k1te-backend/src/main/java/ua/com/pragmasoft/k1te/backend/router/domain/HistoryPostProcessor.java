@@ -1,7 +1,6 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain;
 
-import java.time.Instant;
 import ua.com.pragmasoft.k1te.backend.ws.PayloadEncoder;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 
@@ -35,8 +34,10 @@ public class HistoryPostProcessor implements RouterPostProcessor {
         toMessageId = destinationMessageId;
       }
 
-      this.channels.updateConnection(ctx.from, ctx.originConnection, ownerMessageId, Instant.now());
-      this.channels.updateConnection(ctx.to, ctx.destinationConnection, toMessageId, Instant.now());
+      this.channels.updateConnection(
+          ctx.from, ctx.originConnection, ownerMessageId, ctx.response.delivered());
+      this.channels.updateConnection(
+          ctx.to, ctx.destinationConnection, toMessageId, ctx.response.delivered());
 
       String content = ENCODER.apply(ctx.request);
       if (ctx.from.isHost()) {
