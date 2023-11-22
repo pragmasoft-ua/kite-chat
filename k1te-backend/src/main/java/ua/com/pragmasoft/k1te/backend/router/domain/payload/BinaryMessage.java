@@ -5,7 +5,13 @@ import java.net.URI;
 import java.time.Instant;
 
 public record BinaryMessage(
-    URI uri, String fileName, String fileType, long fileSize, String messageId, Instant created)
+    URI uri,
+    String fileName,
+    String fileType,
+    long fileSize,
+    String messageId,
+    Instant created,
+    Integer status)
     implements BinaryPayload {
 
   public BinaryMessage(
@@ -14,13 +20,14 @@ public record BinaryMessage(
       String fileType,
       long fileSize,
       String messageId,
-      Instant created) {
-    this(URI.create(uri), fileName, fileType, fileSize, messageId, created);
+      Instant created,
+      Integer status) {
+    this(URI.create(uri), fileName, fileType, fileSize, messageId, created, status);
   }
 
   public BinaryMessage(
       String url, String fileName, String fileType, long fileSize, String messageId) {
-    this(url, fileName, fileType, fileSize, messageId, Instant.now());
+    this(url, fileName, fileType, fileSize, messageId, Instant.now(), 0);
   }
 
   public BinaryMessage(String url, String fileName, String fileType, long fileSize) {

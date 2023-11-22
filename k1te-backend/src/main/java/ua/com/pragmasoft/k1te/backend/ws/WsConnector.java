@@ -22,6 +22,7 @@ public class WsConnector implements Connector {
 
   private static final Long BYTES_IN_MB = 1048576L;
   private static final Logger log = LoggerFactory.getLogger(WsConnector.class);
+  private static final PayloadDecoder DECODER = new PayloadDecoder();
 
   private final Router router;
   private final Channels channels;
@@ -142,7 +143,7 @@ public class WsConnector implements Connector {
                 .withMember(client)
                 .withConnectionUri(originConnection)
                 .build());
-    System.out.println();
+
     var ctx =
         RoutingContext.create()
             .withOriginConnection(originConnection)
@@ -152,6 +153,20 @@ public class WsConnector implements Connector {
                     "✅ %s joined channel %s"
                         .formatted(client.getUserName(), client.getChannelName())));
     this.router.dispatch(ctx);
+
+    historyMessages.forEach(
+        message -> {
+          Payload payload = DECODER.apply(message.getContent());
+          var context =
+              RoutingContext.create()
+                  .withFrom(client)
+                  .withTo(client)
+                  .withDestinationConnection(client.getConnectionUri())
+                  .withRequest((MessagePayload) payload);
+
+          this.dispatch(context);
+        });
+
     return new OkResponse();
   }
 
@@ -162,6 +177,20 @@ public class WsConnector implements Connector {
       PlaintextMessage plaintextMessage = (PlaintextMessage) message;
       byte[] size = plaintextMessage.text().getBytes(StandardCharsets.UTF_8);
       if (size.length > 4096) throw new TooLargeException(4L, size.length / 1024L);
+      message =
+          new PlaintextMessage(
+              plaintextMessage.text(), plaintextMessage.messageId(), plaintextMessage.created(), 2);
+    }
+    if (message instanceof BinaryMessage binaryMessage) {
+      message =
+          new BinaryMessage(
+              binaryMessage.uri(),
+              binaryMessage.fileName(),
+              binaryMessage.fileType(),
+              binaryMessage.fileSize(),
+              binaryMessage.messageId(),
+              binaryMessage.created(),
+              2);
     }
 
     var originConnection = this.connectionUriOf(connection);

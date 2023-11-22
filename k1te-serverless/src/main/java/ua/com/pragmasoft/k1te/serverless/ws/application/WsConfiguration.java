@@ -64,7 +64,11 @@ public class WsConfiguration {
   @Produces
   @ApplicationScoped
   public WsConnector websocketConnector(
-          Router router, Channels channels, Messages messages, WsConnectionRegistry connections, ObjectStore objectStore) {
+      Router router,
+      Channels channels,
+      Messages messages,
+      WsConnectionRegistry connections,
+      ObjectStore objectStore) {
     return new WsConnector(router, channels, messages, connections, objectStore);
   }
 }

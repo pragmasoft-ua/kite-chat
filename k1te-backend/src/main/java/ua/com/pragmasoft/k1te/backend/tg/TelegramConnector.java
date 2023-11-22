@@ -465,6 +465,7 @@ public class TelegramConnector implements Connector, Closeable {
     Member to = this.channels.find(from.getChannelName(), toMemberId);
     String msgId = fromLong(message.messageId().longValue());
     Instant messageTimestamp = Instant.ofEpochSecond(message.date());
+    int status = from.isHost() ? 0 : 2;
     MessagePayload request = null;
     var document = message.document();
     if (null != document) {
@@ -475,7 +476,8 @@ public class TelegramConnector implements Connector, Closeable {
               document.fileName(),
               document.mimeType(),
               document.fileSize(),
-              messageTimestamp);
+              messageTimestamp,
+              status);
     } else if (null != message.photo() && message.photo().length > 0) {
       PhotoSize photo = largestPhoto(message.photo());
       var photoFileName =
@@ -487,9 +489,10 @@ public class TelegramConnector implements Connector, Closeable {
               photoFileName,
               ContentTypes.PHOTO_MIME_TYPE,
               photo.fileSize(),
-              messageTimestamp);
+              messageTimestamp,
+              status);
     } else if (null != message.text()) {
-      request = new PlaintextMessage(message.text(), msgId, messageTimestamp);
+      request = new PlaintextMessage(message.text(), msgId, messageTimestamp, status);
     } else {
       throw new RoutingException("unsupported message type");
     }
@@ -709,6 +712,7 @@ public class TelegramConnector implements Connector, Closeable {
     private final String fileType;
     private final long fileSize;
     private final Instant created;
+    private final Integer status;
 
     private TelegramBinaryMessage(
         String messageId,
@@ -716,13 +720,15 @@ public class TelegramConnector implements Connector, Closeable {
         String fileName,
         String fileType,
         long fileSize,
-        Instant created) {
+        Instant created,
+        Integer status) {
       this.messageId = messageId;
       this.fileId = fileId;
       this.fileName = fileName;
       this.fileType = fileType;
       this.fileSize = fileSize;
       this.created = created;
+      this.status = status;
     }
 
     @Override
@@ -765,6 +771,11 @@ public class TelegramConnector implements Connector, Closeable {
     @Override
     public Instant created() {
       return this.created;
+    }
+
+    @Override
+    public Integer status() {
+      return this.status;
     }
   }
 }

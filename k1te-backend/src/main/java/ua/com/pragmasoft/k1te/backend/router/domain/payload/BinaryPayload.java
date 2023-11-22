@@ -16,6 +16,8 @@ public non-sealed interface BinaryPayload extends MessagePayload {
 
   Instant created();
 
+  Integer status();
+
   default boolean isImage() {
     return fileType().startsWith("image");
   }
