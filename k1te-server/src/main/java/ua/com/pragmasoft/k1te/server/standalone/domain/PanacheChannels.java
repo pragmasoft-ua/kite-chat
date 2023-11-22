@@ -6,6 +6,7 @@ import static ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheMem
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+import java.time.Instant;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,7 @@ import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
 import ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheChannel;
 import ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheMember;
+import ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanachePinnedMessage;
 
 @IfBuildProfile("standalone")
 @ApplicationScoped
@@ -85,10 +87,15 @@ public class PanacheChannels implements Channels {
     PanacheChannel channel = PanacheChannel.findById(channelName);
     if (channel == null) throw new NotFoundException();
 
-    PanacheMember existingMember = PanacheMember.findByMemberId(memberId);
+    PanacheMember maybeHost = PanacheMember.findByMemberId(memberId);
+    if (maybeHost != null && maybeHost.isHost())
+      throw new ValidationException(
+          "You are Host in another Channel. To check the channel use /info");
+
+    PanacheMember existingMember = PanacheMember.findById(buildId(channelName, memberId));
     if (existingMember != null) {
       if (existingMember.getConnectionUri().equals(connection))
-        throw new ConflictException("You can't have more than one open Channel");
+        throw new ConflictException("You already in this Channel");
 
       existingMember.setConnectionUri(connection);
       existingMember.persistAndFlush();
@@ -112,14 +119,14 @@ public class PanacheChannels implements Channels {
     if (member.isHost())
       throw new ValidationException("Host can't leave the chat, you can only drop it");
 
-    PanacheMember.deleteById(buildId(member.getId(), member.getChannelName()));
+    PanacheMember.deleteById(buildId(member.getChannelName(), member.getId()));
     PanacheMember.flush();
     log.debug("Member {} left the Channel", member.getId());
     return member;
   }
 
   @Override
-  public Member find(String memberConnection) {
+  public PanacheMember find(String memberConnection) {
     Objects.requireNonNull(memberConnection, "connection");
     PanacheMember member = PanacheMember.find("connectionUri", memberConnection).firstResult();
     if (member == null) throw new NotFoundException();
@@ -127,12 +134,34 @@ public class PanacheChannels implements Channels {
   }
 
   @Override
-  public Member find(String channelName, String memberId) {
-    PanacheMember member = PanacheMember.findById(buildId(memberId, channelName));
+  public PanacheMember find(String channelName, String memberId) {
+    PanacheMember member = PanacheMember.findById(buildId(channelName, memberId));
 
     if (member == null) throw new NotFoundException();
 
     return member;
+  }
+
+  @Override
+  public Member findHost(String channelName) {
+    // TODO: 20.11.2023
+    return null;
+  }
+
+  @Override
+  public String findUnAnsweredMessage(Member from, Member to) {
+    Objects.requireNonNull(from);
+    Objects.requireNonNull(to);
+
+    PanacheMember member = (PanacheMember) from;
+    var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
+    PanachePinnedMessage pinnedMessage = PanachePinnedMessage.findById(pinnedMessagePK);
+
+    return pinnedMessage != null ? pinnedMessage.getMessageId() : null;
+  }
+
+  public Member switchConnection(String channelName, String memberId, String newConnection) {
+    return null;
   }
 
   @Override
@@ -142,8 +171,34 @@ public class PanacheChannels implements Channels {
       return;
     }
     PanacheMember member =
-        PanacheMember.findById(buildId(recipientMember.getId(), recipientMember.getChannelName()));
+        PanacheMember.findById(buildId(recipientMember.getChannelName(), recipientMember.getId()));
     member.setPeerMemberId(peerMemberId);
     member.persistAndFlush();
   }
+
+  @Override
+  public void updateUnAnsweredMessage(Member from, Member to, String pinnedMessageId) {
+    Objects.requireNonNull(from);
+    Objects.requireNonNull(to);
+    Objects.requireNonNull(pinnedMessageId);
+
+    PanacheMember member = (PanacheMember) from;
+    var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
+    PanachePinnedMessage pinnedMessage = new PanachePinnedMessage(pinnedMessagePK, pinnedMessageId);
+    PanachePinnedMessage.getEntityManager().merge(pinnedMessage);
+  }
+
+  @Override
+  public void deleteUnAnsweredMessage(Member from, Member to) {
+    Objects.requireNonNull(from);
+    Objects.requireNonNull(to);
+
+    PanacheMember member = (PanacheMember) from;
+    var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
+    PanachePinnedMessage.deleteById(pinnedMessagePK);
+  }
+
+  @Override
+  public void updateConnection(
+      Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {}
 }

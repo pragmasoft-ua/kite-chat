@@ -3,15 +3,9 @@ package ua.com.pragmasoft.k1te.server.standalone.infrastructure;
 
 import io.quarkus.arc.profile.IfBuildProfile;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.EmbeddedId;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Objects;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 
@@ -37,6 +31,9 @@ public class PanacheMember extends PanacheEntityBase implements Member {
   @JoinColumn(name = "channelName", nullable = false, insertable = false, updatable = false)
   private PanacheChannel channel;
 
+  @OneToMany(mappedBy = "member", fetch = FetchType.LAZY)
+  private List<PanachePinnedMessage> pinnedMessages;
+
   public static PanacheMember of(
       String memberId,
       String channelName,
@@ -45,11 +42,11 @@ public class PanacheMember extends PanacheEntityBase implements Member {
       String connectionUri,
       String peerMemberId) {
     return new PanacheMember(
-        buildId(memberId, channelName), userName, host, connectionUri, peerMemberId);
+        buildId(channelName, memberId), userName, host, connectionUri, peerMemberId);
   }
 
-  public static MemberPK buildId(String memberId, String channelName) {
-    return new MemberPK(memberId, channelName);
+  public static MemberPK buildId(String channelName, String memberId) {
+    return new MemberPK(channelName, memberId);
   }
 
   public static PanacheMember findByMemberId(String memberId) {
@@ -87,9 +84,13 @@ public class PanacheMember extends PanacheEntityBase implements Member {
     return this.host;
   }
 
-  @Override
   public String getConnectionUri() {
     return this.connectionUri;
+  }
+
+  @Override
+  public String getLastMessageId() {
+    return null;
   }
 
   @Override
@@ -136,21 +137,12 @@ public class PanacheMember extends PanacheEntityBase implements Member {
 
     PanacheMember member = (PanacheMember) o;
 
-    if (host != member.host) return false;
-    if (!Objects.equals(memberPK, member.memberPK)) return false;
-    if (!Objects.equals(userName, member.userName)) return false;
-    if (!Objects.equals(connectionUri, member.connectionUri)) return false;
-    return Objects.equals(peerMemberId, member.peerMemberId);
+    return Objects.equals(memberPK, member.memberPK);
   }
 
   @Override
   public int hashCode() {
-    int result = memberPK != null ? memberPK.hashCode() : 0;
-    result = 31 * result + (userName != null ? userName.hashCode() : 0);
-    result = 31 * result + (host ? 1 : 0);
-    result = 31 * result + (connectionUri != null ? connectionUri.hashCode() : 0);
-    result = 31 * result + (peerMemberId != null ? peerMemberId.hashCode() : 0);
-    return result;
+    return memberPK != null ? memberPK.hashCode() : 0;
   }
 
   @Embeddable
@@ -161,9 +153,9 @@ public class PanacheMember extends PanacheEntityBase implements Member {
 
     public MemberPK() {}
 
-    public MemberPK(String memberId, String channelName) {
-      this.memberId = memberId;
+    public MemberPK(String channelName, String memberId) {
       this.channelName = channelName;
+      this.memberId = memberId;
     }
 
     public String getMemberId() {

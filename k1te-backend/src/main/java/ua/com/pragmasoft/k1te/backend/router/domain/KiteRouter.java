@@ -1,11 +1,10 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.shared.KiteException;
 import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
@@ -19,14 +18,17 @@ public class KiteRouter implements Router {
   public static final String ATTR_FROM = "k1te.member.from";
   public static final String ATTR_TO = "k1te.member.to";
 
+  private final List<RouterPostProcessor> postProcessors;
   private final Map<String, Connector> connectors = new HashMap<>(8);
   private final Channels channels;
 
   /**
    * @param channels
    */
-  public KiteRouter(Channels channels) {
+  public KiteRouter(Channels channels, List<RouterPostProcessor> postProcessors) {
+    Objects.requireNonNull(postProcessors, "Post processors");
     this.channels = channels;
+    this.postProcessors = postProcessors;
   }
 
   @Override
@@ -59,13 +61,14 @@ public class KiteRouter implements Router {
     if (null == ctx.destinationConnection) {
       ctx.destinationConnection = ctx.to.getConnectionUri();
     }
-    Connector connector = requiredConnector(this.connectorId(ctx.destinationConnection));
+    Connector connector = requiredConnector(Connector.connectorId(ctx.destinationConnection));
     connector.dispatch(ctx);
-    if (null == ctx.response) {
+    MessageAck response = ctx.response;
+    if (null == response) {
       throw new RoutingException("missing response from connector " + connector.id());
     }
-    this.channels.updatePeer(ctx.to, ctx.from.getId());
-    this.channels.updatePeer(ctx.from, ctx.to.getId());
+
+    postProcessors.forEach(routerPostProcessor -> routerPostProcessor.accept(ctx));
   }
 
   private synchronized Connector requiredConnector(String connectorId) throws NotFoundException {

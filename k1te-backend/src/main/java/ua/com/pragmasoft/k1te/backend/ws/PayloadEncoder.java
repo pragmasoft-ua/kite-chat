@@ -8,12 +8,8 @@ import java.util.EnumMap;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import ua.com.pragmasoft.k1te.backend.router.domain.payload.BinaryMessage;
-import ua.com.pragmasoft.k1te.backend.router.domain.payload.ErrorResponse;
-import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
-import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
-import ua.com.pragmasoft.k1te.backend.router.domain.payload.PlaintextMessage;
-import ua.com.pragmasoft.k1te.backend.router.domain.payload.UploadResponse;
+import ua.com.pragmasoft.k1te.backend.router.domain.payload.*;
+import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
 
 public class PayloadEncoder implements Function<Payload, String> {
 
@@ -48,7 +44,7 @@ public class PayloadEncoder implements Function<Payload, String> {
         Json.createArrayBuilder()
             .add(payload.type().name())
             .add(ack.messageId())
-            .add(ack.destiationMessageId())
+            .add(ack.destinationMessageId())
             .add(ack.delivered().toString())
             .build();
     jw.writeArray(array);
@@ -78,7 +74,10 @@ public class PayloadEncoder implements Function<Payload, String> {
   }
 
   private static void encodeBinary(Payload payload, JsonWriter jw) {
-    var message = (BinaryMessage) payload;
+    var message =
+        payload instanceof TelegramConnector.TelegramBinaryMessage
+            ? (BinaryPayload) payload
+            : (BinaryMessage) payload;
     var array =
         Json.createArrayBuilder()
             .add(payload.type().name())

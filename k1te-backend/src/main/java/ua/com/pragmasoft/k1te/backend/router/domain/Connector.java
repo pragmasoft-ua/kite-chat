@@ -14,13 +14,13 @@ public interface Connector {
     return id() + ':' + rawConnection;
   }
 
-  default String rawConnection(String connectionUri) {
+  static String rawConnection(String connectionUri) {
     var array = connectionUri.split(":", 2);
     Objects.checkIndex(1, array.length);
     return array[1];
   }
 
-  default String connectorId(String connectionUri) {
+  static String connectorId(String connectionUri) {
     var array = connectionUri.split(":", 2);
     return array[0];
   }
