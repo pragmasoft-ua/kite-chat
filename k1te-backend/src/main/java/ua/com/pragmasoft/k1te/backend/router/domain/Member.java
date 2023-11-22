@@ -13,7 +13,5 @@ public interface Member {
 
   public String getConnectionUri();
 
-  public String getLastMessageId();
-
   public String getPeerMemberId();
 }

@@ -1,6 +1,7 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.domain;
 
+import java.time.Instant;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,10 +9,12 @@ import ua.com.pragmasoft.k1te.backend.router.domain.payload.MessageAck;
 import ua.com.pragmasoft.k1te.backend.shared.KiteException;
 import ua.com.pragmasoft.k1te.backend.shared.NotFoundException;
 import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
+import ua.com.pragmasoft.k1te.backend.ws.PayloadEncoder;
 
 public class KiteRouter implements Router {
 
   private static final Logger log = LoggerFactory.getLogger(KiteRouter.class);
+  private static final PayloadEncoder ENCODER = new PayloadEncoder();
 
   public static final String CONNECTOR_ID = "k1te";
 
@@ -21,13 +24,17 @@ public class KiteRouter implements Router {
   private final List<RouterPostProcessor> postProcessors;
   private final Map<String, Connector> connectors = new HashMap<>(8);
   private final Channels channels;
+  private final Messages messages;
 
   /**
    * @param channels
+   * @param messages
    */
-  public KiteRouter(Channels channels, List<RouterPostProcessor> postProcessors) {
+  public KiteRouter(
+      Channels channels, List<RouterPostProcessor> postProcessors, Messages messages) {
     Objects.requireNonNull(postProcessors, "Post processors");
     this.channels = channels;
+    this.messages = messages;
     this.postProcessors = postProcessors;
   }
 
@@ -59,7 +66,16 @@ public class KiteRouter implements Router {
       throw new RoutingException();
     }
     if (null == ctx.destinationConnection) {
-      ctx.destinationConnection = ctx.to.getConnectionUri();
+      String connectionUri = ctx.to.getConnectionUri();
+      if (connectionUri == null && !ctx.to.isHost()) {
+        String content = ENCODER.apply(ctx.request);
+        String messageId = ctx.request.messageId();
+        Instant time = Instant.now();
+        this.messages.persist(ctx.to, messageId, content, time, true);
+        ctx.response = new MessageAck(messageId, messageId, time);
+        return;
+      }
+      ctx.destinationConnection = connectionUri;
     }
     Connector connector = requiredConnector(Connector.connectorId(ctx.destinationConnection));
     connector.dispatch(ctx);

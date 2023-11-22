@@ -22,7 +22,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -252,7 +251,7 @@ public class TelegramConnector implements Connector, Closeable {
               .formatted(this.id(), sendResponse.errorCode(), sendResponse.description()));
     }
 
-    if (PIN_FEATURE_FLAG && !ctx.isIdle) {
+    if (PIN_FEATURE_FLAG && from != to) {
       String text = sendResponse.message().text();
       boolean isJoinMessage =
           text != null && text.contains(SUCCESS) && text.contains("joined channel");
@@ -416,37 +415,41 @@ public class TelegramConnector implements Connector, Closeable {
                 new PlaintextMessage("✅ %s switched to Telegram".formatted(member.getUserName())));
     this.router.dispatch(ctx);
 
-    List<HistoryMessage> historyMessages = this.messages.findAll(member, null, HISTORY_LIMIT);
+    this.messages
+        .findAll(
+            Messages.MessagesRequest.builder().withMember(member).withLimit(HISTORY_LIMIT).build())
+        .forEach(
+            message -> {
+              Payload payload = DECODER.apply(message.getContent());
 
-    for (int i = historyMessages.size() - 1; i >= 0; i--) {
-      HistoryMessage message = historyMessages.get(i);
-      Payload payload = DECODER.apply(message.getContent());
+              if (message.isIncoming() && payload.type() == Payload.Type.BIN) {
+                Long fromChatId = toLong(host.getId());
+                int messageId = toLong(message.getMessageId()).intValue();
+                CopyMessage copyMessage =
+                    new CopyMessage(chatId, fromChatId, messageId)
+                        .disableNotification(true)
+                        .caption("#Host");
+                this.bot.execute(copyMessage);
+              } else {
+                if (message.isIncoming() && payload.type() == Payload.Type.TXT) {
+                  PlaintextMessage textMessage = (PlaintextMessage) payload;
+                  payload =
+                      new PlaintextMessage(
+                          "#Host \n" + textMessage.text(),
+                          textMessage.messageId(),
+                          textMessage.created());
+                }
+                var context =
+                    RoutingContext.create()
+                        .withOriginConnection(newConnection)
+                        .withFrom(member)
+                        .withTo(member)
+                        .withDestinationConnection(member.getConnectionUri())
+                        .withRequest((MessagePayload) payload);
+                this.dispatch(context);
+              }
+            });
 
-      if (message.isIncoming() && payload.type() == Payload.Type.BIN) {
-        Long fromChatId = toLong(host.getId());
-        int messageId = toLong(message.getMessageId()).intValue();
-        CopyMessage copyMessage =
-            new CopyMessage(chatId, fromChatId, messageId)
-                .disableNotification(true)
-                .caption("#Host");
-        this.bot.execute(copyMessage);
-      } else {
-        if (message.isIncoming() && payload.type() == Payload.Type.TXT) {
-          PlaintextMessage textMessage = (PlaintextMessage) payload;
-          payload =
-              new PlaintextMessage(
-                  "#Host \n" + textMessage.text(), textMessage.messageId(), textMessage.created());
-        }
-        var context =
-            RoutingContext.create()
-                .withOriginConnection(newConnection)
-                .withFrom(member)
-                .withTo(member)
-                .isIdle(true)
-                .withRequest((MessagePayload) payload);
-        this.router.dispatch(context);
-      }
-    }
     return "✅ You switched to Telegram";
   }
 

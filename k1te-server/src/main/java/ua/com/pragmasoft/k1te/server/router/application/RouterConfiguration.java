@@ -28,10 +28,11 @@ public class RouterConfiguration {
   @ApplicationScoped
   @DefaultBean
   public Messages messages(
+      Channels channels,
       DynamoDbEnhancedClient ddb,
       DynamoDbClient dynamoDbClient,
       @ConfigProperty(name = "serverless.environment") final String serverlessEnvironmentName) {
-    return new DynamoDbMessages(ddb, dynamoDbClient, serverlessEnvironmentName);
+    return new DynamoDbMessages(channels, ddb, dynamoDbClient, serverlessEnvironmentName);
   }
 
   @Produces
@@ -48,7 +49,8 @@ public class RouterConfiguration {
 
   @Produces
   @ApplicationScoped
-  public Router router(Channels channels, Instance<RouterPostProcessor> postProcessors) {
-    return new KiteRouter(channels, postProcessors.stream().toList());
+  public Router router(
+      Channels channels, Messages messages, Instance<RouterPostProcessor> postProcessors) {
+    return new KiteRouter(channels, postProcessors.stream().toList(), messages);
   }
 }

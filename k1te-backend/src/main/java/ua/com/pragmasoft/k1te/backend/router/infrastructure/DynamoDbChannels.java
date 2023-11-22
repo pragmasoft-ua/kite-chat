@@ -2,7 +2,6 @@
 package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -13,7 +12,6 @@ import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.*;
-import software.amazon.awssdk.services.dynamodb.model.CancellationReason;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 import ua.com.pragmasoft.k1te.backend.router.domain.ChannelName;
@@ -213,21 +211,15 @@ public class DynamoDbChannels implements Channels {
     Key memberKey = Key.builder().partitionValue(channelName).sortValue(memberId).build();
     DynamoDbMember maybeMember = this.membersTable.getItem(memberKey);
     if (maybeMember != null) {
-      if (maybeMember.hasConnection(memberConnection)) {
-        throw new ValidationException("You are already in this Channel");
-      }
       DynamoDBConnection dbConnection =
           new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
-      maybeMember.updateConnectionUri(connectorId, rawConnection);
-      try {
-        this.enhancedDynamo.transactWriteItems(
-            tx ->
-                tx.addUpdateItem(this.membersTable, maybeMember)
-                    .addPutItem(this.connectionsTable, dbConnection));
-        return maybeMember;
-      } catch (Exception e) {
-        throw new KiteException(e.getMessage(), e);
+      if (!maybeMember.hasConnection(memberConnection)) {
+        maybeMember.updateConnectionUri(connectorId, rawConnection);
+        this.membersTable.updateItem(maybeMember);
+        log.debug("Member already exists but connection was updated");
       }
+      this.connectionsTable.putItem(dbConnection);
+      return maybeMember;
     }
 
     final String hostId = channel.getHost();
@@ -239,39 +231,34 @@ public class DynamoDbChannels implements Channels {
             .withHost(false)
             .withPeerMemberId(hostId)
             .build();
-    member.updateConnectionUri(connectorId, rawConnection);
     DynamoDBConnection dbConnection =
         new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
 
+    member.updateConnectionUri(connectorId, rawConnection);
+
     var putMemberRequest =
-        TransactPutItemEnhancedRequest.builder(DynamoDbMember.class)
+        PutItemEnhancedRequest.builder(DynamoDbMember.class)
             .item(member)
             .conditionExpression(pkAndSkNotExistCondition)
             .build();
+    WriteBatch putMember =
+        WriteBatch.builder(DynamoDbMember.class).addPutItem(putMemberRequest).build();
+    WriteBatch putConnection =
+        WriteBatch.builder(DynamoDBConnection.class).addPutItem(dbConnection).build();
     try {
-      this.enhancedDynamo.transactWriteItems(
-          tx ->
-              tx.addPutItem(this.membersTable, putMemberRequest)
-                  .addPutItem(this.connectionsTable, dbConnection));
+      this.enhancedDynamo.batchWriteItem(
+          builder -> builder.addWriteBatch(putMember).addWriteBatch(putConnection));
       return member;
-    } catch (TransactionCanceledException e) {
-      List<CancellationReason> reasons = e.cancellationReasons();
-      String reason =
-          reasons.get(0).code().equals(CONDITION_FAILED)
-              ? "You can't /join the same Channel"
-              : reasons.get(1).message();
-      throw new ConflictException(reason, e);
+    } catch (Exception e) {
+      throw new ConflictException(e.getMessage(), e);
     }
   }
 
-  // TODO: 20.11.2023 Should delete only connection so that Member could reconnect
   @Override
   public Member leaveChannel(String memberConnection) {
-
     Objects.requireNonNull(memberConnection, "member connection");
 
     DynamoDbMember member = this.find(memberConnection);
-
     if (member.isHost()) {
       throw new ValidationException("Host member cannot leave channel. You can only drop it");
     }
@@ -279,27 +266,15 @@ public class DynamoDbChannels implements Channels {
     String rawConnection = Connector.rawConnection(memberConnection);
     Key connectionKey = Key.builder().partitionValue(connectorId).sortValue(rawConnection).build();
 
-    if (!member.getConnectionUri().equals(memberConnection)) {
-      member.deleteConnection(connectorId);
-      this.enhancedDynamo.transactWriteItems(
-          tx ->
-              tx.addDeleteItem(
-                      this.connectionsTable,
-                      connectionKey) // Deletes only connection because it's not the most recent one
-                  .addUpdateItem(this.membersTable, member));
-      return member;
-    }
+    member.deleteConnection(connectorId);
 
     try {
-      this.enhancedDynamo.transactWriteItems(
-          tx ->
-              tx.addDeleteItem(this.connectionsTable, connectionKey)
-                  .addDeleteItem(this.membersTable, member));
+      this.membersTable.updateItem(member);
+      this.connectionsTable.deleteItem(connectionKey);
+      return member;
     } catch (Exception e) { // TransactionCanceledException
       throw new KiteException(e.getMessage(), e);
     }
-
-    return member;
   }
 
   @Override
@@ -360,12 +335,9 @@ public class DynamoDbChannels implements Channels {
     DynamoDBConnection dbConnection =
         new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
 
-    try {
-      this.enhancedDynamo.transactWriteItems(
-          tx -> tx.addUpdateItem(membersTable, member).addPutItem(connectionsTable, dbConnection));
-    } catch (TransactionCanceledException e) {
-      throw new KiteException(e.getMessage(), e);
-    }
+    this.connectionsTable.putItem(dbConnection);
+    this.membersTable.updateItem(member);
+
     return member;
   }
 

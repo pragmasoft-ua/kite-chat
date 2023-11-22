@@ -16,10 +16,8 @@ public class PeerUpdatePostProcessor implements RouterPostProcessor {
 
   @Override
   public void accept(RoutingContext ctx) {
-    if (!ctx.isIdle) {
-      this.channels.updatePeer(ctx.to, ctx.from.getId());
-      this.channels.updatePeer(ctx.from, ctx.to.getId());
-      log.debug("PeerMembers were updated");
-    }
+    this.channels.updatePeer(ctx.to, ctx.from.getId());
+    this.channels.updatePeer(ctx.from, ctx.to.getId());
+    log.debug("PeerMembers were updated");
   }
 }

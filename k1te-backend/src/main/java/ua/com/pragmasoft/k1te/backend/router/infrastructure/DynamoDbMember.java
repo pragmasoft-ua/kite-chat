@@ -10,7 +10,6 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 import ua.com.pragmasoft.k1te.backend.router.domain.Connector;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
-import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 
@@ -20,13 +19,16 @@ public class DynamoDbMember implements Member {
   private String id;
   private String channelName;
   private String tgUri;
-  private Instant tgLastTime;
+  private Instant tgLastActiveTime;
+  private Instant tgLastMessageTime;
   private String tgLastMessageId;
   private String wsUri;
-  private Instant wsLastTime;
+  private Instant wsLastActiveTime;
+  private Instant wsLastMessageTime;
   private String wsLastMessageId;
   private String aiUri;
-  private Instant aiLastTime;
+  private Instant aiLastActiveTime;
+  private Instant aiLastMessageTime;
   private String aiLastMessageId;
   private String userName;
   private boolean host;
@@ -37,13 +39,16 @@ public class DynamoDbMember implements Member {
       String id,
       String channelName,
       String tgUri,
-      Instant tgLastTime,
+      Instant tgLastActiveTime,
+      Instant tgLastMessageTime,
       String tgLastMessageId,
       String wsUri,
-      Instant wsLastTime,
+      Instant wsLastActiveTime,
+      Instant wsLastMessageTime,
       String wsLastMessageId,
       String aiUri,
-      Instant aiLastTime,
+      Instant aiLastActiveTime,
+      Instant aiLastMessageTime,
       String aiLastMessageId,
       String userName,
       boolean host,
@@ -52,13 +57,16 @@ public class DynamoDbMember implements Member {
     this.id = id;
     this.channelName = channelName;
     this.tgUri = tgUri;
-    this.tgLastTime = tgLastTime;
+    this.tgLastActiveTime = tgLastActiveTime;
+    this.tgLastMessageTime = tgLastMessageTime;
     this.tgLastMessageId = tgLastMessageId;
     this.wsUri = wsUri;
-    this.wsLastTime = wsLastTime;
+    this.wsLastActiveTime = wsLastActiveTime;
+    this.wsLastMessageTime = wsLastMessageTime;
     this.wsLastMessageId = wsLastMessageId;
     this.aiUri = aiUri;
-    this.aiLastTime = aiLastTime;
+    this.aiLastActiveTime = aiLastActiveTime;
+    this.aiLastMessageTime = aiLastMessageTime;
     this.aiLastMessageId = aiLastMessageId;
     this.userName = userName;
     this.host = host;
@@ -70,6 +78,7 @@ public class DynamoDbMember implements Member {
     super();
   }
 
+  /** Returns the most relevant connection by comparing lastActiveTime attribute */
   @Override
   public String getConnectionUri() {
     String maybeTgUri = this.tgUri != null ? TelegramConnector.TG + ":" + this.tgUri : null;
@@ -77,7 +86,7 @@ public class DynamoDbMember implements Member {
     String maybeAiUri = this.aiUri != null ? "ai:" + this.aiUri : null;
 
     String[] uris = {maybeTgUri, maybeWsUri, maybeAiUri};
-    Instant[] lastTimes = {this.tgLastTime, this.wsLastTime, this.aiLastTime};
+    Instant[] lastTimes = {this.tgLastActiveTime, this.wsLastActiveTime, this.aiLastActiveTime};
 
     String connectionUri = null;
     Instant mostRecentTime = null;
@@ -89,20 +98,16 @@ public class DynamoDbMember implements Member {
       }
     }
 
-    if (connectionUri == null) throw new RoutingException("missing connectionUri");
-
     return connectionUri;
   }
 
-  @Override
-  public String getLastMessageId() {
-    String connectionUri = this.getConnectionUri();
+  public Instant getLastMessageTimeForConnection(String connectionUri) {
     String connectorId = Connector.connectorId(connectionUri);
     return switch (connectorId) {
-      case (TelegramConnector.TG) -> getTgLastMessageId();
-      case (WsConnector.WS) -> getWsLastMessageId();
-      case ("ai") -> getAiLastMessageId();
-      default -> throw new RoutingException("missing connectionUri");
+      case (TelegramConnector.TG) -> this.getTgLastMessageTime();
+      case (WsConnector.WS) -> this.getWsLastMessageTime();
+      case ("ai") -> this.getAiLastMessageTime();
+      default -> null;
     };
   }
 
@@ -110,22 +115,45 @@ public class DynamoDbMember implements Member {
     updateConnectionUri(connectorId, connectionUri, null, null);
   }
 
+  public void updateConnectionUri(
+      String connectorId, String connectionUri, String messageId, Instant usageTime) {
+    Instant activeTime = usageTime != null ? usageTime : Instant.now();
+    switch (connectorId) {
+      case (TelegramConnector.TG) -> {
+        this.setTgUri(connectionUri);
+        if (messageId != null) this.setTgLastMessageId(messageId);
+        if (usageTime != null) this.setTgLastMessageTime(usageTime);
+        this.setTgLastActiveTime(activeTime);
+      }
+      case (WsConnector.WS) -> {
+        this.setWsUri(connectionUri);
+        if (messageId != null) this.setWsLastMessageId(messageId);
+        if (usageTime != null) this.setWsLastMessageTime(usageTime);
+        this.setWsLastActiveTime(activeTime);
+      }
+      case ("ai") -> {
+        this.setAiUri(connectionUri);
+        if (messageId != null) this.setAiLastMessageId(messageId);
+        if (usageTime != null) this.setAiLastMessageTime(usageTime);
+        this.setAiLastActiveTime(activeTime);
+      }
+      default -> throw new IllegalStateException("Unsupported connector id");
+    }
+  }
+
   public void deleteConnection(String connectorId) {
     switch (connectorId) {
       case (TelegramConnector.TG) -> {
         this.setTgUri(null);
-        this.setTgLastTime(null);
-        this.setTgLastMessageId(null);
+        this.setTgLastActiveTime(null);
       }
       case (WsConnector.WS) -> {
         this.setWsUri(null);
-        this.setWsLastTime(null);
-        this.setWsLastMessageId(null);
+        this.setWsLastActiveTime(null);
       }
       case ("ai") -> {
         this.setAiUri(null);
-        this.setAiLastTime(null);
-        this.setAiLastMessageId(null);
+        this.setAiLastActiveTime(null);
       }
       default -> throw new IllegalStateException("Unsupported connector id");
     }
@@ -137,29 +165,6 @@ public class DynamoDbMember implements Member {
         || (this.aiUri != null && this.aiUri.equals(connection));
   }
 
-  public void updateConnectionUri(
-      String connectorId, String connectionUri, String messageId, Instant usageTime) {
-    Instant time = usageTime != null ? usageTime : Instant.now();
-    switch (connectorId) {
-      case (TelegramConnector.TG) -> {
-        this.setTgUri(connectionUri);
-        this.setTgLastTime(time);
-        this.setTgLastMessageId(messageId);
-      }
-      case (WsConnector.WS) -> {
-        this.setWsUri(connectionUri);
-        this.setWsLastTime(time);
-        this.setWsLastMessageId(messageId);
-      }
-      case ("ai") -> {
-        this.setAiUri(connectionUri);
-        this.setAiLastTime(time);
-        this.setAiLastMessageId(messageId);
-      }
-      default -> throw new IllegalStateException("Unsupported connector id");
-    }
-  }
-
   @Override
   @DynamoDbSortKey
   public String getId() {
@@ -168,6 +173,33 @@ public class DynamoDbMember implements Member {
 
   public void setId(String id) {
     this.id = id;
+  }
+
+  @DynamoDbIgnoreNulls
+  public Instant getTgLastActiveTime() {
+    return tgLastActiveTime;
+  }
+
+  public void setTgLastActiveTime(Instant tgLastActiveTime) {
+    this.tgLastActiveTime = tgLastActiveTime;
+  }
+
+  @DynamoDbIgnoreNulls
+  public Instant getWsLastActiveTime() {
+    return wsLastActiveTime;
+  }
+
+  public void setWsLastActiveTime(Instant wsLastActiveTime) {
+    this.wsLastActiveTime = wsLastActiveTime;
+  }
+
+  @DynamoDbIgnoreNulls
+  public Instant getAiLastActiveTime() {
+    return aiLastActiveTime;
+  }
+
+  public void setAiLastActiveTime(Instant aiLastActiveTime) {
+    this.aiLastActiveTime = aiLastActiveTime;
   }
 
   @Override
@@ -190,12 +222,12 @@ public class DynamoDbMember implements Member {
   }
 
   @DynamoDbIgnoreNulls
-  public Instant getTgLastTime() {
-    return tgLastTime;
+  public Instant getTgLastMessageTime() {
+    return tgLastMessageTime;
   }
 
-  public void setTgLastTime(Instant tgLastTime) {
-    this.tgLastTime = tgLastTime;
+  public void setTgLastMessageTime(Instant tgLastMessageTime) {
+    this.tgLastMessageTime = tgLastMessageTime;
   }
 
   @DynamoDbIgnoreNulls
@@ -217,12 +249,12 @@ public class DynamoDbMember implements Member {
   }
 
   @DynamoDbIgnoreNulls
-  public Instant getWsLastTime() {
-    return wsLastTime;
+  public Instant getWsLastMessageTime() {
+    return wsLastMessageTime;
   }
 
-  public void setWsLastTime(Instant wsLastTime) {
-    this.wsLastTime = wsLastTime;
+  public void setWsLastMessageTime(Instant wsLastMessageTime) {
+    this.wsLastMessageTime = wsLastMessageTime;
   }
 
   @DynamoDbIgnoreNulls
@@ -244,12 +276,12 @@ public class DynamoDbMember implements Member {
   }
 
   @DynamoDbIgnoreNulls
-  public Instant getAiLastTime() {
-    return aiLastTime;
+  public Instant getAiLastMessageTime() {
+    return aiLastMessageTime;
   }
 
-  public void setAiLastTime(Instant aiLastTime) {
-    this.aiLastTime = aiLastTime;
+  public void setAiLastMessageTime(Instant aiLastMessageTime) {
+    this.aiLastMessageTime = aiLastMessageTime;
   }
 
   @DynamoDbIgnoreNulls
@@ -319,7 +351,7 @@ public class DynamoDbMember implements Member {
         + tgUri
         + '\''
         + ", tgLastTime='"
-        + tgLastTime
+        + tgLastMessageTime
         + '\''
         + ", tgLastMessageId='"
         + tgLastMessageId
@@ -328,7 +360,7 @@ public class DynamoDbMember implements Member {
         + wsUri
         + '\''
         + ", wsLastTime='"
-        + wsLastTime
+        + wsLastMessageTime
         + '\''
         + ", wsLastMessageId='"
         + wsLastMessageId
@@ -337,7 +369,7 @@ public class DynamoDbMember implements Member {
         + aiUri
         + '\''
         + ", aiLastTime='"
-        + aiLastTime
+        + aiLastMessageTime
         + '\''
         + ", aiLastMessageId='"
         + aiLastMessageId
@@ -378,7 +410,7 @@ public class DynamoDbMember implements Member {
     }
 
     public DynamoDbMemberBuilder withTgLastTime(Instant tgLastTime) {
-      this.member.setTgLastTime(tgLastTime);
+      this.member.setTgLastMessageTime(tgLastTime);
       return this;
     }
 
@@ -393,7 +425,7 @@ public class DynamoDbMember implements Member {
     }
 
     public DynamoDbMemberBuilder withWsLastTime(Instant wsLastTime) {
-      this.member.setWsLastTime(wsLastTime);
+      this.member.setWsLastMessageTime(wsLastTime);
       return this;
     }
 
@@ -408,7 +440,7 @@ public class DynamoDbMember implements Member {
     }
 
     public DynamoDbMemberBuilder withAiLastTime(Instant aiLastTime) {
-      this.member.setAiLastTime(aiLastTime);
+      this.member.setAiLastMessageTime(aiLastTime);
       return this;
     }
 

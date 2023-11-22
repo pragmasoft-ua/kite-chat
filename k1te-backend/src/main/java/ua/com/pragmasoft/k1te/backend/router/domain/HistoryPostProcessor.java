@@ -19,8 +19,7 @@ public class HistoryPostProcessor implements RouterPostProcessor {
   public void accept(RoutingContext ctx) {
     String messageId = ctx.response.messageId();
     String destinationMessageId = ctx.response.destinationMessageId();
-    if (!ctx.isIdle
-        && (!messageId.equals("-"))) { // do nothing if it's join/left/switch/selfMessage messages
+    if (!messageId.equals("-")) { // do nothing if it's join/left/switch/selfMessage messages
       String ownerMessageId;
       String toMessageId;
       if (Connector.connectorId(ctx.originConnection).equals(WsConnector.WS)) {

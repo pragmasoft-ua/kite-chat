@@ -4,6 +4,7 @@ package ua.com.pragmasoft.k1te.backend.ws;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,7 @@ public class WsConnector implements Connector {
 
   private final Router router;
   private final Channels channels;
+  private final Messages messages;
   private final WsConnectionRegistry connections;
   private final ObjectStore objectStore;
   private final Map<String, Integer> allowedMediaTypes =
@@ -40,9 +42,11 @@ public class WsConnector implements Connector {
   public WsConnector(
       final Router router,
       final Channels channels,
+      Messages messages,
       final WsConnectionRegistry connections,
       ObjectStore objectStore) {
     this.router = router;
+    this.messages = messages;
     router.registerConnector(this);
     this.channels = channels;
     this.connections = connections;
@@ -131,6 +135,14 @@ public class WsConnector implements Connector {
             joinChannel.memberId(),
             originConnection,
             joinChannel.memberName());
+
+    List<HistoryMessage> historyMessages =
+        this.messages.findAll(
+            Messages.MessagesRequest.builder()
+                .withMember(client)
+                .withConnectionUri(originConnection)
+                .build());
+    System.out.println();
     var ctx =
         RoutingContext.create()
             .withOriginConnection(originConnection)
