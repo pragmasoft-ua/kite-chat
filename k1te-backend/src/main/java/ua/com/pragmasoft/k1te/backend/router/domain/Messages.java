@@ -6,8 +6,7 @@ import java.util.List;
 
 public interface Messages {
 
-  HistoryMessage persist(
-      Member owner, String messageId, String content, Instant time, boolean incoming);
+  HistoryMessage persist(Member owner, String messageId, String content, Instant time);
 
   HistoryMessage find(Member member, String messageId);
 

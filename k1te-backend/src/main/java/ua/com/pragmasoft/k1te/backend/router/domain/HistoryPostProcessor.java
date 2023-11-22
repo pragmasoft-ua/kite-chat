@@ -40,9 +40,9 @@ public class HistoryPostProcessor implements RouterPostProcessor {
 
       String content = ENCODER.apply(ctx.request);
       if (ctx.from.isHost()) {
-        this.messages.persist(ctx.to, toMessageId, content, ctx.response.delivered(), true);
+        this.messages.persist(ctx.to, toMessageId, content, ctx.response.delivered());
       } else {
-        this.messages.persist(ctx.from, ownerMessageId, content, ctx.response.delivered(), false);
+        this.messages.persist(ctx.from, ownerMessageId, content, ctx.response.delivered());
       }
     }
   }

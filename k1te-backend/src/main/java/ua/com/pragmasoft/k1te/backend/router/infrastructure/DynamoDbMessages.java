@@ -23,7 +23,6 @@ public class DynamoDbMessages implements Messages {
   private static final String MESSAGES_TIME_ATTRIBUTE = "time";
   private static final String MESSAGES_CONTENT_ATTRIBUTE = "content";
   private static final String MESSAGES_MESSAGE_ID_ATTRIBUTE = "messageId";
-  private static final String MESSAGES_INCOMING_ATTRIBUTE = "incoming";
 
   private final Channels channels;
 
@@ -50,16 +49,14 @@ public class DynamoDbMessages implements Messages {
   }
 
   @Override
-  public HistoryMessage persist(
-      Member owner, String messageId, String content, Instant time, boolean incoming) {
+  public HistoryMessage persist(Member owner, String messageId, String content, Instant time) {
     Objects.requireNonNull(owner);
     Objects.requireNonNull(messageId);
     Objects.requireNonNull(content);
     Objects.requireNonNull(time);
     String id = DynamoDbHistoryMessage.buildId(owner.getChannelName(), owner.getId());
 
-    DynamoDbHistoryMessage dbMessage =
-        new DynamoDbHistoryMessage(id, messageId, content, time, incoming);
+    DynamoDbHistoryMessage dbMessage = new DynamoDbHistoryMessage(id, messageId, content, time);
     try {
       this.messageTable.putItem(dbMessage);
       return dbMessage;
@@ -148,9 +145,7 @@ public class DynamoDbMessages implements Messages {
     String historyMessageId = map.get(MESSAGES_ID_ATTRIBUTE).s();
     String messageId = map.get(MESSAGES_MESSAGE_ID_ATTRIBUTE).s();
     String content = map.get(MESSAGES_CONTENT_ATTRIBUTE).s();
-    boolean incoming = map.get(MESSAGES_INCOMING_ATTRIBUTE).bool();
     String time = map.get(MESSAGES_TIME_ATTRIBUTE).s();
-    return new DynamoDbHistoryMessage(
-        historyMessageId, messageId, content, Instant.parse(time), incoming);
+    return new DynamoDbHistoryMessage(historyMessageId, messageId, content, Instant.parse(time));
   }
 }

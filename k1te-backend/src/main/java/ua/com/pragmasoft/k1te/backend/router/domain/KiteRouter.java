@@ -71,7 +71,7 @@ public class KiteRouter implements Router {
         String content = ENCODER.apply(ctx.request);
         String messageId = ctx.request.messageId();
         Instant time = Instant.now();
-        this.messages.persist(ctx.to, messageId, content, time, true);
+        this.messages.persist(ctx.to, messageId, content, time);
         ctx.response = new MessageAck(messageId, messageId, time);
         return;
       }

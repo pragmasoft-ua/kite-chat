@@ -44,6 +44,7 @@ public class TelegramConnector implements Connector, Closeable {
   public static final String TG = "tg";
   private static final String OK = "ok";
   private static final String SUCCESS = "✅ ";
+  private static final String FAIL = "⛔ ";
   private static final String HELP =
       """
       This bot allows to set up support channel in the current chat as a host
@@ -415,42 +416,57 @@ public class TelegramConnector implements Connector, Closeable {
                 new PlaintextMessage("✅ %s switched to Telegram".formatted(member.getUserName())));
     this.router.dispatch(ctx);
 
+    Messages.MessagesRequest messagesRequest =
+        Messages.MessagesRequest.builder().withMember(member).withLimit(HISTORY_LIMIT).build();
     this.messages
-        .findAll(
-            Messages.MessagesRequest.builder().withMember(member).withLimit(HISTORY_LIMIT).build())
-        .forEach(
-            message -> {
-              Payload payload = DECODER.apply(message.getContent());
-
-              if (message.isIncoming() && payload.type() == Payload.Type.BIN) {
-                Long fromChatId = toLong(host.getId());
-                int messageId = toLong(message.getMessageId()).intValue();
-                CopyMessage copyMessage =
-                    new CopyMessage(chatId, fromChatId, messageId)
-                        .disableNotification(true)
-                        .caption("#Host");
-                this.bot.execute(copyMessage);
-              } else {
-                if (message.isIncoming() && payload.type() == Payload.Type.TXT) {
-                  PlaintextMessage textMessage = (PlaintextMessage) payload;
-                  payload =
-                      new PlaintextMessage(
-                          "#Host \n" + textMessage.text(),
-                          textMessage.messageId(),
-                          textMessage.created());
-                }
-                var context =
-                    RoutingContext.create()
-                        .withOriginConnection(newConnection)
-                        .withFrom(member)
-                        .withTo(member)
-                        .withDestinationConnection(member.getConnectionUri())
-                        .withRequest((MessagePayload) payload);
-                this.dispatch(context);
-              }
-            });
+        .findAll(messagesRequest)
+        .forEach(message -> processHistoryMessage(chatId, newConnection, member, host, message));
 
     return "✅ You switched to Telegram";
+  }
+
+  private void processHistoryMessage(
+      Long chatId, String newConnection, Member member, Member host, HistoryMessage message) {
+    Payload payload = DECODER.apply(message.getContent());
+    int status =
+        payload.type() == Payload.Type.BIN
+            ? ((BinaryPayload) payload).status()
+            : ((PlaintextMessage) payload).status();
+    boolean isIncoming = status == 0;
+
+    if (payload.type() == Payload.Type.BIN && isIncoming) {
+      Long fromChatId = toLong(host.getId());
+      Integer messageId = toLong(message.getMessageId()).intValue();
+      copyMessageTo(chatId, fromChatId, messageId, "#Host");
+    } else {
+      if (payload.type() == Payload.Type.TXT && isIncoming) {
+        PlaintextMessage textMessage = (PlaintextMessage) payload;
+        payload =
+            new PlaintextMessage(
+                "#Host \n" + textMessage.text(), textMessage.messageId(), textMessage.created());
+      }
+      var context =
+          RoutingContext.create()
+              .withOriginConnection(newConnection)
+              .withFrom(member)
+              .withTo(member)
+              .withDestinationConnection(member.getConnectionUri())
+              .withRequest((MessagePayload) payload);
+
+      try {
+        this.dispatch(context);
+      } catch (RoutingException e) {
+        log.warn("Couldn't send message {}", payload);
+        this.bot.execute(new SendMessage(chatId, FAIL + "Unable to recover this message"));
+      }
+    }
+  }
+
+  private void copyMessageTo(Long toChatId, Long fromChatId, Integer messageId, String caption) {
+    CopyMessage copyMessage =
+        new CopyMessage(toChatId, fromChatId, messageId).disableNotification(true).caption(caption);
+
+    this.bot.execute(copyMessage);
   }
 
   private String onMessage(final Message message, boolean isEdited) {

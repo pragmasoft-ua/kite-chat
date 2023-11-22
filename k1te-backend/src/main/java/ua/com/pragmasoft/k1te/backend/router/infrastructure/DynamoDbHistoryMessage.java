@@ -16,16 +16,13 @@ public class DynamoDbHistoryMessage implements HistoryMessage {
   private String messageId;
   private String content;
   private Instant time;
-  private boolean incoming;
   private long ttl;
 
-  public DynamoDbHistoryMessage(
-      String id, String messageId, String content, Instant time, boolean incoming) {
+  public DynamoDbHistoryMessage(String id, String messageId, String content, Instant time) {
     this.id = id;
     this.messageId = messageId;
     this.content = content;
     this.time = time;
-    this.incoming = incoming;
     this.ttl = Instant.now().plus(DEFAULT_TIMEOUT).getEpochSecond();
   }
 
@@ -84,15 +81,6 @@ public class DynamoDbHistoryMessage implements HistoryMessage {
     this.time = time;
   }
 
-  @Override
-  public boolean isIncoming() {
-    return incoming;
-  }
-
-  public void setIncoming(boolean incoming) {
-    this.incoming = incoming;
-  }
-
   public long getTtl() {
     return ttl;
   }
@@ -115,8 +103,6 @@ public class DynamoDbHistoryMessage implements HistoryMessage {
         + '\''
         + ", time="
         + time
-        + ", incoming="
-        + incoming
         + ", ttl="
         + ttl
         + '}';
