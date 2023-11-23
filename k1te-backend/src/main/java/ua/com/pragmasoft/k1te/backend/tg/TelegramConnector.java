@@ -406,7 +406,6 @@ public class TelegramConnector implements Connector, Closeable {
   private String onSwitchConnection(
       Long chatId, String channelName, String memberId, String newConnection) {
     Member member = this.channels.switchConnection(channelName, memberId, newConnection);
-    Member host = this.channels.findHost(channelName);
 
     var ctx =
         RoutingContext.create()
@@ -420,13 +419,13 @@ public class TelegramConnector implements Connector, Closeable {
         Messages.MessagesRequest.builder().withMember(member).withLimit(HISTORY_LIMIT).build();
     this.messages
         .findAll(messagesRequest)
-        .forEach(message -> processHistoryMessage(chatId, newConnection, member, host, message));
+        .forEach(message -> processHistoryMessage(chatId, newConnection, member, message));
 
     return "✅ You switched to Telegram";
   }
 
   private void processHistoryMessage(
-      Long chatId, String newConnection, Member member, Member host, HistoryMessage message) {
+      Long chatId, String newConnection, Member member, HistoryMessage message) {
     Payload payload = DECODER.apply(message.getContent());
     int status =
         payload.type() == Payload.Type.BIN
@@ -435,7 +434,7 @@ public class TelegramConnector implements Connector, Closeable {
     boolean isIncoming = status == 0;
 
     if (payload.type() == Payload.Type.BIN && isIncoming) {
-      Long fromChatId = toLong(host.getId());
+      Long fromChatId = toLong(member.getPeerMemberId());
       Integer messageId = toLong(message.getMessageId()).intValue();
       copyMessageTo(chatId, fromChatId, messageId, "#Host");
     } else {
