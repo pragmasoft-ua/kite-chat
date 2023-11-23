@@ -236,15 +236,16 @@ public class DynamoDbChannels implements Channels {
 
     member.updateConnectionUri(connectorId, rawConnection);
 
-    var putMemberRequest =
-        PutItemEnhancedRequest.builder(DynamoDbMember.class)
-            .item(member)
-            .conditionExpression(pkAndSkNotExistCondition)
-            .build();
     WriteBatch putMember =
-        WriteBatch.builder(DynamoDbMember.class).addPutItem(putMemberRequest).build();
+        WriteBatch.builder(DynamoDbMember.class)
+            .addPutItem(member)
+            .mappedTableResource(this.membersTable)
+            .build();
     WriteBatch putConnection =
-        WriteBatch.builder(DynamoDBConnection.class).addPutItem(dbConnection).build();
+        WriteBatch.builder(DynamoDBConnection.class)
+            .addPutItem(dbConnection)
+            .mappedTableResource(this.connectionsTable)
+            .build();
     try {
       this.enhancedDynamo.batchWriteItem(
           builder -> builder.addWriteBatch(putMember).addWriteBatch(putConnection));
