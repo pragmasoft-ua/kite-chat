@@ -268,8 +268,8 @@ public class TelegramConnector implements Connector, Closeable {
               new PinChatMessage(destinationChatId, sendResponse.message().messageId())
                   .disableNotification(true);
           bot.execute(pinChatMessage);
-          channels.updateUnAnsweredMessage(
-              from, to, fromLong(sendResponse.message().messageId().longValue()));
+          from.updateUnAnsweredMessage(
+              to, fromLong(sendResponse.message().messageId().longValue()));
           log.debug(
               "Member {} pinned message {}", from.getId(), sendResponse.message().messageId());
         }
@@ -278,7 +278,7 @@ public class TelegramConnector implements Connector, Closeable {
           UnpinChatMessage unpinChatMessage =
               new UnpinChatMessage(destinationChatId).messageId(toLong(pinnedMessageId).intValue());
           bot.execute(unpinChatMessage);
-          this.channels.deleteUnAnsweredMessage(from, to);
+          from.deleteUnAnsweredMessage(to);
           log.debug(
               "Member {} left the Channel, his pinnedMessage {} was deleted",
               from.getId(),
@@ -526,7 +526,7 @@ public class TelegramConnector implements Connector, Closeable {
         UnpinChatMessage unpinChatMessage =
             new UnpinChatMessage(rawChatId).messageId(toLong(pinnedMessageId).intValue());
         bot.execute(unpinChatMessage);
-        channels.deleteUnAnsweredMessage(to, from);
+        to.deleteUnAnsweredMessage(from);
         log.debug("Member {} unpinned Message {}", to.getId(), pinnedMessageId);
       }
     }

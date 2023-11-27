@@ -73,6 +73,7 @@ public class KiteRouter implements Router {
         Instant time = Instant.now();
         this.messages.persist(ctx.to, messageId, content, time);
         ctx.response = new MessageAck(messageId, messageId, time);
+        log.debug("Member was not found. Messages {} was added to Member's history", messageId);
         return;
       }
       ctx.destinationConnection = connectionUri;

@@ -4,10 +4,8 @@ package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnoreNulls;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
+import java.util.Objects;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
 import ua.com.pragmasoft.k1te.backend.router.domain.Connector;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
@@ -101,38 +99,48 @@ public class DynamoDbMember implements Member {
     return connectionUri;
   }
 
-  public Instant getLastMessageTimeForConnection(String connectionUri) {
+  @Override
+  public void updatePeer(String peerMemberId) {
+    if (peerMemberId.equals(this.getPeerMemberId())) {
+      return;
+    }
+    this.setPeerMemberId(peerMemberId);
+  }
+
+  @Override
+  public void updateUnAnsweredMessage(Member toMember, String messageId) {
+    this.pinnedMessages.put(toMember.getId(), messageId);
+  }
+
+  @Override
+  public void deleteUnAnsweredMessage(Member toMember) {
+    this.pinnedMessages.remove(toMember.getId());
+  }
+
+  public void updateConnection(String connectionUri) {
+    this.updateConnection(connectionUri, null, null);
+  }
+
+  @Override
+  public void updateConnection(String connectionUri, String messageId, Instant usageTime) {
     String connectorId = Connector.connectorId(connectionUri);
-    return switch (connectorId) {
-      case (TelegramConnector.TG) -> this.getTgLastMessageTime();
-      case (WsConnector.WS) -> this.getWsLastMessageTime();
-      case ("ai") -> this.getAiLastMessageTime();
-      default -> null;
-    };
-  }
-
-  public void updateConnectionUri(String connectorId, String connectionUri) {
-    updateConnectionUri(connectorId, connectionUri, null, null);
-  }
-
-  public void updateConnectionUri(
-      String connectorId, String connectionUri, String messageId, Instant usageTime) {
+    String rawConnection = Connector.rawConnection(connectionUri);
     Instant activeTime = usageTime != null ? usageTime : Instant.now();
     switch (connectorId) {
       case (TelegramConnector.TG) -> {
-        this.setTgUri(connectionUri);
+        this.setTgUri(rawConnection);
         if (messageId != null) this.setTgLastMessageId(messageId);
         if (usageTime != null) this.setTgLastMessageTime(usageTime);
         this.setTgLastActiveTime(activeTime);
       }
       case (WsConnector.WS) -> {
-        this.setWsUri(connectionUri);
+        this.setWsUri(rawConnection);
         if (messageId != null) this.setWsLastMessageId(messageId);
         if (usageTime != null) this.setWsLastMessageTime(usageTime);
         this.setWsLastActiveTime(activeTime);
       }
       case ("ai") -> {
-        this.setAiUri(connectionUri);
+        this.setAiUri(rawConnection);
         if (messageId != null) this.setAiLastMessageId(messageId);
         if (usageTime != null) this.setAiLastMessageTime(usageTime);
         this.setAiLastActiveTime(activeTime);
@@ -157,6 +165,16 @@ public class DynamoDbMember implements Member {
       }
       default -> throw new IllegalStateException("Unsupported connector id");
     }
+  }
+
+  public Instant getLastMessageTimeForConnection(String connectionUri) {
+    String connectorId = Connector.connectorId(connectionUri);
+    return switch (connectorId) {
+      case (TelegramConnector.TG) -> this.getTgLastMessageTime();
+      case (WsConnector.WS) -> this.getWsLastMessageTime();
+      case ("ai") -> this.getAiLastMessageTime();
+      default -> null;
+    };
   }
 
   public boolean hasConnection(String connection) {
@@ -330,12 +348,77 @@ public class DynamoDbMember implements Member {
     this.pinnedMessages = pinnedMessages;
   }
 
-  public void addPinnedMessage(String memberId, String pinnedMessageId) {
-    this.pinnedMessages.put(memberId, pinnedMessageId);
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    DynamoDbMember member = (DynamoDbMember) o;
+
+    if (host != member.host) return false;
+    if (!Objects.equals(id, member.id)) return false;
+    if (!Objects.equals(channelName, member.channelName)) return false;
+    if (!Objects.equals(tgUri, member.tgUri)) return false;
+    if (!Objects.equals(tgLastActiveTime, member.tgLastActiveTime)) return false;
+    if (!Objects.equals(tgLastMessageTime, member.tgLastMessageTime)) return false;
+    if (!Objects.equals(tgLastMessageId, member.tgLastMessageId)) return false;
+    if (!Objects.equals(wsUri, member.wsUri)) return false;
+    if (!Objects.equals(wsLastActiveTime, member.wsLastActiveTime)) return false;
+    if (!Objects.equals(wsLastMessageTime, member.wsLastMessageTime)) return false;
+    if (!Objects.equals(wsLastMessageId, member.wsLastMessageId)) return false;
+    if (!Objects.equals(aiUri, member.aiUri)) return false;
+    if (!Objects.equals(aiLastActiveTime, member.aiLastActiveTime)) return false;
+    if (!Objects.equals(aiLastMessageTime, member.aiLastMessageTime)) return false;
+    if (!Objects.equals(aiLastMessageId, member.aiLastMessageId)) return false;
+    if (!Objects.equals(userName, member.userName)) return false;
+    if (!Objects.equals(peerMemberId, member.peerMemberId)) return false;
+    return Objects.equals(pinnedMessages, member.pinnedMessages);
   }
 
-  public void deletePinnedMessage(String memberId) {
-    this.pinnedMessages.remove(memberId);
+  @Override
+  public int hashCode() {
+    int result = id != null ? id.hashCode() : 0;
+    result = 31 * result + (channelName != null ? channelName.hashCode() : 0);
+    result = 31 * result + (tgUri != null ? tgUri.hashCode() : 0);
+    result = 31 * result + (tgLastActiveTime != null ? tgLastActiveTime.hashCode() : 0);
+    result = 31 * result + (tgLastMessageTime != null ? tgLastMessageTime.hashCode() : 0);
+    result = 31 * result + (tgLastMessageId != null ? tgLastMessageId.hashCode() : 0);
+    result = 31 * result + (wsUri != null ? wsUri.hashCode() : 0);
+    result = 31 * result + (wsLastActiveTime != null ? wsLastActiveTime.hashCode() : 0);
+    result = 31 * result + (wsLastMessageTime != null ? wsLastMessageTime.hashCode() : 0);
+    result = 31 * result + (wsLastMessageId != null ? wsLastMessageId.hashCode() : 0);
+    result = 31 * result + (aiUri != null ? aiUri.hashCode() : 0);
+    result = 31 * result + (aiLastActiveTime != null ? aiLastActiveTime.hashCode() : 0);
+    result = 31 * result + (aiLastMessageTime != null ? aiLastMessageTime.hashCode() : 0);
+    result = 31 * result + (aiLastMessageId != null ? aiLastMessageId.hashCode() : 0);
+    result = 31 * result + (userName != null ? userName.hashCode() : 0);
+    result = 31 * result + (host ? 1 : 0);
+    result = 31 * result + (peerMemberId != null ? peerMemberId.hashCode() : 0);
+    result = 31 * result + (pinnedMessages != null ? pinnedMessages.hashCode() : 0);
+    return result;
+  }
+
+  public DynamoDbMember copy() {
+    return new DynamoDbMember.DynamoDbMemberBuilder()
+        .withId(this.id)
+        .withChannelName(this.channelName)
+        .withUserName(this.userName)
+        .withHost(this.host)
+        .withPeerMemberId(this.peerMemberId)
+        .withTgUri(this.tgUri)
+        .withTgLastActiveTime(this.tgLastActiveTime)
+        .withTgLastMessageTime(this.tgLastMessageTime)
+        .withTgLastMessageId(this.tgLastMessageId)
+        .withWsUri(this.wsUri)
+        .withWsLastActiveTime(this.wsLastActiveTime)
+        .withWsLastMessageTime(this.wsLastMessageTime)
+        .withWsLastMessageId(this.wsLastMessageId)
+        .withAiUri(this.aiUri)
+        .withAiLastActiveTime(this.aiLastActiveTime)
+        .withAiLastMessageTime(this.aiLastMessageTime)
+        .withAiLastMessageId(this.aiLastMessageId)
+        .withPinnedMessageId(new HashMap<>(this.pinnedMessages))
+        .build();
   }
 
   @Override
@@ -350,27 +433,30 @@ public class DynamoDbMember implements Member {
         + ", tgUri='"
         + tgUri
         + '\''
-        + ", tgLastTime='"
+        + ", tgLastActiveTime="
+        + tgLastActiveTime
+        + ", tgLastMessageTime="
         + tgLastMessageTime
-        + '\''
         + ", tgLastMessageId='"
         + tgLastMessageId
         + '\''
         + ", wsUri='"
         + wsUri
         + '\''
-        + ", wsLastTime='"
+        + ", wsLastActiveTime="
+        + wsLastActiveTime
+        + ", wsLastMessageTime="
         + wsLastMessageTime
-        + '\''
         + ", wsLastMessageId='"
         + wsLastMessageId
         + '\''
         + ", aiUri='"
         + aiUri
         + '\''
-        + ", aiLastTime='"
+        + ", aiLastActiveTime="
+        + aiLastActiveTime
+        + ", aiLastMessageTime="
         + aiLastMessageTime
-        + '\''
         + ", aiLastMessageId='"
         + aiLastMessageId
         + '\''
@@ -382,7 +468,7 @@ public class DynamoDbMember implements Member {
         + ", peerMemberId='"
         + peerMemberId
         + '\''
-        + ", pinnedMessageId="
+        + ", pinnedMessages="
         + pinnedMessages
         + '}';
   }
@@ -409,8 +495,8 @@ public class DynamoDbMember implements Member {
       return this;
     }
 
-    public DynamoDbMemberBuilder withTgLastTime(Instant tgLastTime) {
-      this.member.setTgLastMessageTime(tgLastTime);
+    public DynamoDbMemberBuilder withTgLastActiveTime(Instant tgLastActiveTime) {
+      this.member.setTgLastActiveTime(tgLastActiveTime);
       return this;
     }
 
@@ -419,13 +505,23 @@ public class DynamoDbMember implements Member {
       return this;
     }
 
+    public DynamoDbMemberBuilder withTgLastMessageTime(Instant tgLastMessageTime) {
+      this.member.setTgLastMessageTime(tgLastMessageTime);
+      return this;
+    }
+
     public DynamoDbMemberBuilder withWsUri(String wsUri) {
       this.member.setWsUri(wsUri);
       return this;
     }
 
-    public DynamoDbMemberBuilder withWsLastTime(Instant wsLastTime) {
-      this.member.setWsLastMessageTime(wsLastTime);
+    public DynamoDbMemberBuilder withWsLastActiveTime(Instant wsLastActiveTime) {
+      this.member.setWsLastActiveTime(wsLastActiveTime);
+      return this;
+    }
+
+    public DynamoDbMemberBuilder withWsLastMessageTime(Instant wsLastMessageTime) {
+      this.member.setWsLastMessageTime(wsLastMessageTime);
       return this;
     }
 
@@ -439,8 +535,13 @@ public class DynamoDbMember implements Member {
       return this;
     }
 
-    public DynamoDbMemberBuilder withAiLastTime(Instant aiLastTime) {
-      this.member.setAiLastMessageTime(aiLastTime);
+    public DynamoDbMemberBuilder withAiLastActiveTime(Instant aiLastActiveTime) {
+      this.member.setAiLastActiveTime(aiLastActiveTime);
+      return this;
+    }
+
+    public DynamoDbMemberBuilder withAiLastMessageTime(Instant aiLastMessageTime) {
+      this.member.setAiLastMessageTime(aiLastMessageTime);
       return this;
     }
 

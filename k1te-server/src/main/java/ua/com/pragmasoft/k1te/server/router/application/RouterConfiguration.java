@@ -2,8 +2,8 @@
 package ua.com.pragmasoft.k1te.server.router.application;
 
 import io.quarkus.arc.DefaultBean;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.context.Dependent;
+import jakarta.enterprise.context.*;
+import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.Produces;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -16,12 +16,17 @@ import ua.com.pragmasoft.k1te.backend.router.infrastructure.DynamoDbMessages;
 public class RouterConfiguration {
 
   @Produces
-  @ApplicationScoped
+  @RequestScoped
   @DefaultBean
-  public Channels channels(
+  public DynamoDbChannels channels(
       DynamoDbEnhancedClient ddb,
       @ConfigProperty(name = "serverless.environment") final String serverlessEnvironmentName) {
     return new DynamoDbChannels(ddb, serverlessEnvironmentName);
+  }
+
+  public void observeRequestDestroyed1(
+      @Observes @BeforeDestroyed(RequestScoped.class) Object event, DynamoDbChannels channels) {
+    channels.flush();
   }
 
   @Produces
@@ -36,15 +41,15 @@ public class RouterConfiguration {
   }
 
   @Produces
-  @Dependent
-  public PeerUpdatePostProcessor peerUpdatePostProcessor(Channels channels) {
-    return new PeerUpdatePostProcessor(channels);
+  @ApplicationScoped
+  public PeerUpdatePostProcessor peerUpdatePostProcessor() {
+    return new PeerUpdatePostProcessor();
   }
 
   @Produces
-  @Dependent
-  public RouterPostProcessor historyPostProcessor(Channels channels, Messages messages) {
-    return new HistoryPostProcessor(channels, messages);
+  @ApplicationScoped
+  public RouterPostProcessor historyPostProcessor(Messages messages) {
+    return new HistoryPostProcessor(messages);
   }
 
   @Produces

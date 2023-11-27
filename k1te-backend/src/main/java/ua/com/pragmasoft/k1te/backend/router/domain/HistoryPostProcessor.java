@@ -7,11 +7,9 @@ import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 public class HistoryPostProcessor implements RouterPostProcessor {
 
   private static final PayloadEncoder ENCODER = new PayloadEncoder();
-  private final Channels channels;
   private final Messages messages;
 
-  public HistoryPostProcessor(Channels channels, Messages messages) {
-    this.channels = channels;
+  public HistoryPostProcessor(Messages messages) {
     this.messages = messages;
   }
 
@@ -33,16 +31,16 @@ public class HistoryPostProcessor implements RouterPostProcessor {
         toMessageId = destinationMessageId;
       }
 
-      this.channels.updateConnection(
-          ctx.from, ctx.originConnection, ownerMessageId, ctx.response.delivered());
-      this.channels.updateConnection(
-          ctx.to, ctx.destinationConnection, toMessageId, ctx.response.delivered());
+      Member from = ctx.from;
+      Member to = ctx.to;
+      from.updateConnection(ctx.originConnection, ownerMessageId, ctx.response.delivered());
+      to.updateConnection(ctx.destinationConnection, toMessageId, ctx.response.delivered());
 
       String content = ENCODER.apply(ctx.request);
-      if (ctx.from.isHost()) {
-        this.messages.persist(ctx.to, toMessageId, content, ctx.response.delivered());
+      if (from.isHost()) {
+        this.messages.persist(to, toMessageId, content, ctx.response.delivered());
       } else {
-        this.messages.persist(ctx.from, ownerMessageId, content, ctx.response.delivered());
+        this.messages.persist(from, ownerMessageId, content, ctx.response.delivered());
       }
     }
   }
