@@ -8,18 +8,10 @@ public class PeerUpdatePostProcessor implements RouterPostProcessor {
 
   private static final Logger log = LoggerFactory.getLogger(PeerUpdatePostProcessor.class);
 
-  private final Channels channels;
-
-  public PeerUpdatePostProcessor(Channels channels) {
-    this.channels = channels;
-  }
-
   @Override
   public void accept(RoutingContext ctx) {
-    if (!ctx.isIdle) {
-      this.channels.updatePeer(ctx.to, ctx.from.getId());
-      this.channels.updatePeer(ctx.from, ctx.to.getId());
-      log.debug("PeerMembers were updated");
-    }
+    ctx.to.updatePeer(ctx.from.getId());
+    ctx.from.updatePeer(ctx.to.getId());
+    log.debug("PeerMembers were updated");
   }
 }

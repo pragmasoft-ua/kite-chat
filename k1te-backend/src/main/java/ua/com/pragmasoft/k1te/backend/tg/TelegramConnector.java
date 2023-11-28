@@ -22,7 +22,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +44,7 @@ public class TelegramConnector implements Connector, Closeable {
   public static final String TG = "tg";
   private static final String OK = "ok";
   private static final String SUCCESS = "✅ ";
+  private static final String FAIL = "⛔ ";
   private static final String HELP =
       """
       This bot allows to set up support channel in the current chat as a host
@@ -252,7 +252,7 @@ public class TelegramConnector implements Connector, Closeable {
               .formatted(this.id(), sendResponse.errorCode(), sendResponse.description()));
     }
 
-    if (PIN_FEATURE_FLAG && !ctx.isIdle) {
+    if (PIN_FEATURE_FLAG && from != to) {
       String text = sendResponse.message().text();
       boolean isJoinMessage =
           text != null && text.contains(SUCCESS) && text.contains("joined channel");
@@ -268,8 +268,8 @@ public class TelegramConnector implements Connector, Closeable {
               new PinChatMessage(destinationChatId, sendResponse.message().messageId())
                   .disableNotification(true);
           bot.execute(pinChatMessage);
-          channels.updateUnAnsweredMessage(
-              from, to, fromLong(sendResponse.message().messageId().longValue()));
+          from.updateUnAnsweredMessage(
+              to, fromLong(sendResponse.message().messageId().longValue()));
           log.debug(
               "Member {} pinned message {}", from.getId(), sendResponse.message().messageId());
         }
@@ -278,7 +278,7 @@ public class TelegramConnector implements Connector, Closeable {
           UnpinChatMessage unpinChatMessage =
               new UnpinChatMessage(destinationChatId).messageId(toLong(pinnedMessageId).intValue());
           bot.execute(unpinChatMessage);
-          this.channels.deleteUnAnsweredMessage(from, to);
+          from.deleteUnAnsweredMessage(to);
           log.debug(
               "Member {} left the Channel, his pinnedMessage {} was deleted",
               from.getId(),
@@ -406,7 +406,6 @@ public class TelegramConnector implements Connector, Closeable {
   private String onSwitchConnection(
       Long chatId, String channelName, String memberId, String newConnection) {
     Member member = this.channels.switchConnection(channelName, memberId, newConnection);
-    Member host = this.channels.findHost(channelName);
 
     var ctx =
         RoutingContext.create()
@@ -416,38 +415,57 @@ public class TelegramConnector implements Connector, Closeable {
                 new PlaintextMessage("✅ %s switched to Telegram".formatted(member.getUserName())));
     this.router.dispatch(ctx);
 
-    List<HistoryMessage> historyMessages = this.messages.findAll(member, null, HISTORY_LIMIT);
+    Messages.MessagesRequest messagesRequest =
+        Messages.MessagesRequest.builder().withMember(member).withLimit(HISTORY_LIMIT).build();
+    this.messages
+        .findAll(messagesRequest)
+        .forEach(message -> processHistoryMessage(chatId, newConnection, member, message));
 
-    for (int i = historyMessages.size() - 1; i >= 0; i--) {
-      HistoryMessage message = historyMessages.get(i);
-      Payload payload = DECODER.apply(message.getContent());
+    return "✅ You switched to Telegram";
+  }
 
-      if (message.isIncoming() && payload.type() == Payload.Type.BIN) {
-        Long fromChatId = toLong(host.getId());
-        int messageId = toLong(message.getMessageId()).intValue();
-        CopyMessage copyMessage =
-            new CopyMessage(chatId, fromChatId, messageId)
-                .disableNotification(true)
-                .caption("#Host");
-        this.bot.execute(copyMessage);
-      } else {
-        if (message.isIncoming() && payload.type() == Payload.Type.TXT) {
-          PlaintextMessage textMessage = (PlaintextMessage) payload;
-          payload =
-              new PlaintextMessage(
-                  "#Host \n" + textMessage.text(), textMessage.messageId(), textMessage.created());
-        }
-        var context =
-            RoutingContext.create()
-                .withOriginConnection(newConnection)
-                .withFrom(member)
-                .withTo(member)
-                .isIdle(true)
-                .withRequest((MessagePayload) payload);
-        this.router.dispatch(context);
+  private void processHistoryMessage(
+      Long chatId, String newConnection, Member member, HistoryMessage message) {
+    Payload payload = DECODER.apply(message.getContent());
+    int status =
+        payload.type() == Payload.Type.BIN
+            ? ((BinaryPayload) payload).status()
+            : ((PlaintextMessage) payload).status();
+    boolean isIncoming = status == 0;
+
+    if (payload.type() == Payload.Type.BIN && isIncoming) {
+      Long fromChatId = toLong(member.getPeerMemberId());
+      Integer messageId = toLong(message.getMessageId()).intValue();
+      copyMessageTo(chatId, fromChatId, messageId, "#Host");
+    } else {
+      if (payload.type() == Payload.Type.TXT && isIncoming) {
+        PlaintextMessage textMessage = (PlaintextMessage) payload;
+        payload =
+            new PlaintextMessage(
+                "#Host \n" + textMessage.text(), textMessage.messageId(), textMessage.created());
+      }
+      var context =
+          RoutingContext.create()
+              .withOriginConnection(newConnection)
+              .withFrom(member)
+              .withTo(member)
+              .withDestinationConnection(member.getConnectionUri())
+              .withRequest((MessagePayload) payload);
+
+      try {
+        this.dispatch(context);
+      } catch (RoutingException e) {
+        log.warn("Couldn't send message {}", payload);
+        this.bot.execute(new SendMessage(chatId, FAIL + "Unable to recover this message"));
       }
     }
-    return "✅ You switched to Telegram";
+  }
+
+  private void copyMessageTo(Long toChatId, Long fromChatId, Integer messageId, String caption) {
+    CopyMessage copyMessage =
+        new CopyMessage(toChatId, fromChatId, messageId).disableNotification(true).caption(caption);
+
+    this.bot.execute(copyMessage);
   }
 
   private String onMessage(final Message message, boolean isEdited) {
@@ -462,6 +480,7 @@ public class TelegramConnector implements Connector, Closeable {
     Member to = this.channels.find(from.getChannelName(), toMemberId);
     String msgId = fromLong(message.messageId().longValue());
     Instant messageTimestamp = Instant.ofEpochSecond(message.date());
+    int status = from.isHost() ? 0 : 2;
     MessagePayload request = null;
     var document = message.document();
     if (null != document) {
@@ -472,7 +491,8 @@ public class TelegramConnector implements Connector, Closeable {
               document.fileName(),
               document.mimeType(),
               document.fileSize(),
-              messageTimestamp);
+              messageTimestamp,
+              status);
     } else if (null != message.photo() && message.photo().length > 0) {
       PhotoSize photo = largestPhoto(message.photo());
       var photoFileName =
@@ -484,9 +504,10 @@ public class TelegramConnector implements Connector, Closeable {
               photoFileName,
               ContentTypes.PHOTO_MIME_TYPE,
               photo.fileSize(),
-              messageTimestamp);
+              messageTimestamp,
+              status);
     } else if (null != message.text()) {
-      request = new PlaintextMessage(message.text(), msgId, messageTimestamp);
+      request = new PlaintextMessage(message.text(), msgId, messageTimestamp, status);
     } else {
       throw new RoutingException("unsupported message type");
     }
@@ -505,7 +526,7 @@ public class TelegramConnector implements Connector, Closeable {
         UnpinChatMessage unpinChatMessage =
             new UnpinChatMessage(rawChatId).messageId(toLong(pinnedMessageId).intValue());
         bot.execute(unpinChatMessage);
-        channels.deleteUnAnsweredMessage(to, from);
+        to.deleteUnAnsweredMessage(from);
         log.debug("Member {} unpinned Message {}", to.getId(), pinnedMessageId);
       }
     }
@@ -706,6 +727,7 @@ public class TelegramConnector implements Connector, Closeable {
     private final String fileType;
     private final long fileSize;
     private final Instant created;
+    private final Integer status;
 
     private TelegramBinaryMessage(
         String messageId,
@@ -713,13 +735,15 @@ public class TelegramConnector implements Connector, Closeable {
         String fileName,
         String fileType,
         long fileSize,
-        Instant created) {
+        Instant created,
+        Integer status) {
       this.messageId = messageId;
       this.fileId = fileId;
       this.fileName = fileName;
       this.fileType = fileType;
       this.fileSize = fileSize;
       this.created = created;
+      this.status = status;
     }
 
     @Override
@@ -762,6 +786,11 @@ public class TelegramConnector implements Connector, Closeable {
     @Override
     public Instant created() {
       return this.created;
+    }
+
+    @Override
+    public Integer status() {
+      return this.status;
     }
   }
 }

@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.enterprise.context.control.ActivateRequestContext;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.io.IOException;
@@ -15,6 +16,7 @@ import ua.com.pragmasoft.k1te.backend.shared.KiteException;
 import ua.com.pragmasoft.k1te.serverless.handler.event.LambdaEvent;
 
 @Named(value = "main")
+@ActivateRequestContext
 public class RequestDispatcher implements RequestStreamHandler {
 
   private final ObjectMapper objectMapper;

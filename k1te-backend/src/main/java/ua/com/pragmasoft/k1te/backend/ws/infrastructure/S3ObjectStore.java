@@ -66,7 +66,8 @@ public final class S3ObjectStore implements ObjectStore {
           transientPayload.fileType(),
           transientPayload.fileSize(),
           transientPayload.messageId(),
-          transientPayload.created());
+          transientPayload.created(),
+          transientPayload.status());
     } catch (IOException e) {
       throw new IllegalStateException(e.getMessage(), e);
     }

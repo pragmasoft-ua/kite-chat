@@ -15,6 +15,4 @@ public interface HistoryMessage {
   String getContent();
 
   Instant getTime();
-
-  boolean isIncoming();
 }

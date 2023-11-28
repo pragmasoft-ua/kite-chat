@@ -1,20 +1,14 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
-import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Expression;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.*;
 import software.amazon.awssdk.enhanced.dynamodb.model.*;
-import software.amazon.awssdk.services.dynamodb.model.CancellationReason;
-import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 import ua.com.pragmasoft.k1te.backend.router.domain.ChannelName;
 import ua.com.pragmasoft.k1te.backend.router.domain.Channels;
@@ -30,6 +24,8 @@ public class DynamoDbChannels implements Channels {
   private static final Logger log = LoggerFactory.getLogger(DynamoDbChannels.class);
   private static final boolean AI_FEATURE_FLAG = false;
 
+  private final HashMap<String, DynamoDbMember> stash = new HashMap<>(8);
+
   public static final String MEMBERS = "Members";
   public static final String CHANNELS = "Channels";
   public static final String CONNECTIONS = "Connections";
@@ -40,24 +36,6 @@ public class DynamoDbChannels implements Channels {
       Expression.builder()
           .expression("attribute_not_exists(#attr)")
           .putExpressionName("#attr", "name") // name is a dynamodb keyword
-          .build();
-
-  private static Expression pkAndSkNotExistCondition =
-      Expression.builder()
-          .expression("attribute_not_exists(#pk) AND attribute_not_exists(#sk)")
-          .expressionNames(
-              Map.of(
-                  "#pk", "ChannelName",
-                  "#sk", "id"))
-          .build();
-
-  private static final Expression pkAndSkExistCondition =
-      Expression.builder()
-          .expression("attribute_exists(#pk) AND attribute_exists(#sk)")
-          .expressionNames(
-              Map.of(
-                  "#pk", "channelName",
-                  "#sk", "id"))
           .build();
 
   private final String channelsTableName;
@@ -93,7 +71,6 @@ public class DynamoDbChannels implements Channels {
 
   @Override
   public Member hostChannel(String channel, String memberId, String ownerConnection, String title) {
-
     ChannelName.validate(channel);
     Objects.requireNonNull(memberId, "member id");
     Objects.requireNonNull(ownerConnection, "owner connection");
@@ -110,7 +87,7 @@ public class DynamoDbChannels implements Channels {
             .withUserName(title)
             .withHost(true)
             .build();
-    hostMember.updateConnectionUri(connectorId, rawConnection);
+    hostMember.updateConnection(ownerConnection);
 
     if (AI_FEATURE_FLAG) {
       hostMember.setAiUri("Ai URI");
@@ -213,21 +190,15 @@ public class DynamoDbChannels implements Channels {
     Key memberKey = Key.builder().partitionValue(channelName).sortValue(memberId).build();
     DynamoDbMember maybeMember = this.membersTable.getItem(memberKey);
     if (maybeMember != null) {
-      if (maybeMember.hasConnection(memberConnection)) {
-        throw new ValidationException("You are already in this Channel");
-      }
       DynamoDBConnection dbConnection =
           new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
-      maybeMember.updateConnectionUri(connectorId, rawConnection);
-      try {
-        this.enhancedDynamo.transactWriteItems(
-            tx ->
-                tx.addUpdateItem(this.membersTable, maybeMember)
-                    .addPutItem(this.connectionsTable, dbConnection));
-        return maybeMember;
-      } catch (Exception e) {
-        throw new KiteException(e.getMessage(), e);
+      if (!maybeMember.hasConnection(memberConnection)) {
+        maybeMember.updateConnection(memberConnection); // TODO: 24.11.2023
+        this.membersTable.updateItem(maybeMember);
+        log.debug("Member already exists but connection was updated");
       }
+      this.connectionsTable.putItem(dbConnection);
+      return maybeMember;
     }
 
     final String hostId = channel.getHost();
@@ -239,39 +210,35 @@ public class DynamoDbChannels implements Channels {
             .withHost(false)
             .withPeerMemberId(hostId)
             .build();
-    member.updateConnectionUri(connectorId, rawConnection);
     DynamoDBConnection dbConnection =
         new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
 
-    var putMemberRequest =
-        TransactPutItemEnhancedRequest.builder(DynamoDbMember.class)
-            .item(member)
-            .conditionExpression(pkAndSkNotExistCondition)
+    member.updateConnection(memberConnection);
+
+    WriteBatch putMember =
+        WriteBatch.builder(DynamoDbMember.class)
+            .addPutItem(member)
+            .mappedTableResource(this.membersTable)
+            .build();
+    WriteBatch putConnection =
+        WriteBatch.builder(DynamoDBConnection.class)
+            .addPutItem(dbConnection)
+            .mappedTableResource(this.connectionsTable)
             .build();
     try {
-      this.enhancedDynamo.transactWriteItems(
-          tx ->
-              tx.addPutItem(this.membersTable, putMemberRequest)
-                  .addPutItem(this.connectionsTable, dbConnection));
+      this.enhancedDynamo.batchWriteItem(
+          builder -> builder.addWriteBatch(putMember).addWriteBatch(putConnection));
       return member;
-    } catch (TransactionCanceledException e) {
-      List<CancellationReason> reasons = e.cancellationReasons();
-      String reason =
-          reasons.get(0).code().equals(CONDITION_FAILED)
-              ? "You can't /join the same Channel"
-              : reasons.get(1).message();
-      throw new ConflictException(reason, e);
+    } catch (Exception e) {
+      throw new ConflictException(e.getMessage(), e);
     }
   }
 
-  // TODO: 20.11.2023 Should delete only connection so that Member could reconnect
   @Override
   public Member leaveChannel(String memberConnection) {
-
     Objects.requireNonNull(memberConnection, "member connection");
 
     DynamoDbMember member = this.find(memberConnection);
-
     if (member.isHost()) {
       throw new ValidationException("Host member cannot leave channel. You can only drop it");
     }
@@ -279,50 +246,29 @@ public class DynamoDbChannels implements Channels {
     String rawConnection = Connector.rawConnection(memberConnection);
     Key connectionKey = Key.builder().partitionValue(connectorId).sortValue(rawConnection).build();
 
-    if (!member.getConnectionUri().equals(memberConnection)) {
-      member.deleteConnection(connectorId);
-      this.enhancedDynamo.transactWriteItems(
-          tx ->
-              tx.addDeleteItem(
-                      this.connectionsTable,
-                      connectionKey) // Deletes only connection because it's not the most recent one
-                  .addUpdateItem(this.membersTable, member));
-      return member;
-    }
-
+    member.deleteConnection(connectorId);
     try {
-      this.enhancedDynamo.transactWriteItems(
-          tx ->
-              tx.addDeleteItem(this.connectionsTable, connectionKey)
-                  .addDeleteItem(this.membersTable, member));
+      this.connectionsTable.deleteItem(connectionKey);
+      // Member is updated via flush()
+      return member;
     } catch (Exception e) { // TransactionCanceledException
       throw new KiteException(e.getMessage(), e);
     }
-
-    return member;
   }
 
   @Override
   public DynamoDbMember find(String channel, String id) {
+    DynamoDbMember cachedMember = this.stash.get(this.constructCachedMemberId(channel, id));
+    if (cachedMember != null) return cachedMember;
+
     Key memberKey = Key.builder().partitionValue(channel).sortValue(id).build();
     DynamoDbMember member = this.membersTable.getItem(memberKey);
     if (null == member) {
       throw new NotFoundException("Not found member");
     }
+
+    this.stash.put(constructCachedMemberId(channel, id), member);
     return member;
-  }
-
-  @Override
-  public Member findHost(String channelName) {
-    Objects.requireNonNull(channelName);
-    ChannelName.validate(channelName);
-
-    Key channelKey = Key.builder().partitionValue(channelName).build();
-    DynamoDbChannel channel = this.channelsTable.getItem(channelKey);
-    if (channel == null)
-      throw new NotFoundException("Channel has not been found by a given channelName");
-
-    return find(channelName, channel.getHost());
   }
 
   @Override
@@ -355,76 +301,37 @@ public class DynamoDbChannels implements Channels {
     String connectorId = Connector.connectorId(newConnection);
     String rawConnection = Connector.rawConnection(newConnection);
 
-    member.updateConnectionUri(connectorId, rawConnection);
-
+    member.updateConnection(newConnection);
     DynamoDBConnection dbConnection =
         new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
 
-    try {
-      this.enhancedDynamo.transactWriteItems(
-          tx -> tx.addUpdateItem(membersTable, member).addPutItem(connectionsTable, dbConnection));
-    } catch (TransactionCanceledException e) {
-      throw new KiteException(e.getMessage(), e);
-    }
+    this.connectionsTable.putItem(dbConnection);
+    // Member is updated via flush()
     return member;
   }
 
-  @Override
-  public void updatePeer(Member myMember, String peerMember) {
-    Objects.requireNonNull(peerMember, "peer Member");
-    if (peerMember.equals(myMember.getPeerMemberId())) {
-      return;
+  public void flush() {
+    List<DynamoDbMember> cachedMembers =
+        this.stash.values().stream().filter(DynamoDbMember::isDirty).toList();
+    if (!cachedMembers.isEmpty()) {
+      List<WriteBatch> writeBatches =
+          cachedMembers.stream()
+              .map(
+                  member ->
+                      WriteBatch.builder(DynamoDbMember.class)
+                          .mappedTableResource(this.membersTable)
+                          .addPutItem(member)
+                          .build())
+              .toList();
+      this.enhancedDynamo.batchWriteItem(builder -> builder.writeBatches(writeBatches));
+      this.stash.clear();
     }
-    DynamoDbMember member = (DynamoDbMember) myMember;
-    member.setPeerMemberId(peerMember);
-
-    this.updateMemberIfExist(member);
+    log.debug("{} flush", this.getClass().getSimpleName());
   }
 
-  @Override
-  public void updateConnection(
-      Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {
-    Objects.requireNonNull(connectionUri);
-    Objects.requireNonNull(messageId);
-    Objects.requireNonNull(usageTime);
-
-    String connectorId = Connector.connectorId(connectionUri);
-    String rawConnection = Connector.rawConnection(connectionUri);
-
-    DynamoDbMember member = (DynamoDbMember) memberToUpdate;
-
-    member.updateConnectionUri(connectorId, rawConnection, messageId, usageTime);
-    this.updateMemberIfExist(member);
-  }
-
-  @Override
-  public void updateUnAnsweredMessage(Member from, Member to, String pinnedMessagedId) {
-    DynamoDbMember member = (DynamoDbMember) from;
-    member.addPinnedMessage(to.getId(), pinnedMessagedId);
-
-    this.updateMemberIfExist(member);
-  }
-
-  @Override
-  public void deleteUnAnsweredMessage(Member from, Member to) {
-    DynamoDbMember member = (DynamoDbMember) from;
-    member.deletePinnedMessage(to.getId());
-
-    this.updateMemberIfExist(member);
-  }
-
-  private void updateMemberIfExist(DynamoDbMember member) {
-    var updateRequest =
-        UpdateItemEnhancedRequest.builder(DynamoDbMember.class)
-            .item(member)
-            .conditionExpression(pkAndSkExistCondition)
-            .build();
-    try {
-      this.membersTable.updateItem(updateRequest);
-    } catch (ConditionalCheckFailedException conditionalException) {
-      log.warn("Member has already left the Channel");
-    } catch (Exception e) {
-      throw new ValidationException(e.getMessage(), e);
-    }
+  private String constructCachedMemberId(String channelName, String memberId) {
+    Objects.requireNonNull(channelName);
+    Objects.requireNonNull(memberId);
+    return channelName + "::" + memberId;
   }
 }

@@ -60,7 +60,11 @@ public class PayloadDecoder implements Function<String, Payload> {
     String messageId = array.getString(1);
     String text = array.getString(2);
     Instant timestamp = Instant.parse(array.getString(3));
-    return new PlaintextMessage(text, messageId, timestamp);
+    int status = 0;
+    if (array.size() > 4) {
+      status = array.getJsonNumber(4).intValue();
+    }
+    return new PlaintextMessage(text, messageId, timestamp, status);
   }
 
   private static Payload decodeBinaryMessage(JsonArray array) {
@@ -71,7 +75,11 @@ public class PayloadDecoder implements Function<String, Payload> {
     var fileType = array.getString(4);
     var fileSize = array.getJsonNumber(5).longValueExact();
     Instant timestamp = Instant.parse(array.getString(6));
-    return new BinaryMessage(url, fileName, fileType, fileSize, messageId, timestamp);
+    int status = 0;
+    if (array.size() > 7) {
+      status = array.getJsonNumber(7).intValue();
+    }
+    return new BinaryMessage(url, fileName, fileType, fileSize, messageId, timestamp, status);
   }
 
   private static Payload decodeUploadRequest(JsonArray array) {

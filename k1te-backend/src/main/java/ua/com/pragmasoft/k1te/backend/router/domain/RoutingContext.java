@@ -14,7 +14,6 @@ public final class RoutingContext {
   public Member to;
   public MessagePayload request;
   public MessageAck response;
-  public boolean isIdle;
   Map<String, Object> attributes;
 
   public Map<String, Object> attributes() {
@@ -60,11 +59,6 @@ public final class RoutingContext {
 
   public RoutingContext withAttribute(String name, Object value) {
     this.attributes().put(name, value);
-    return this;
-  }
-
-  public RoutingContext isIdle(boolean isIdle) {
-    this.isIdle = isIdle;
     return this;
   }
 

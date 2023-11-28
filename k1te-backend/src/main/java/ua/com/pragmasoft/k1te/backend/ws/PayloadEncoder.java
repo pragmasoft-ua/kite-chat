@@ -63,14 +63,16 @@ public class PayloadEncoder implements Function<Payload, String> {
 
   private static void encodePlaintext(Payload payload, JsonWriter jw) {
     var message = (PlaintextMessage) payload;
-    var array =
+    var arrayBuilder =
         Json.createArrayBuilder()
             .add(payload.type().name())
             .add(message.messageId())
             .add(message.text())
-            .add(message.created().toString())
-            .build();
-    jw.writeArray(array);
+            .add(message.created().toString());
+    if (message.status() != null && message.status() != 0) {
+      arrayBuilder.add(message.status());
+    }
+    jw.writeArray(arrayBuilder.build());
   }
 
   private static void encodeBinary(Payload payload, JsonWriter jw) {
@@ -78,7 +80,7 @@ public class PayloadEncoder implements Function<Payload, String> {
         payload instanceof TelegramConnector.TelegramBinaryMessage
             ? (BinaryPayload) payload
             : (BinaryMessage) payload;
-    var array =
+    var arrayBuilder =
         Json.createArrayBuilder()
             .add(payload.type().name())
             .add(message.messageId())
@@ -86,9 +88,11 @@ public class PayloadEncoder implements Function<Payload, String> {
             .add(message.fileName())
             .add(message.fileType())
             .add(message.fileSize())
-            .add(message.created().toString())
-            .build();
-    jw.writeArray(array);
+            .add(message.created().toString());
+    if (message.status() != null && message.status() != 0) {
+      arrayBuilder.add(message.status());
+    }
+    jw.writeArray(arrayBuilder.build());
   }
 
   private static void encodeUploadResponse(Payload payload, JsonWriter jw) {

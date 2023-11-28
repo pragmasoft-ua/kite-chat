@@ -6,7 +6,6 @@ import static ua.com.pragmasoft.k1te.server.standalone.infrastructure.PanacheMem
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
-import java.time.Instant;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,12 +142,6 @@ public class PanacheChannels implements Channels {
   }
 
   @Override
-  public Member findHost(String channelName) {
-    // TODO: 20.11.2023
-    return null;
-  }
-
-  @Override
   public String findUnAnsweredMessage(Member from, Member to) {
     Objects.requireNonNull(from);
     Objects.requireNonNull(to);
@@ -164,41 +157,43 @@ public class PanacheChannels implements Channels {
     return null;
   }
 
-  @Override
-  public void updatePeer(Member recipientMember, String peerMemberId) {
-    Objects.requireNonNull(peerMemberId, "peer Member");
-    if (peerMemberId.equals(recipientMember.getPeerMemberId())) {
-      return;
-    }
-    PanacheMember member =
-        PanacheMember.findById(buildId(recipientMember.getChannelName(), recipientMember.getId()));
-    member.setPeerMemberId(peerMemberId);
-    member.persistAndFlush();
-  }
-
-  @Override
-  public void updateUnAnsweredMessage(Member from, Member to, String pinnedMessageId) {
-    Objects.requireNonNull(from);
-    Objects.requireNonNull(to);
-    Objects.requireNonNull(pinnedMessageId);
-
-    PanacheMember member = (PanacheMember) from;
-    var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
-    PanachePinnedMessage pinnedMessage = new PanachePinnedMessage(pinnedMessagePK, pinnedMessageId);
-    PanachePinnedMessage.getEntityManager().merge(pinnedMessage);
-  }
-
-  @Override
-  public void deleteUnAnsweredMessage(Member from, Member to) {
-    Objects.requireNonNull(from);
-    Objects.requireNonNull(to);
-
-    PanacheMember member = (PanacheMember) from;
-    var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
-    PanachePinnedMessage.deleteById(pinnedMessagePK);
-  }
-
-  @Override
-  public void updateConnection(
-      Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {}
+  //  @Override
+  //  public void updatePeer(Member recipientMember, String peerMemberId) {
+  //    Objects.requireNonNull(peerMemberId, "peer Member");
+  //    if (peerMemberId.equals(recipientMember.getPeerMemberId())) {
+  //      return;
+  //    }
+  //    PanacheMember member =
+  //        PanacheMember.findById(buildId(recipientMember.getChannelName(),
+  // recipientMember.getId()));
+  //    member.setPeerMemberId(peerMemberId);
+  //    member.persistAndFlush();
+  //  }
+  //
+  //  @Override
+  //  public void updateUnAnsweredMessage(Member from, Member to, String pinnedMessageId) {
+  //    Objects.requireNonNull(from);
+  //    Objects.requireNonNull(to);
+  //    Objects.requireNonNull(pinnedMessageId);
+  //
+  //    PanacheMember member = (PanacheMember) from;
+  //    var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
+  //    PanachePinnedMessage pinnedMessage = new PanachePinnedMessage(pinnedMessagePK,
+  // pinnedMessageId);
+  //    PanachePinnedMessage.getEntityManager().merge(pinnedMessage);
+  //  }
+  //
+  //  @Override
+  //  public void deleteUnAnsweredMessage(Member from, Member to) {
+  //    Objects.requireNonNull(from);
+  //    Objects.requireNonNull(to);
+  //
+  //    PanacheMember member = (PanacheMember) from;
+  //    var pinnedMessagePK = new PanachePinnedMessage.PinnedMessagePK(member, to.getId());
+  //    PanachePinnedMessage.deleteById(pinnedMessagePK);
+  //  }
+  //
+  //  @Override
+  //  public void updateConnection(
+  //      Member memberToUpdate, String connectionUri, String messageId, Instant usageTime) {}
 }

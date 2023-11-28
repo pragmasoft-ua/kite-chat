@@ -5,6 +5,7 @@ import io.quarkus.arc.profile.IfBuildProfile;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
@@ -65,6 +66,20 @@ public class PanacheMember extends PanacheEntityBase implements Member {
   }
 
   @Override
+  public void updateUnAnsweredMessage(Member toMember, String messageId) {
+    // TODO: 24.11.2023
+  }
+
+  @Override
+  public void updatePeer(String peerMemberId) {}
+
+  @Override
+  public void updateConnection(String connectionUri, String messageId, Instant usageTime) {}
+
+  @Override
+  public void deleteUnAnsweredMessage(Member toMember) {}
+
+  @Override
   public String getId() {
     return this.memberPK.memberId;
   }
@@ -86,11 +101,6 @@ public class PanacheMember extends PanacheEntityBase implements Member {
 
   public String getConnectionUri() {
     return this.connectionUri;
-  }
-
-  @Override
-  public String getLastMessageId() {
-    return null;
   }
 
   @Override

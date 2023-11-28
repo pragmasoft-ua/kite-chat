@@ -10,6 +10,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import ua.com.pragmasoft.k1te.backend.router.domain.Channels;
+import ua.com.pragmasoft.k1te.backend.router.domain.Messages;
 import ua.com.pragmasoft.k1te.backend.router.domain.Router;
 import ua.com.pragmasoft.k1te.backend.ws.ObjectStore;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
@@ -39,8 +40,9 @@ public class WsConfiguration {
   public WsConnector websocketConnector(
       Router router,
       Channels channels,
+      Messages messages,
       WsConnector.WsConnectionRegistry connections,
       ObjectStore objectStore) {
-    return new WsConnector(router, channels, connections, objectStore);
+    return new WsConnector(router, channels, messages, connections, objectStore);
   }
 }

@@ -89,7 +89,13 @@ public class FileSystemObjectStore implements ObjectStore {
     log.debug("Download URI: {}", getUri);
 
     return new BinaryMessage(
-        getUri, fileName, fileType, fileSize, payload.messageId(), payload.created());
+        getUri,
+        fileName,
+        fileType,
+        fileSize,
+        payload.messageId(),
+        payload.created(),
+        payload.status());
   }
 
   private void uploadFile(URI inputUri, Path parent, String fileName) {
