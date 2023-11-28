@@ -24,7 +24,7 @@ public class DynamoDbChannels implements Channels {
   private static final Logger log = LoggerFactory.getLogger(DynamoDbChannels.class);
   private static final boolean AI_FEATURE_FLAG = false;
 
-  private final HashMap<String, CachedMember> stash = new HashMap<>(8);
+  private final HashMap<String, DynamoDbMember> stash = new HashMap<>(8);
 
   public static final String MEMBERS = "Members";
   public static final String CHANNELS = "Channels";
@@ -292,8 +292,8 @@ public class DynamoDbChannels implements Channels {
 
   @Override
   public DynamoDbMember find(String channel, String id) {
-    CachedMember cachedMember = this.stash.get(this.constructCachedMemberId(channel, id));
-    if (cachedMember != null) return cachedMember.getMember();
+    DynamoDbMember cachedMember = this.stash.get(this.constructCachedMemberId(channel, id));
+    if (cachedMember != null) return cachedMember;
 
     Key memberKey = Key.builder().partitionValue(channel).sortValue(id).build();
     DynamoDbMember member = this.membersTable.getItem(memberKey);
@@ -301,7 +301,7 @@ public class DynamoDbChannels implements Channels {
       throw new NotFoundException("Not found member");
     }
 
-    this.stash.put(constructCachedMemberId(channel, id), new CachedMember(member));
+    this.stash.put(constructCachedMemberId(channel, id), member);
     return member;
   }
 
@@ -341,12 +341,12 @@ public class DynamoDbChannels implements Channels {
   }
 
   public void flush() {
-    List<CachedMember> cachedMembers =
-        this.stash.values().stream().filter(CachedMember::isDirty).toList();
+    List<DynamoDbMember> cachedMembers =
+        this.stash.values().stream().filter(DynamoDbMember::isDirty).toList();
+
     if (!cachedMembers.isEmpty()) {
       List<WriteBatch> writeBatches =
           cachedMembers.stream()
-              .map(CachedMember::getMember)
               .map(
                   member ->
                       WriteBatch.builder(DynamoDbMember.class)
@@ -364,28 +364,5 @@ public class DynamoDbChannels implements Channels {
     Objects.requireNonNull(channelName);
     Objects.requireNonNull(memberId);
     return channelName + "::" + memberId;
-  }
-
-  private static class CachedMember {
-    private final DynamoDbMember member;
-    private final DynamoDbMember originalMember;
-
-    CachedMember(DynamoDbMember member) {
-      this.member = member;
-      this.originalMember = member.copy();
-    }
-
-    public boolean isDirty() {
-      return !originalMember.equals(member);
-    }
-
-    public DynamoDbMember getMember() {
-      return member;
-    }
-
-    @Override
-    public String toString() {
-      return this.member.toString() + "\n" + this.originalMember.toString();
-    }
   }
 }

@@ -4,7 +4,6 @@ package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
 import ua.com.pragmasoft.k1te.backend.router.domain.Connector;
 import ua.com.pragmasoft.k1te.backend.router.domain.Member;
@@ -32,6 +31,7 @@ public class DynamoDbMember implements Member {
   private boolean host;
   private String peerMemberId;
   private Map<String, String> pinnedMessages = new HashMap<>();
+  private boolean isDirty = false;
 
   public DynamoDbMember(
       String id,
@@ -105,16 +105,19 @@ public class DynamoDbMember implements Member {
       return;
     }
     this.setPeerMemberId(peerMemberId);
+    this.setDirty(true);
   }
 
   @Override
   public void updateUnAnsweredMessage(Member toMember, String messageId) {
     this.pinnedMessages.put(toMember.getId(), messageId);
+    this.setDirty(true);
   }
 
   @Override
   public void deleteUnAnsweredMessage(Member toMember) {
     this.pinnedMessages.remove(toMember.getId());
+    this.setDirty(true);
   }
 
   public void updateConnection(String connectionUri) {
@@ -147,6 +150,7 @@ public class DynamoDbMember implements Member {
       }
       default -> throw new IllegalStateException("Unsupported connector id");
     }
+    this.setDirty(true);
   }
 
   public void deleteConnection(String connectorId) {
@@ -165,6 +169,7 @@ public class DynamoDbMember implements Member {
       }
       default -> throw new IllegalStateException("Unsupported connector id");
     }
+    this.setDirty(true);
   }
 
   public Instant getLastMessageTimeForConnection(String connectionUri) {
@@ -348,77 +353,13 @@ public class DynamoDbMember implements Member {
     this.pinnedMessages = pinnedMessages;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-
-    DynamoDbMember member = (DynamoDbMember) o;
-
-    if (host != member.host) return false;
-    if (!Objects.equals(id, member.id)) return false;
-    if (!Objects.equals(channelName, member.channelName)) return false;
-    if (!Objects.equals(tgUri, member.tgUri)) return false;
-    if (!Objects.equals(tgLastActiveTime, member.tgLastActiveTime)) return false;
-    if (!Objects.equals(tgLastMessageTime, member.tgLastMessageTime)) return false;
-    if (!Objects.equals(tgLastMessageId, member.tgLastMessageId)) return false;
-    if (!Objects.equals(wsUri, member.wsUri)) return false;
-    if (!Objects.equals(wsLastActiveTime, member.wsLastActiveTime)) return false;
-    if (!Objects.equals(wsLastMessageTime, member.wsLastMessageTime)) return false;
-    if (!Objects.equals(wsLastMessageId, member.wsLastMessageId)) return false;
-    if (!Objects.equals(aiUri, member.aiUri)) return false;
-    if (!Objects.equals(aiLastActiveTime, member.aiLastActiveTime)) return false;
-    if (!Objects.equals(aiLastMessageTime, member.aiLastMessageTime)) return false;
-    if (!Objects.equals(aiLastMessageId, member.aiLastMessageId)) return false;
-    if (!Objects.equals(userName, member.userName)) return false;
-    if (!Objects.equals(peerMemberId, member.peerMemberId)) return false;
-    return Objects.equals(pinnedMessages, member.pinnedMessages);
+  @DynamoDbIgnore
+  public boolean isDirty() {
+    return isDirty;
   }
 
-  @Override
-  public int hashCode() {
-    int result = id != null ? id.hashCode() : 0;
-    result = 31 * result + (channelName != null ? channelName.hashCode() : 0);
-    result = 31 * result + (tgUri != null ? tgUri.hashCode() : 0);
-    result = 31 * result + (tgLastActiveTime != null ? tgLastActiveTime.hashCode() : 0);
-    result = 31 * result + (tgLastMessageTime != null ? tgLastMessageTime.hashCode() : 0);
-    result = 31 * result + (tgLastMessageId != null ? tgLastMessageId.hashCode() : 0);
-    result = 31 * result + (wsUri != null ? wsUri.hashCode() : 0);
-    result = 31 * result + (wsLastActiveTime != null ? wsLastActiveTime.hashCode() : 0);
-    result = 31 * result + (wsLastMessageTime != null ? wsLastMessageTime.hashCode() : 0);
-    result = 31 * result + (wsLastMessageId != null ? wsLastMessageId.hashCode() : 0);
-    result = 31 * result + (aiUri != null ? aiUri.hashCode() : 0);
-    result = 31 * result + (aiLastActiveTime != null ? aiLastActiveTime.hashCode() : 0);
-    result = 31 * result + (aiLastMessageTime != null ? aiLastMessageTime.hashCode() : 0);
-    result = 31 * result + (aiLastMessageId != null ? aiLastMessageId.hashCode() : 0);
-    result = 31 * result + (userName != null ? userName.hashCode() : 0);
-    result = 31 * result + (host ? 1 : 0);
-    result = 31 * result + (peerMemberId != null ? peerMemberId.hashCode() : 0);
-    result = 31 * result + (pinnedMessages != null ? pinnedMessages.hashCode() : 0);
-    return result;
-  }
-
-  public DynamoDbMember copy() {
-    return new DynamoDbMember.DynamoDbMemberBuilder()
-        .withId(this.id)
-        .withChannelName(this.channelName)
-        .withUserName(this.userName)
-        .withHost(this.host)
-        .withPeerMemberId(this.peerMemberId)
-        .withTgUri(this.tgUri)
-        .withTgLastActiveTime(this.tgLastActiveTime)
-        .withTgLastMessageTime(this.tgLastMessageTime)
-        .withTgLastMessageId(this.tgLastMessageId)
-        .withWsUri(this.wsUri)
-        .withWsLastActiveTime(this.wsLastActiveTime)
-        .withWsLastMessageTime(this.wsLastMessageTime)
-        .withWsLastMessageId(this.wsLastMessageId)
-        .withAiUri(this.aiUri)
-        .withAiLastActiveTime(this.aiLastActiveTime)
-        .withAiLastMessageTime(this.aiLastMessageTime)
-        .withAiLastMessageId(this.aiLastMessageId)
-        .withPinnedMessageId(new HashMap<>(this.pinnedMessages))
-        .build();
+  public void setDirty(boolean dirty) {
+    isDirty = dirty;
   }
 
   @Override
