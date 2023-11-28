@@ -12,6 +12,7 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.util.List;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
 import ua.com.pragmasoft.k1te.server.ws.application.JakartaWebsocketConnectionRegistry.JakartaWebsocketConnection;
@@ -43,7 +44,9 @@ public class JakartaWebsocketAdapter {
     session.setMaxIdleTimeout(timeout * 60L * 1000L);
     JakartaWebsocketConnection connection = this.connectionRegistry.createConnection(session);
     this.connectionRegistry.registerConnection(connection);
-    var response = wsConnector.onOpen(connection);
+    String channelName = this.getParameter(session, "c");
+    String memberId = this.getParameter(session, "m");
+    var response = wsConnector.onOpen(connection, channelName, memberId);
     if (null != response) {
       connection.sendObject(response);
     }
@@ -78,5 +81,10 @@ public class JakartaWebsocketAdapter {
     if (null != response) {
       connection.sendObject(response);
     }
+  }
+
+  private String getParameter(Session session, String name) {
+    List<String> values = session.getRequestParameterMap().get(name);
+    return values != null && !values.isEmpty() ? values.get(0) : null;
   }
 }

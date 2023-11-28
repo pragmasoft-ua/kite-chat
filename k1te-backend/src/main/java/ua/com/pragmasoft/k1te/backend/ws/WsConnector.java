@@ -4,7 +4,6 @@ package ua.com.pragmasoft.k1te.backend.ws;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,26 +58,45 @@ public class WsConnector implements Connector {
     return WS;
   }
 
-  public Payload onOpen(WsConnection connection) {
+  public Payload onOpen(WsConnection connection, String channelName, String memberId) {
+    final var connectionUri = this.connectionUriOf(connection);
     if (log.isDebugEnabled()) {
-      final var connectionUri = this.connectionUriOf(connection);
       log.debug("Member connected to channel on {}", connectionUri);
     }
+    if (channelName == null || memberId == null) {
+      return null;
+    }
+    Member member = this.channels.reconnect(channelName, memberId, connectionUri);
+    if (member == null) {
+      return null;
+    }
+
+    this.messages
+        .findAll(
+            Messages.MessagesRequest.builder()
+                .withMember(member)
+                .withConnectionUri(connectionUri)
+                .build())
+        .forEach(
+            message -> {
+              Payload payload = DECODER.apply(message.getContent());
+              var context =
+                  RoutingContext.create()
+                      .withFrom(member)
+                      .withTo(member)
+                      .withDestinationConnection(member.getConnectionUri())
+                      .withRequest((MessagePayload) payload);
+              this.dispatch(context);
+            });
+
     return null;
   }
 
   public Payload onClose(WsConnection connection) {
     final var connectionUri = this.connectionUriOf(connection);
+    this.channels.disconnect(connectionUri);
     log.debug("Member disconnected from channel on {}", connectionUri);
-    Member client = this.channels.find(connectionUri);
-    this.router.dispatch(
-        RoutingContext.create()
-            .withOriginConnection(connectionUri)
-            .withRequest(
-                new PlaintextMessage(
-                    "✅ %s left channel %s"
-                        .formatted(client.getUserName(), client.getChannelName()))));
-    this.channels.leaveChannel(connectionUri);
+
     return null;
   }
 
@@ -137,13 +155,6 @@ public class WsConnector implements Connector {
             originConnection,
             joinChannel.memberName());
 
-    List<HistoryMessage> historyMessages =
-        this.messages.findAll(
-            Messages.MessagesRequest.builder()
-                .withMember(client)
-                .withConnectionUri(originConnection)
-                .build());
-
     var ctx =
         RoutingContext.create()
             .withOriginConnection(originConnection)
@@ -153,19 +164,6 @@ public class WsConnector implements Connector {
                     "✅ %s joined channel %s"
                         .formatted(client.getUserName(), client.getChannelName())));
     this.router.dispatch(ctx);
-
-    historyMessages.forEach(
-        message -> {
-          Payload payload = DECODER.apply(message.getContent());
-          var context =
-              RoutingContext.create()
-                  .withFrom(client)
-                  .withTo(client)
-                  .withDestinationConnection(client.getConnectionUri())
-                  .withRequest((MessagePayload) payload);
-
-          this.dispatch(context);
-        });
 
     return new OkResponse();
   }
@@ -204,10 +202,10 @@ public class WsConnector implements Connector {
     var messagePayload = ctx.request;
     if (messagePayload instanceof BinaryPayload binaryPayload) {
       /*
-       * Telegram sends binary url which is temporary and contains bot token so it
+       * Telegram sends binary url which is temporary and contains bot token, so it
        * is not suitable to expose to the public web.
        * Due to this we need to copy this resource to s3 and expose s3 url instead.
-       * Currently we only receive BinaryPayload from the Telegram, so there's no need
+       * Currently, we only receive BinaryPayload from the Telegram, so there's no need
        * to check who is the sender. Later we may have other connectors though
        * Then we'll need additional flag like isTransientUrl or url may contain query
        * param ?transient=true in the BinaryPayload to copy conditionally only if flag

@@ -25,7 +25,7 @@ const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 export type KiteStackProps = {
   domainName?: string;
   architecture?: "x86_64" | "arm64";
-  runtime?: "provided.al2" | "java17";
+  runtime?: "provided.al2" | "java17" | "java21";
   handler?:
     | "hello.handler"
     | "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest";

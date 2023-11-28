@@ -110,6 +110,18 @@ public class PanacheChannels implements Channels {
   }
 
   @Override
+  public Member reconnect(String channelName, String memberId, String newConnection) {
+    // TODO: 27.11.2023
+    return null;
+  }
+
+  @Override
+  public Member disconnect(String connectionUri) {
+    // TODO: 27.11.2023
+    return null;
+  }
+
+  @Override
   public Member leaveChannel(String connection) {
     Objects.requireNonNull(connection, "connection");
 

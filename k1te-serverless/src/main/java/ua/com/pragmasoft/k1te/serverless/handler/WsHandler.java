@@ -41,11 +41,17 @@ public class WsHandler
     final var connectionId = input.getRequestContext().getConnectionId();
     final var body = input.getBody();
     final var connection = this.connectionRegistry.getConnection(connectionId);
+    String channelName = null;
+    String memberId = null;
+    if (input.getQueryStringParameters() != null) {
+      channelName = input.getQueryStringParameters().get("c");
+      memberId = input.getQueryStringParameters().get("m");
+    }
     Payload responsePayload;
     try {
       responsePayload =
           switch (eventType) {
-            case "CONNECT" -> this.wsConnector.onOpen(connection);
+            case "CONNECT" -> this.wsConnector.onOpen(connection, channelName, memberId);
             case "DISCONNECT" -> this.wsConnector.onClose(connection);
             case "MESSAGE" -> this.wsConnector.onPayload(DECODER.apply(body), connection);
             default -> throw new IllegalStateException("Unsupported event type: " + eventType);
