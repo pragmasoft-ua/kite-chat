@@ -19,9 +19,10 @@ new S3Backend(kiteStack, {
 });
 
 const kiteStackLocal = new KiteStack(app, "kite-local", {
-  architecture: "arm64",
-  runtime: "provided.al2",
-  handler: "hello.handler",
+  architecture: "x86_64",
+  runtime: "java21",
+  handler:
+    "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest",
   memorySize: 256,
 });
 new LocalBackend(kiteStackLocal);

@@ -18,6 +18,7 @@ public interface Messages {
     private Instant lastMessageTime;
     private String lastMessageId;
     private Integer limit;
+    private boolean lastMessageByConnection;
 
     private MessagesRequest() {}
 
@@ -45,6 +46,10 @@ public interface Messages {
       return limit;
     }
 
+    public boolean isLastMessageByConnection() {
+      return lastMessageByConnection;
+    }
+
     public static class MessagesRequestBuilder {
       private final MessagesRequest request;
 
@@ -52,28 +57,33 @@ public interface Messages {
         this.request = new MessagesRequest();
       }
 
-      public MessagesRequestBuilder withConnectionUri(String connectionUri) {
+      public MessagesRequestBuilder connectionUri(String connectionUri) {
         this.request.connectionUri = connectionUri;
         return this;
       }
 
-      public MessagesRequestBuilder withMember(Member member) {
+      public MessagesRequestBuilder member(Member member) {
         this.request.messagesOwner = member;
         return this;
       }
 
-      public MessagesRequestBuilder withLastMessageTime(Instant lastMessageTime) {
+      public MessagesRequestBuilder lastMessageTime(Instant lastMessageTime) {
         this.request.lastMessageTime = lastMessageTime;
         return this;
       }
 
-      public MessagesRequestBuilder withLastMessageId(String lastMessageId) {
+      public MessagesRequestBuilder lastMessageId(String lastMessageId) {
         this.request.lastMessageId = lastMessageId;
         return this;
       }
 
-      public MessagesRequestBuilder withLimit(Integer limit) {
+      public MessagesRequestBuilder limit(Integer limit) {
         this.request.limit = limit;
+        return this;
+      }
+
+      public MessagesRequestBuilder lastMessageByConnection(boolean flag) {
+        this.request.lastMessageByConnection = flag;
         return this;
       }
 

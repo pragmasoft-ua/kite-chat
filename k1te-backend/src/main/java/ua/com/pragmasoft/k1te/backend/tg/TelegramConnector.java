@@ -416,7 +416,7 @@ public class TelegramConnector implements Connector, Closeable {
     this.router.dispatch(ctx);
 
     Messages.MessagesRequest messagesRequest =
-        Messages.MessagesRequest.builder().withMember(member).withLimit(HISTORY_LIMIT).build();
+        Messages.MessagesRequest.builder().member(member).limit(HISTORY_LIMIT).build();
     this.messages
         .findAll(messagesRequest)
         .forEach(message -> processHistoryMessage(chatId, newConnection, member, message));

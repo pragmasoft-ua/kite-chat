@@ -90,6 +90,7 @@ public class DynamoDbMessages implements Messages {
     Instant lastMessageTime = request.getLastMessageTime();
     String lastMessageId = request.getLastMessageId();
     Integer limit = request.getLimit();
+    boolean lastMessageByConnection = request.isLastMessageByConnection();
 
     if (connectionUri == null && member == null)
       throw new IllegalStateException(
@@ -98,7 +99,11 @@ public class DynamoDbMessages implements Messages {
     if (member == null) {
       member = this.channels.find(connectionUri);
     }
-    if (connectionUri != null) {
+    if (lastMessageByConnection) {
+      if (connectionUri == null) {
+        throw new IllegalStateException(
+            "lastMessageByConnection is true but not ConnectionUri is specified");
+      }
       DynamoDbMember dbMember = (DynamoDbMember) member;
       lastMessageTime = dbMember.getLastMessageTimeForConnection(connectionUri);
     }

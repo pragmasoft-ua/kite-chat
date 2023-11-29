@@ -5,14 +5,12 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ua.com.pragmasoft.k1te.backend.router.domain.*;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.*;
-import ua.com.pragmasoft.k1te.backend.shared.KiteException;
-import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
-import ua.com.pragmasoft.k1te.backend.shared.TooLargeException;
-import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
+import ua.com.pragmasoft.k1te.backend.shared.*;
 
 public class WsConnector implements Connector {
 
@@ -59,37 +57,22 @@ public class WsConnector implements Connector {
   }
 
   public Payload onOpen(WsConnection connection, String channelName, String memberId) {
-    final var connectionUri = this.connectionUriOf(connection);
-    if (log.isDebugEnabled()) {
-      log.debug("Member connected to channel on {}", connectionUri);
-    }
-    if (channelName == null || memberId == null) {
-      return null;
-    }
-    Member member = this.channels.reconnect(channelName, memberId, connectionUri);
-    if (member == null) {
-      return null;
-    }
+    try {
+      if (channelName == null) throw new IllegalStateException("No ChannelName was passed");
 
-    this.messages
-        .findAll(
-            Messages.MessagesRequest.builder()
-                .withMember(member)
-                .withConnectionUri(connectionUri)
-                .build())
-        .forEach(
-            message -> {
-              Payload payload = DECODER.apply(message.getContent());
-              var context =
-                  RoutingContext.create()
-                      .withFrom(member)
-                      .withTo(member)
-                      .withDestinationConnection(member.getConnectionUri())
-                      .withRequest((MessagePayload) payload);
-              this.dispatch(context);
-            });
+      final var connectionUri = this.connectionUriOf(connection);
+      Member member = this.channels.reconnect(channelName, memberId, connectionUri);
 
-    return null;
+      if (member != null) {
+        CompletableFuture.runAsync(() -> dispatchMemberHistory(member, connectionUri));
+        log.debug("Member {} reconnected to the Channel {}", memberId, channelName);
+      } else {
+        log.debug("Member {} connected to the Channel {}", connectionUri, channelName);
+      }
+      return null;
+    } catch (Exception e) {
+      throw new OnWsConnectionFailedException(e);
+    }
   }
 
   public Payload onClose(WsConnection connection) {
@@ -223,6 +206,27 @@ public class WsConnector implements Connector {
     } catch (IOException e) {
       throw new RoutingException(e.getMessage(), e);
     }
+  }
+
+  private void dispatchMemberHistory(Member member, String connectionUri) {
+    this.messages
+        .findAll(
+            Messages.MessagesRequest.builder()
+                .member(member)
+                .connectionUri(connectionUri)
+                .lastMessageByConnection(true)
+                .build())
+        .forEach(
+            message -> {
+              Payload payload = DECODER.apply(message.getContent());
+              var context =
+                  RoutingContext.create()
+                      .withFrom(member)
+                      .withTo(member)
+                      .withDestinationConnection(member.getConnectionUri())
+                      .withRequest((MessagePayload) payload);
+              this.dispatch(context);
+            });
   }
 
   private String connectionUriOf(WsConnection c) {

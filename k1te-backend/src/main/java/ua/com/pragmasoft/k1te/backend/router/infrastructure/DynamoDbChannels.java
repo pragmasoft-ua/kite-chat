@@ -184,7 +184,11 @@ public class DynamoDbChannels implements Channels {
 
     Key memberKey = Key.builder().partitionValue(channelName).sortValue(memberId).build();
     DynamoDbMember maybeMember = this.membersTable.getItem(memberKey);
-    if (maybeMember != null) throw new ValidationException("You are already in this Channel");
+    if (maybeMember != null) {
+      //      throw new ValidationException("You are already in this Channel");
+      return maybeMember; // In order not to fail the app due to some not done work on Client side.
+      // Will be deleted when client is ready.
+    }
 
     final String hostId = channel.getHost();
     DynamoDbMember member =
@@ -219,12 +223,20 @@ public class DynamoDbChannels implements Channels {
 
   @Override
   public Member reconnect(String channelName, String memberId, String newConnection) {
-    Objects.requireNonNull(channelName, "channelName");
-    Objects.requireNonNull(memberId, "memberId");
+    ChannelName.validate(channelName);
+
+    Key channelKey = Key.builder().partitionValue(channelName).build();
+    DynamoDbChannel channel = this.channelsTable.getItem(channelKey);
+    if (channel == null)
+      throw new NotFoundException("There is no Channel with name " + channelName);
+
+    if (memberId == null || memberId.isEmpty()) return null;
 
     Key memberKey = Key.builder().partitionValue(channelName).sortValue(memberId).build();
     DynamoDbMember maybeMember = this.membersTable.getItem(memberKey);
-    if (maybeMember == null) return null;
+    if (maybeMember == null)
+      throw new NotFoundException(
+          "There is no Member with id %s in Channel %s".formatted(memberId, channelName));
 
     DynamoDBConnection dbConnection = new DynamoDBConnection(newConnection, channelName, memberId);
     maybeMember.updateConnection(newConnection);

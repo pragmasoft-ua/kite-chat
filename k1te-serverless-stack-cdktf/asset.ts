@@ -6,7 +6,7 @@ import fs = require("node:fs");
 import assert = require("node:assert");
 import { DataArchiveFile } from "@cdktf/provider-archive/lib/data-archive-file";
 
-type Runtime = "java11" | "java17" | "nodejs18.x" | "provided.al2";
+type Runtime = "java11" | "java17" | "java21" | "nodejs18.x" | "provided.al2";
 type Handler =
   | "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
   | "index.handler"
