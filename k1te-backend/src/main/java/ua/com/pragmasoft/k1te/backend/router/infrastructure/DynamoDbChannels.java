@@ -78,17 +78,11 @@ public class DynamoDbChannels implements Channels {
       title = channel;
     }
 
-    DynamoDbMember hostMember =
-        new DynamoDbMember.DynamoDbMemberBuilder()
-            .withId(memberId)
-            .withChannelName(channel)
-            .withUserName(title)
-            .withHost(true)
-            .build();
+    DynamoDbMember hostMember = new DynamoDbMember(channel, memberId, title, true, null);
     hostMember.updateConnection(ownerConnection);
 
     if (AI_FEATURE_FLAG) {
-      hostMember.setAiUri("Ai URI");
+      // TODO: 30.11.2023 AI
     }
 
     DynamoDBConnection dbConnection = new DynamoDBConnection(ownerConnection, channel, memberId);
@@ -191,15 +185,9 @@ public class DynamoDbChannels implements Channels {
     }
 
     final String hostId = channel.getHost();
-    DynamoDbMember member =
-        new DynamoDbMember.DynamoDbMemberBuilder()
-            .withChannelName(channelName)
-            .withId(memberId)
-            .withUserName(userName)
-            .withHost(false)
-            .withPeerMemberId(hostId)
-            .build();
+    DynamoDbMember member = new DynamoDbMember(channelName, memberId, userName, false, hostId);
     member.updateConnection(memberConnection);
+
     DynamoDBConnection dbConnection =
         new DynamoDBConnection(memberConnection, channelName, memberId);
 
@@ -265,7 +253,7 @@ public class DynamoDbChannels implements Channels {
     Key connectionKey = Key.builder().partitionValue(connectorId).sortValue(rawConnection).build();
 
     this.connectionsTable.deleteItem(connectionKey);
-    member.deleteConnection(connectorId); // Member is updated via flush()
+    member.deleteConnection(connectionUri); // Member is updated via flush()
     return member;
   }
 
