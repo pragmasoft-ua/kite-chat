@@ -4,16 +4,13 @@ package ua.com.pragmasoft.k1te.backend.ws;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ua.com.pragmasoft.k1te.backend.router.domain.*;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.*;
-import ua.com.pragmasoft.k1te.backend.shared.KiteException;
-import ua.com.pragmasoft.k1te.backend.shared.RoutingException;
-import ua.com.pragmasoft.k1te.backend.shared.TooLargeException;
-import ua.com.pragmasoft.k1te.backend.shared.ValidationException;
+import ua.com.pragmasoft.k1te.backend.shared.*;
 
 public class WsConnector implements Connector {
 
@@ -59,26 +56,30 @@ public class WsConnector implements Connector {
     return WS;
   }
 
-  public Payload onOpen(WsConnection connection) {
-    if (log.isDebugEnabled()) {
+  public Payload onOpen(WsConnection connection, String channelName, String memberId) {
+    try {
+      if (channelName == null) throw new IllegalStateException("No ChannelName was passed");
+
       final var connectionUri = this.connectionUriOf(connection);
-      log.debug("Member connected to channel on {}", connectionUri);
+      Member member = this.channels.reconnect(channelName, memberId, connectionUri);
+
+      if (member != null) {
+        CompletableFuture.runAsync(() -> dispatchMemberHistory(member, connectionUri));
+        log.debug("Member {} reconnected to the Channel {}", memberId, channelName);
+      } else {
+        log.debug("Member {} connected to the Channel {}", connectionUri, channelName);
+      }
+      return null;
+    } catch (Exception e) {
+      throw new OnWsConnectionFailedException(e);
     }
-    return null;
   }
 
   public Payload onClose(WsConnection connection) {
     final var connectionUri = this.connectionUriOf(connection);
+    this.channels.disconnect(connectionUri);
     log.debug("Member disconnected from channel on {}", connectionUri);
-    Member client = this.channels.find(connectionUri);
-    this.router.dispatch(
-        RoutingContext.create()
-            .withOriginConnection(connectionUri)
-            .withRequest(
-                new PlaintextMessage(
-                    "✅ %s left channel %s"
-                        .formatted(client.getUserName(), client.getChannelName()))));
-    this.channels.leaveChannel(connectionUri);
+
     return null;
   }
 
@@ -137,13 +138,6 @@ public class WsConnector implements Connector {
             originConnection,
             joinChannel.memberName());
 
-    List<HistoryMessage> historyMessages =
-        this.messages.findAll(
-            Messages.MessagesRequest.builder()
-                .withMember(client)
-                .withConnectionUri(originConnection)
-                .build());
-
     var ctx =
         RoutingContext.create()
             .withOriginConnection(originConnection)
@@ -153,19 +147,6 @@ public class WsConnector implements Connector {
                     "✅ %s joined channel %s"
                         .formatted(client.getUserName(), client.getChannelName())));
     this.router.dispatch(ctx);
-
-    historyMessages.forEach(
-        message -> {
-          Payload payload = DECODER.apply(message.getContent());
-          var context =
-              RoutingContext.create()
-                  .withFrom(client)
-                  .withTo(client)
-                  .withDestinationConnection(client.getConnectionUri())
-                  .withRequest((MessagePayload) payload);
-
-          this.dispatch(context);
-        });
 
     return new OkResponse();
   }
@@ -204,10 +185,10 @@ public class WsConnector implements Connector {
     var messagePayload = ctx.request;
     if (messagePayload instanceof BinaryPayload binaryPayload) {
       /*
-       * Telegram sends binary url which is temporary and contains bot token so it
+       * Telegram sends binary url which is temporary and contains bot token, so it
        * is not suitable to expose to the public web.
        * Due to this we need to copy this resource to s3 and expose s3 url instead.
-       * Currently we only receive BinaryPayload from the Telegram, so there's no need
+       * Currently, we only receive BinaryPayload from the Telegram, so there's no need
        * to check who is the sender. Later we may have other connectors though
        * Then we'll need additional flag like isTransientUrl or url may contain query
        * param ?transient=true in the BinaryPayload to copy conditionally only if flag
@@ -225,6 +206,27 @@ public class WsConnector implements Connector {
     } catch (IOException e) {
       throw new RoutingException(e.getMessage(), e);
     }
+  }
+
+  private void dispatchMemberHistory(Member member, String connectionUri) {
+    this.messages
+        .findAll(
+            Messages.MessagesRequest.builder()
+                .member(member)
+                .connectionUri(connectionUri)
+                .lastMessageByConnection(true)
+                .build())
+        .forEach(
+            message -> {
+              Payload payload = DECODER.apply(message.getContent());
+              var context =
+                  RoutingContext.create()
+                      .withFrom(member)
+                      .withTo(member)
+                      .withDestinationConnection(member.getConnectionUri())
+                      .withRequest((MessagePayload) payload);
+              this.dispatch(context);
+            });
   }
 
   private String connectionUriOf(WsConnection c) {

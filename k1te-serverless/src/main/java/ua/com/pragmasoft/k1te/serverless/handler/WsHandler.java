@@ -8,7 +8,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketRespons
 import io.quarkus.logging.Log;
 import jakarta.inject.Named;
 import java.util.Map;
+import java.util.Objects;
 import ua.com.pragmasoft.k1te.backend.router.domain.payload.Payload;
+import ua.com.pragmasoft.k1te.backend.shared.OnWsConnectionFailedException;
 import ua.com.pragmasoft.k1te.backend.ws.PayloadDecoder;
 import ua.com.pragmasoft.k1te.backend.ws.PayloadEncoder;
 import ua.com.pragmasoft.k1te.backend.ws.WsConnector;
@@ -41,15 +43,25 @@ public class WsHandler
     final var connectionId = input.getRequestContext().getConnectionId();
     final var body = input.getBody();
     final var connection = this.connectionRegistry.getConnection(connectionId);
+    String channelName = null;
+    String memberId = null;
+    if (input.getQueryStringParameters() != null) {
+      channelName = input.getQueryStringParameters().get("c");
+      memberId = input.getQueryStringParameters().get("m");
+    }
     Payload responsePayload;
+    Integer status = null;
     try {
       responsePayload =
           switch (eventType) {
-            case "CONNECT" -> this.wsConnector.onOpen(connection);
+            case "CONNECT" -> this.wsConnector.onOpen(connection, channelName, memberId);
             case "DISCONNECT" -> this.wsConnector.onClose(connection);
             case "MESSAGE" -> this.wsConnector.onPayload(DECODER.apply(body), connection);
             default -> throw new IllegalStateException("Unsupported event type: " + eventType);
           };
+    } catch (OnWsConnectionFailedException wsException) {
+      responsePayload = this.wsConnector.onError(connection, wsException);
+      status = wsException.getStatus() != null ? wsException.getStatus() : 400;
     } catch (Exception e) {
       responsePayload = this.wsConnector.onError(connection, e);
     }
@@ -58,7 +70,8 @@ public class WsHandler
     if (null != responsePayload) {
       response.setBody(ENCODER.apply(responsePayload));
     }
-    response.setStatusCode(200);
+    response.setStatusCode(Objects.requireNonNullElse(status, 200));
+
     Log.debugf("ws %s (%s) -> %s", input, context, response);
     return response;
   }

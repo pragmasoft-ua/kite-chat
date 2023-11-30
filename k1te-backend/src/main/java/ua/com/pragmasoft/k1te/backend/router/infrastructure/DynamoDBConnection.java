@@ -4,6 +4,7 @@ package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
+import ua.com.pragmasoft.k1te.backend.router.domain.Connector;
 
 @DynamoDbBean
 public class DynamoDBConnection {
@@ -16,6 +17,13 @@ public class DynamoDBConnection {
   public DynamoDBConnection(String connector, String rawId, String channelName, String memberId) {
     this.connector = connector;
     this.rawId = rawId;
+    this.channelName = channelName;
+    this.memberId = memberId;
+  }
+
+  public DynamoDBConnection(String connectionUri, String channelName, String memberId) {
+    this.connector = Connector.connectorId(connectionUri);
+    this.rawId = Connector.rawConnection(connectionUri);
     this.channelName = channelName;
     this.memberId = memberId;
   }

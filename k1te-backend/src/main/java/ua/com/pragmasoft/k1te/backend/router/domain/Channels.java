@@ -9,6 +9,10 @@ public interface Channels {
 
   Member joinChannel(String channelName, String memberId, String connection, String memberName);
 
+  Member reconnect(String channelName, String memberId, String newConnection);
+
+  Member disconnect(String connectionUri);
+
   Member leaveChannel(String connection);
 
   Member find(String memberConnection);

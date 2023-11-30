@@ -77,8 +77,6 @@ public class DynamoDbChannels implements Channels {
     if (null == title) {
       title = channel;
     }
-    String connectorId = Connector.connectorId(ownerConnection);
-    String rawConnection = Connector.rawConnection(ownerConnection);
 
     DynamoDbMember hostMember =
         new DynamoDbMember.DynamoDbMemberBuilder()
@@ -93,8 +91,7 @@ public class DynamoDbChannels implements Channels {
       hostMember.setAiUri("Ai URI");
     }
 
-    DynamoDBConnection dbConnection =
-        new DynamoDBConnection(connectorId, rawConnection, channel, memberId);
+    DynamoDBConnection dbConnection = new DynamoDBConnection(ownerConnection, channel, memberId);
 
     DynamoDbChannel newChannel = new DynamoDbChannel(channel, memberId);
 
@@ -184,21 +181,13 @@ public class DynamoDbChannels implements Channels {
     if (null == channel) {
       throw new NotFoundException("Channel not found");
     }
-    String connectorId = Connector.connectorId(memberConnection);
-    String rawConnection = Connector.rawConnection(memberConnection);
 
     Key memberKey = Key.builder().partitionValue(channelName).sortValue(memberId).build();
     DynamoDbMember maybeMember = this.membersTable.getItem(memberKey);
     if (maybeMember != null) {
-      DynamoDBConnection dbConnection =
-          new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
-      if (!maybeMember.hasConnection(memberConnection)) {
-        maybeMember.updateConnection(memberConnection); // TODO: 24.11.2023
-        this.membersTable.updateItem(maybeMember);
-        log.debug("Member already exists but connection was updated");
-      }
-      this.connectionsTable.putItem(dbConnection);
-      return maybeMember;
+      //      throw new ValidationException("You are already in this Channel");
+      return maybeMember; // In order not to fail the app due to some not done work on Client side.
+      // Will be deleted when client is ready.
     }
 
     final String hostId = channel.getHost();
@@ -210,10 +199,9 @@ public class DynamoDbChannels implements Channels {
             .withHost(false)
             .withPeerMemberId(hostId)
             .build();
-    DynamoDBConnection dbConnection =
-        new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
-
     member.updateConnection(memberConnection);
+    DynamoDBConnection dbConnection =
+        new DynamoDBConnection(memberConnection, channelName, memberId);
 
     WriteBatch putMember =
         WriteBatch.builder(DynamoDbMember.class)
@@ -226,12 +214,59 @@ public class DynamoDbChannels implements Channels {
             .mappedTableResource(this.connectionsTable)
             .build();
     try {
-      this.enhancedDynamo.batchWriteItem(
-          builder -> builder.addWriteBatch(putMember).addWriteBatch(putConnection));
+      this.enhancedDynamo.batchWriteItem(builder -> builder.writeBatches(putMember, putConnection));
       return member;
     } catch (Exception e) {
       throw new ConflictException(e.getMessage(), e);
     }
+  }
+
+  @Override
+  public Member reconnect(String channelName, String memberId, String newConnection) {
+    ChannelName.validate(channelName);
+
+    Key channelKey = Key.builder().partitionValue(channelName).build();
+    DynamoDbChannel channel = this.channelsTable.getItem(channelKey);
+    if (channel == null)
+      throw new NotFoundException("There is no Channel with name " + channelName);
+
+    if (memberId == null || memberId.isEmpty()) return null;
+
+    Key memberKey = Key.builder().partitionValue(channelName).sortValue(memberId).build();
+    DynamoDbMember maybeMember = this.membersTable.getItem(memberKey);
+    if (maybeMember == null)
+      throw new NotFoundException(
+          "There is no Member with id %s in Channel %s".formatted(memberId, channelName));
+
+    DynamoDBConnection dbConnection = new DynamoDBConnection(newConnection, channelName, memberId);
+    maybeMember.updateConnection(newConnection);
+
+    WriteBatch memberRequest =
+        WriteBatch.builder(DynamoDbMember.class)
+            .addPutItem(maybeMember)
+            .mappedTableResource(this.membersTable)
+            .build();
+    WriteBatch connectionRequest =
+        WriteBatch.builder(DynamoDBConnection.class)
+            .addPutItem(dbConnection)
+            .mappedTableResource(this.connectionsTable)
+            .build();
+
+    this.enhancedDynamo.batchWriteItem(
+        builder -> builder.writeBatches(memberRequest, connectionRequest));
+    return maybeMember;
+  }
+
+  @Override
+  public Member disconnect(String connectionUri) {
+    DynamoDbMember member = this.find(connectionUri);
+    String connectorId = Connector.connectorId(connectionUri);
+    String rawConnection = Connector.rawConnection(connectionUri);
+    Key connectionKey = Key.builder().partitionValue(connectorId).sortValue(rawConnection).build();
+
+    this.connectionsTable.deleteItem(connectionKey);
+    member.deleteConnection(connectorId); // Member is updated via flush()
+    return member;
   }
 
   @Override
@@ -245,11 +280,22 @@ public class DynamoDbChannels implements Channels {
     String connectorId = Connector.connectorId(memberConnection);
     String rawConnection = Connector.rawConnection(memberConnection);
     Key connectionKey = Key.builder().partitionValue(connectorId).sortValue(rawConnection).build();
+    Key memberKey =
+        Key.builder().partitionValue(member.getChannelName()).sortValue(member.getId()).build();
 
-    member.deleteConnection(connectorId);
+    WriteBatch deleteMember =
+        WriteBatch.builder(DynamoDbMember.class)
+            .addDeleteItem(memberKey)
+            .mappedTableResource(this.membersTable)
+            .build();
+    WriteBatch deleteConnection =
+        WriteBatch.builder(DynamoDBConnection.class)
+            .addDeleteItem(connectionKey)
+            .mappedTableResource(this.connectionsTable)
+            .build();
     try {
-      this.connectionsTable.deleteItem(connectionKey);
-      // Member is updated via flush()
+      this.enhancedDynamo.batchWriteItem(
+          builder -> builder.writeBatches(deleteMember, deleteConnection));
       return member;
     } catch (Exception e) { // TransactionCanceledException
       throw new KiteException(e.getMessage(), e);
@@ -298,12 +344,8 @@ public class DynamoDbChannels implements Channels {
   public Member switchConnection(String channelName, String memberId, String newConnection) {
     DynamoDbMember member = find(channelName, memberId);
 
-    String connectorId = Connector.connectorId(newConnection);
-    String rawConnection = Connector.rawConnection(newConnection);
-
     member.updateConnection(newConnection);
-    DynamoDBConnection dbConnection =
-        new DynamoDBConnection(connectorId, rawConnection, channelName, memberId);
+    DynamoDBConnection dbConnection = new DynamoDBConnection(newConnection, channelName, memberId);
 
     this.connectionsTable.putItem(dbConnection);
     // Member is updated via flush()
@@ -313,6 +355,7 @@ public class DynamoDbChannels implements Channels {
   public void flush() {
     List<DynamoDbMember> cachedMembers =
         this.stash.values().stream().filter(DynamoDbMember::isDirty).toList();
+
     if (!cachedMembers.isEmpty()) {
       List<WriteBatch> writeBatches =
           cachedMembers.stream()
