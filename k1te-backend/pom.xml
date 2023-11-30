@@ -45,6 +45,13 @@
     </dependency>
 
     <dependency>
+      <groupId>io.soabase.record-builder</groupId>
+      <artifactId>record-builder-processor</artifactId>
+      <version>37</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
       <groupId>com.github.pengrad</groupId>
       <artifactId>java-telegram-bot-api</artifactId>
       <version>6.8.0</version>
@@ -99,6 +106,13 @@
         <configuration>
           <release>${maven.compiler.release}</release>
           <showWarnings>true</showWarnings>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>io.soabase.record-builder</groupId>
+              <artifactId>record-builder-processor</artifactId>
+              <version>37</version>
+            </path>
+          </annotationProcessorPaths>
         </configuration>
       </plugin>
       <plugin>
