@@ -68,7 +68,6 @@ export class Lambda extends Construct {
       ...props,
     };
     this.environment = environment ?? {};
-    const publish = isSnapStart;
     const snapStart = isSnapStart
       ? {
           applyOn: "PublishedVersions",
@@ -91,7 +90,7 @@ export class Lambda extends Construct {
       },
       architectures: [architecture!],
       snapStart,
-      publish,
+      publish: true,
       filename: asset.path,
       sourceCodeHash: asset.hash,
       runtime: asset.runtime,

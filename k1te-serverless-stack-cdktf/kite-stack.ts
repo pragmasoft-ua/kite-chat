@@ -19,6 +19,7 @@ import { TlsCertificate } from "./tls-certificate";
 import { WebsocketApi } from "./websocket-api";
 import { ObjectStore } from "./object-store";
 import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
+import { Codebuild } from "./codebuild";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 
@@ -59,7 +60,7 @@ export class KiteStack extends TerraformStack {
     const schema = new DynamoDbSchema(this, prod, {
       pointInTimeRecovery: false,
       preventDestroy: false,
-    });
+    }); //todo
 
     const role = new Role(this, "lambda-execution-role", {
       forService: LAMBDA_SERVICE_PRINCIPAL,
@@ -73,7 +74,7 @@ export class KiteStack extends TerraformStack {
 
     const objectStore = new ObjectStore(this, "prod-object-store", {
       bucketPrefix: "prod-k1te-chat-object-store-",
-    });
+    }); //todo
 
     objectStore.allowReadWrite(role);
 
@@ -82,7 +83,7 @@ export class KiteStack extends TerraformStack {
       "apigateway-principal"
     );
 
-    const telegramRoute = "/tg";
+    const telegramRoute = "/tg"; //todo
 
     const wsApiProps = certificate && {
       domainName: `ws.${domainName}`,
@@ -115,15 +116,15 @@ export class KiteStack extends TerraformStack {
         value: restApi.domainName.domainNameConfiguration.targetDomainName,
       });
 
-    const wsApiStage = wsApi.addStage({ stage: prod });
-    const restApiStage = restApi.addStage(prod);
+    const wsApiStage = wsApi.addStage({ stage: prod }); //todo
+    const restApiStage = restApi.addStage(prod); //todo
 
     const telegramBotToken = new TerraformVariable(this, "TELEGRAM_BOT_TOKEN", {
       type: "string",
       nullable: false,
       description: "telegram bot token, obtain in telegram from botfather",
       sensitive: true,
-    });
+    }); //todo
 
     const PROD_ENV = {
       SERVERLESS_ENVIRONMENT: prod,
@@ -132,7 +133,7 @@ export class KiteStack extends TerraformStack {
       TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
       BUCKET_NAME: objectStore.bucket.bucket,
       DISABLE_SIGNAL_HANDLERS: "true",
-    };
+    }; //todo
 
     const quarkusAsset = new LambdaAsset(this, "k1te-serverless-quarkus", {
       relativeProjectPath: "../k1te-serverless",
@@ -158,10 +159,10 @@ export class KiteStack extends TerraformStack {
       architecture,
       memorySize,
       timeout: 30,
-    });
+    }); //todo
 
-    wsApiStage.addDefaultRoutes(mainHandler, apiGatewayPrincipal);
-    restApiStage.addHandler(telegramRoute, "POST", mainHandler);
+    wsApiStage.addDefaultRoutes(mainHandler, apiGatewayPrincipal); //todo
+    restApiStage.addHandler(telegramRoute, "POST", mainHandler); //todo
 
     const lifecycleHandler = new Lambda(this, "lifecycle-handler", {
       role,
@@ -181,6 +182,11 @@ export class KiteStack extends TerraformStack {
       triggers: PROD_ENV,
       dependsOn: [lifecycleHandler.fn],
     });
+
+    new Codebuild(this, "arm-lambda-build", {
+      prodLambda: mainHandler,
+      gitProjectUrl: "https://github.com/Alex21022001/arm",
+    }); //todo add if condition
 
     new TerraformOutput(this, "lifecycle-output", {
       value: lifecycle.result,
