@@ -23,6 +23,7 @@ const kiteStackLocal = new KiteStack(app, "kite-local", {
   runtime: "provided.al2",
   handler: "hello.handler",
   memorySize: 256,
+  addDev: true,
 });
 new LocalBackend(kiteStackLocal);
 

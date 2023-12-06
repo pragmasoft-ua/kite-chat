@@ -15,6 +15,10 @@ import { ExecuteApi } from "iam-floyd";
 import { Lambda } from "./lambda";
 import { TlsCertificate } from "./tls-certificate";
 import { ApiGatewayPrincipal } from "./apigateway-principal";
+import assert = require("assert");
+
+const FUNCTION_STAGE_VAR = "${stageVariables.function}";
+const FUNCTION_ALIAS_STAGE_VAR = "${stageVariables.functionAlias}";
 
 const PING_REQUEST_TEMPLATE = JSON.stringify({ statusCode: 200 });
 
@@ -22,6 +26,7 @@ const PONG_RESPONSE_TEMPLATE = JSON.stringify(["PONG"]);
 
 export type WebsocketApiStageProps = {
   stage: string;
+  stageVariables: { [key: string]: string };
   logRetentionDays?: number;
 };
 
@@ -41,7 +46,11 @@ export class WebsocketApiStage extends Construct {
   ) {
     super(scope, id);
 
-    const { stage, logRetentionDays: retentionInDays = 7 } = props;
+    const {
+      stage,
+      stageVariables,
+      logRetentionDays: retentionInDays = 7,
+    } = props;
     this.api = scope;
 
     const accessLogGroup = new CloudwatchLogGroup(this, "access-logs", {
@@ -77,6 +86,7 @@ export class WebsocketApiStage extends Construct {
           principalId: "$context.authorizer.principalId",
         }),
       },
+      stageVariables,
       defaultRouteSettings: {
         dataTraceEnabled: true,
         loggingLevel: "INFO",
@@ -84,6 +94,11 @@ export class WebsocketApiStage extends Construct {
         throttlingRateLimit: 10,
         throttlingBurstLimit: 5,
       },
+    });
+
+    // Outputs the WebSocket URL
+    new TerraformOutput(this, "url", {
+      value: this.stage.invokeUrl,
     });
   }
 
@@ -264,4 +279,147 @@ export class WebsocketApi extends Construct {
   public addStage(props: Readonly<WebsocketApiStageProps>) {
     return new WebsocketApiStage(this, `${props.stage}-stage`, props);
   }
+
+  public addDefaultRoutes(
+    routeConfigs: [Readonly<RouteConfig>],
+    principal: ApiGatewayPrincipal
+  ) {
+    assert(routeConfigs.length > 0);
+    const arn = routeConfigs[0].handler.fn.arn;
+    console.log(arn);
+    const arnBase = RegExp(/(arn:aws:lambda:[^:]+:[^:]+:function)(?=:)/).exec(
+      arn
+    );
+    const handlerArn = `${arnBase}:${FUNCTION_STAGE_VAR}:${FUNCTION_ALIAS_STAGE_VAR}`;
+
+    const integration = new Apigatewayv2Integration(
+      this,
+      "default-integration",
+      {
+        apiId: this.api.id,
+        integrationType: "AWS_PROXY",
+        integrationUri: handlerArn,
+        credentialsArn: principal.role.arn,
+        contentHandlingStrategy: "CONVERT_TO_TEXT",
+        passthroughBehavior: "WHEN_NO_MATCH",
+      }
+    );
+
+    new Apigatewayv2IntegrationResponse(this, "default-integration-response", {
+      apiId: this.api.id,
+      integrationId: integration.id,
+      integrationResponseKey: "/200/",
+    });
+
+    const defaultRoute = new Apigatewayv2Route(this, "default-route", {
+      apiId: this.api.id,
+      routeKey: "$default",
+      target: "integrations/" + integration.id,
+    });
+
+    new Apigatewayv2RouteResponse(this, "default-route-response", {
+      apiId: this.api.id,
+      routeId: defaultRoute.id,
+      routeResponseKey: "$default",
+    });
+
+    const connectRoute = new Apigatewayv2Route(this, "connect-route", {
+      apiId: this.api.id,
+      routeKey: "$connect",
+      target: "integrations/" + integration.id,
+    });
+
+    new Apigatewayv2RouteResponse(this, "connect-route-response", {
+      apiId: this.api.id,
+      routeId: connectRoute.id,
+      routeResponseKey: "$default",
+    });
+
+    const disconnectRoute = new Apigatewayv2Route(this, "disconnect-route", {
+      apiId: this.api.id,
+      routeKey: "$disconnect",
+      target: "integrations/" + integration.id,
+    });
+
+    new Apigatewayv2RouteResponse(this, "disconnect-route-response", {
+      apiId: this.api.id,
+      routeId: disconnectRoute.id,
+      routeResponseKey: "$default",
+    });
+
+    // PING
+
+    const pingIntegration = new Apigatewayv2Integration(
+      this,
+      "ping-integration",
+      {
+        apiId: this.api.id,
+        integrationType: "MOCK",
+        templateSelectionExpression: "200",
+        requestTemplates: {
+          "200": PING_REQUEST_TEMPLATE,
+        },
+      }
+    );
+
+    new Apigatewayv2IntegrationResponse(this, "ping-integration-response", {
+      apiId: this.api.id,
+      integrationId: pingIntegration.id,
+      integrationResponseKey: "/200/",
+      templateSelectionExpression: "200",
+      responseTemplates: {
+        "200": PONG_RESPONSE_TEMPLATE,
+      },
+    });
+
+    const pingRoute = new Apigatewayv2Route(this, "ping-route", {
+      apiId: this.api.id,
+      routeKey: "PING",
+      routeResponseSelectionExpression: "$default",
+      target: "integrations/" + pingIntegration.id,
+    });
+
+    new Apigatewayv2RouteResponse(this, "ping-route-response", {
+      apiId: this.api.id,
+      routeId: pingRoute.id,
+      routeResponseKey: "$default",
+    });
+
+    routeConfigs.forEach(({ handler, stage }) => {
+      handler.allowToInvoke(principal.role);
+
+      /*
+       * We cannot use token to define policy resource, like
+       * '.on(stage.executionArn)' as it causes terraform cycle
+       */
+      const policyStatement = new ExecuteApi()
+        .allow()
+        .allActions()
+        .onExecuteApiGeneral(this.api.id, stage, "*", "*");
+
+      handler.role.grant(
+        `allow-execute-api-${this.node.id}-${stage}`,
+        policyStatement
+      );
+
+      if (this.domainName) {
+        const nameMapping = new Apigatewayv2ApiMapping(this, "domain-mapping", {
+          apiId: this.api.id,
+          domainName: this.domainName.domainName,
+          stage,
+          apiMappingKey: stage,
+        });
+
+        // Outputs the WebSocket URL
+        new TerraformOutput(this, "mapped-url", {
+          value: `wss://${nameMapping.domainName}/${stage}`,
+        });
+      }
+    });
+  }
 }
+
+export type RouteConfig = {
+  handler: Lambda;
+  stage: string;
+};

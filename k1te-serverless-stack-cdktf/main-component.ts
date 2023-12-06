@@ -5,8 +5,9 @@ import { ObjectStore } from "./object-store";
 import { WebsocketApi } from "./websocket-api";
 import { RestApi } from "./rest-api";
 import { Lambda } from "./lambda";
-import { Resource } from "./asset";
-import { ApiGatewayPrincipal } from "./apigateway-principal";
+import { ArchiveResource, Resource } from "./asset";
+import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
+import { TerraformOutput } from "cdktf";
 
 export type MainComponentProps = {
   role: Role;
@@ -18,10 +19,13 @@ export type MainComponentProps = {
     architecture: "x86_64" | "arm64";
     memorySize: number;
   };
-  apiGatewayPrincipal: ApiGatewayPrincipal;
+  lifecycleAsset: ArchiveResource;
+  // apiGatewayPrincipal: ApiGatewayPrincipal;
 };
 
 export class MainComponent extends Construct {
+  readonly lambdaFunction: Lambda;
+
   constructor(
     scope: Construct,
     id: string,
@@ -29,9 +33,17 @@ export class MainComponent extends Construct {
   ) {
     super(scope, id);
 
-    const { role, wsApi, restApi, telegramToken, lambda, apiGatewayPrincipal } =
-      props;
+    const {
+      role,
+      wsApi,
+      restApi,
+      telegramToken,
+      lambda,
+      lifecycleAsset,
+      // apiGatewayPrincipal,
+    } = props;
     const telegramRoute = "/tg";
+    const functionName = `${id}-request-dispatcher`;
 
     const schema = new DynamoDbSchema(this, `${id}`, {
       pointInTimeRecovery: false,
@@ -46,7 +58,13 @@ export class MainComponent extends Construct {
 
     objectStore.allowReadWrite(role);
 
-    const wsApiStage = wsApi.addStage({ stage: id });
+    const wsApiStage = wsApi.addStage({
+      stage: id,
+      stageVariables: {
+        function: functionName,
+        functionAlias: functionName + "-alias",
+      },
+    });
     const restApiStage = restApi.addStage(id);
 
     const ENV = {
@@ -57,8 +75,7 @@ export class MainComponent extends Construct {
       BUCKET_NAME: objectStore.bucket.bucket,
       DISABLE_SIGNAL_HANDLERS: "true",
     };
-
-    const mainHandler = new Lambda(this, `${id}-request-dispatcher`, {
+    const mainHandler = new Lambda(this, functionName, {
       role,
       asset: lambda.asset,
       environment: {
@@ -68,8 +85,32 @@ export class MainComponent extends Construct {
       memorySize: lambda.memorySize,
       timeout: 30,
     });
+    this.lambdaFunction = mainHandler;
 
-    wsApiStage.addDefaultRoutes(mainHandler, apiGatewayPrincipal);
+    // wsApiStage.addDefaultRoutes(mainHandler, apiGatewayPrincipal);
     restApiStage.addHandler(telegramRoute, "POST", mainHandler);
+
+    const lifecycleHandler = new Lambda(this, `${id}-lifecycle-handler`, {
+      role,
+      asset: lifecycleAsset,
+      environment: {
+        TELEGRAM_BOT_TOKEN: telegramToken,
+        TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
+      },
+      memorySize: 128,
+      architecture: "arm64",
+    });
+
+    const lifecycle = new LambdaInvocation(this, "lifecycle-invocation", {
+      functionName: lifecycleHandler.functionName,
+      input: JSON.stringify({}),
+      lifecycleScope: "CRUD",
+      triggers: ENV,
+      dependsOn: [lifecycleHandler.fn],
+    });
+
+    new TerraformOutput(this, "lifecycle-output", {
+      value: lifecycle.result,
+    });
   }
 }
