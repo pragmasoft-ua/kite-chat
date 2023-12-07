@@ -101,7 +101,7 @@ export class Lambda extends Construct {
     });
 
     this.alias = new LambdaAlias(this, "alias", {
-      name: `${this.fn.functionName}-alias`,
+      name: `${id.replaceAll(/dev-|prod-/gi, "")}-alias`,
       functionName: this.fn.functionName,
       functionVersion: this.fn.version,
       lifecycle: {

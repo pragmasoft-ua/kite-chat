@@ -9,13 +9,15 @@ import { LAMBDA_SERVICE_PRINCIPAL } from "./lambda";
 import { RestApi } from "./rest-api";
 import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
 import { TlsCertificate } from "./tls-certificate";
-import { RouteConfig, WebsocketApi } from "./websocket-api";
+import { WebsocketApi } from "./websocket-api";
 import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
 import { Codebuild } from "./codebuild";
 import { MainComponent } from "./main-component";
+import { DataAwsRegion } from "@cdktf/provider-aws/lib/data-aws-region";
+import { DataAwsCallerIdentity } from "@cdktf/provider-aws/lib/data-aws-caller-identity";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
-
+export const TELEGRAM_ROUTE = "/tg";
 export type KiteStackProps = {
   domainName?: string;
   architecture?: "x86_64" | "arm64";
@@ -44,6 +46,9 @@ export class KiteStack extends TerraformStack {
 
     new AwsProvider(this, "AWS");
     new ArchiveProvider(this, "archive-provider");
+
+    const region = new DataAwsRegion(this, "current-region");
+    const callerIdentity = new DataAwsCallerIdentity(this, "current-caller");
 
     const dnsZone = domainName
       ? new CloudflareDnsZone(this, domainName)
@@ -132,13 +137,10 @@ export class KiteStack extends TerraformStack {
       lifecycleAsset: archiveResource,
       restApi,
       wsApi,
-      // apiGatewayPrincipal,
       telegramToken: telegramProdBotToken.value,
     });
-    const routeConfigs: [RouteConfig] = [
-      { handler: prod.lambdaFunction, stage: "prod" },
-    ];
 
+    let devHandler;
     if (addDev) {
       const telegramDevBotToken = new TerraformVariable(
         this,
@@ -161,14 +163,32 @@ export class KiteStack extends TerraformStack {
         lifecycleAsset: archiveResource,
         restApi,
         wsApi,
-        // apiGatewayPrincipal,
         telegramToken: telegramDevBotToken.value,
       });
-
-      routeConfigs.push({ handler: dev.lambdaFunction, stage: "dev" });
+      devHandler = dev.lambdaFunction;
     }
 
-    wsApi.addDefaultRoutes(routeConfigs, apiGatewayPrincipal);
+    // Creating Integration, adding Routes to it and complementing Role to invoke Lambda
+    wsApi
+      .attachDefaultIntegration({
+        region: region.name,
+        accountId: callerIdentity.accountId,
+        integrationName: "default-integration",
+        principal: apiGatewayPrincipal,
+      })
+      .addRouteDefaultRoutes()
+      .allowInvocation({ handler: prod.lambdaFunction, stage: "prod" })
+      .allowInvocation({ handler: devHandler, stage: "dev" });
+
+    restApi
+      .attachDefaultIntegration({
+        region: region.name,
+        accountId: callerIdentity.accountId,
+        integrationName: "default-integration",
+      })
+      .addRouteDefaultRoutes({ route: TELEGRAM_ROUTE, method: "POST" })
+      .allowInvocation({ handler: prod.lambdaFunction, stage: "prod" })
+      .allowInvocation({ handler: devHandler, stage: "dev" });
 
     if (addCodeBuild) {
       new Codebuild(this, "arm-lambda-build", {

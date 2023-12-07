@@ -10,62 +10,27 @@ import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group
 import { Construct } from "constructs";
 import { API_GATEWAY_SERVICE_PRINCIPAL } from "./apigateway-principal";
 import { ServicePrincipal } from "./grantable";
-import { Lambda } from "./lambda";
 import { ApiProps } from "./websocket-api";
-
-export type RestApiHandlerProps = {
-  route: string;
-  method?: string;
-  handler: Lambda;
-};
-
-class RestApiHandler extends Construct {
-  readonly integration: Apigatewayv2Integration;
-  readonly route: Apigatewayv2Route;
-
-  constructor(scope: RestApiStage, props: Readonly<RestApiHandlerProps>) {
-    const { route, method = "GET", handler } = props;
-
-    const routeKey = `${method} ${route}`;
-
-    super(scope, routeKey);
-
-    const gw = scope.api.api;
-
-    this.integration = new Apigatewayv2Integration(this, "lambda-integration", {
-      apiId: gw.id,
-      integrationType: "AWS_PROXY",
-      integrationUri: handler.alias.arn,
-      payloadFormatVersion: "2.0",
-    });
-
-    this.route = new Apigatewayv2Route(this, "route", {
-      apiId: gw.id,
-      routeKey,
-      target: "integrations/" + this.integration.id,
-    });
-
-    handler.allowInvocationForService(scope.api);
-  }
-}
-
-export type RestApiStageProps = {
-  stage: string;
-  logRetentionDays?: number;
-  loggingLevel?: "ERROR" | "INFO" | "OFF";
-};
+import {
+  Api,
+  ApiIntegration,
+  ApiStageConfig,
+  IntegrationConfig,
+  InvocationConfig,
+} from "./api";
 
 export class RestApiStage extends Construct {
   readonly stage: Apigatewayv2Stage;
   readonly api: RestApi;
 
-  constructor(scope: RestApi, id: string, props: RestApiStageProps) {
+  constructor(scope: RestApi, id: string, props: ApiStageConfig) {
     super(scope, id);
 
     this.api = scope;
 
     const {
       stage,
+      functionStageVariable,
       logRetentionDays: retentionInDays = 7,
       loggingLevel = "INFO",
     } = props || {};
@@ -98,6 +63,9 @@ export class RestApiStage extends Construct {
           principalId: "$context.authorizer.principalId",
         }),
       },
+      stageVariables: {
+        function: functionStageVariable,
+      },
       defaultRouteSettings: {
         dataTraceEnabled: false,
         loggingLevel,
@@ -126,24 +94,15 @@ export class RestApiStage extends Construct {
     }
   }
 
-  addHandler(route: string, method: string, handler: Lambda): this {
-    new RestApiHandler(this, { route, method, handler });
-    return this;
-  }
-
   get invokeUrl() {
     if (this.api.domainName) {
       return `https://${this.api.domainName.domainName}/${this.stage.name}`;
     }
     return this.stage.invokeUrl;
   }
-
-  done() {
-    return this.api;
-  }
 }
 
-export class RestApi extends Construct implements ServicePrincipal {
+export class RestApi extends Construct implements ServicePrincipal, Api {
   readonly api: Apigatewayv2Api;
   readonly domainName?: Apigatewayv2DomainName;
 
@@ -173,8 +132,20 @@ export class RestApi extends Construct implements ServicePrincipal {
     }
   }
 
-  addStage(stage: string, props: Readonly<RestApiStageProps> = { stage }) {
+  addStage(props: Readonly<ApiStageConfig>) {
     return new RestApiStage(this, `${props.stage}-stage`, props);
+  }
+
+  attachDefaultIntegration(integrationConfig: IntegrationConfig) {
+    const { region, accountId, integrationName } = integrationConfig;
+
+    const handlerArn =
+      "arn:aws:lambda:" +
+      region +
+      ":" +
+      accountId +
+      ":function:$${stageVariables.function}";
+    return new RestApiIntegration(this, integrationName, handlerArn);
   }
 
   get name() {
@@ -187,5 +158,42 @@ export class RestApi extends Construct implements ServicePrincipal {
 
   get sourceArn() {
     return `${this.api.executionArn}/*/*`;
+  }
+}
+
+export class RestApiIntegration extends Construct implements ApiIntegration {
+  private readonly integration: Apigatewayv2Integration;
+  private readonly restApi: RestApi;
+
+  constructor(scope: RestApi, id: string, handlerArn: string) {
+    super(scope, id);
+    this.restApi = scope;
+
+    this.integration = new Apigatewayv2Integration(this, id, {
+      apiId: scope.api.id,
+      integrationType: "AWS_PROXY",
+      integrationUri: handlerArn,
+      payloadFormatVersion: "2.0",
+    });
+  }
+
+  addRouteDefaultRoutes(props?: any) {
+    const { route, method = "GET" } = props;
+    const routeKey = `${method} ${route}`;
+
+    new Apigatewayv2Route(this, "route", {
+      apiId: this.restApi.api.id,
+      routeKey,
+      target: "integrations/" + this.integration.id,
+    });
+    return this;
+  }
+
+  allowInvocation({ handler }: InvocationConfig) {
+    if (!handler) {
+      return this;
+    }
+    handler.allowInvocationForService(this.restApi);
+    return this;
   }
 }
