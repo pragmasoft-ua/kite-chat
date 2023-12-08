@@ -26,8 +26,8 @@ phases:
           echo "New version of function is $VERSION"
           if [[ $i == dev-* ]]; then
             echo "Updating alias for function: $i"
-            alias="${i#dev-}-alias"
-            aws lambda update-alias --function-name $i --name $alias --function-version $VERSION
+            ALIAS="${i#dev-}-alias"
+            aws lambda update-alias --function-name $i --name $ALIAS --function-version $VERSION
         fi
         done
 artifacts:

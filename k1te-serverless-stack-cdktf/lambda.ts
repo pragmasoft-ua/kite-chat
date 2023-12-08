@@ -135,6 +135,7 @@ export class Lambda extends Construct {
   allowToUpdate(to: Grantable) {
     const policyStatement = new LambdaPolicy()
       .allow()
+      .toListVersionsByFunction()
       .toGetFunction()
       .toUpdateFunctionCode()
       .toUpdateAlias()

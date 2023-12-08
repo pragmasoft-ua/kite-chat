@@ -9,8 +9,8 @@ import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group
 
 export type CodebuildProps = {
   functions: Lambda[];
+  prodFunctionName: string;
   gitProjectUrl: string;
-  buildspecPath?: string;
   buildTimeout?: number;
 };
 
@@ -22,8 +22,8 @@ export class Codebuild extends Construct {
 
     const {
       functions,
+      prodFunctionName,
       gitProjectUrl,
-      buildspecPath = "k1te-serverless-stack-cdktf/buildspec.yml",
       buildTimeout = 12,
     } = props;
 
@@ -50,47 +50,90 @@ export class Codebuild extends Construct {
     );
     functions.forEach((fun) => fun.allowToUpdate(role));
 
-    const logGroup = new CloudwatchLogGroup(this, "logs", {
+    const mainLogGroup = new CloudwatchLogGroup(this, "main-logs", {
       name: `/aws/${id}`,
       retentionInDays: 7,
     });
 
-    const codebuildProject = new CodebuildProject(this, "code-build", {
-      name: id,
+    const mainCodebuildProject = new CodebuildProject(
+      this,
+      "main-codebuild-project",
+      {
+        name: `main-${id}`,
+        serviceRole: role.arn,
+        source: {
+          type: "GITHUB",
+          gitCloneDepth: 1,
+          location: gitProjectUrl,
+          buildspec: "k1te-serverless-stack-cdktf/buildspec.yml",
+        },
+        sourceVersion: "main",
+        environment: {
+          computeType: "BUILD_GENERAL1_SMALL",
+          type: "ARM_CONTAINER",
+          image: "quay.io/quarkus/ubi-quarkus-graalvmce-builder-image:jdk-21",
+          privilegedMode: true,
+          environmentVariable: [
+            {
+              name: "FUNCTIONS",
+              value: functions.map((fun) => fun.functionName).join(","),
+            },
+          ],
+        },
+        artifacts: {
+          type: "S3",
+          location: s3Bucket.bucket,
+          name: "build",
+          packaging: "NONE",
+        },
+        cache: {
+          modes: ["LOCAL_SOURCE_CACHE", "LOCAL_CUSTOM_CACHE"],
+          type: "LOCAL",
+        },
+        buildTimeout,
+        logsConfig: {
+          cloudwatchLogs: {
+            groupName: mainLogGroup.name,
+          },
+        },
+      }
+    );
+
+    const tagLogGroup = new CloudwatchLogGroup(this, "tag-logs", {
+      name: `/aws/tag-${id}`,
+      retentionInDays: 7,
+    });
+
+    //I would like to use Lambda compute type since it costs less, but we can't create it via Terraform
+    //https://github.com/hashicorp/terraform-provider-aws/issues/34376
+    const tagCodeBuild = new CodebuildProject(this, "tag-codebuild-project", {
+      name: `tag-${id}`,
       serviceRole: role.arn,
       source: {
         type: "GITHUB",
         gitCloneDepth: 1,
         location: gitProjectUrl,
-        buildspec: buildspecPath,
+        buildspec: "k1te-serverless-stack-cdktf/tag-buildspec.yml",
       },
+      buildTimeout: 5,
       sourceVersion: "main",
       environment: {
         computeType: "BUILD_GENERAL1_SMALL",
         type: "ARM_CONTAINER",
-        image: "quay.io/quarkus/ubi-quarkus-graalvmce-builder-image:jdk-21",
-        privilegedMode: true,
+        image: "aws/codebuild/amazonlinux2-aarch64-standard:3.0",
         environmentVariable: [
           {
-            name: "FUNCTIONS",
-            value: functions.map((fun) => fun.functionName).join(","),
+            name: "FUNCTION",
+            value: prodFunctionName,
           },
         ],
       },
       artifacts: {
-        type: "S3",
-        location: s3Bucket.bucket,
-        name: "build",
-        packaging: "NONE",
+        type: "NO_ARTIFACTS",
       },
-      cache: {
-        modes: ["LOCAL_SOURCE_CACHE", "LOCAL_CUSTOM_CACHE"],
-        type: "LOCAL",
-      },
-      buildTimeout,
       logsConfig: {
         cloudwatchLogs: {
-          groupName: logGroup.name,
+          groupName: tagLogGroup.name,
         },
       },
     });
@@ -102,8 +145,8 @@ export class Codebuild extends Construct {
      * be done before creating webhooks with this resource.
      * https://docs.aws.amazon.com/codebuild/latest/userguide/access-tokens.html
      * */
-    new CodebuildWebhook(this, "code-build-webhook", {
-      projectName: codebuildProject.name,
+    new CodebuildWebhook(this, "main-codebuild-webhook", {
+      projectName: mainCodebuildProject.name,
       buildType: "BUILD",
       filterGroup: [
         {
@@ -119,6 +162,25 @@ export class Codebuild extends Construct {
             {
               type: "FILE_PATH",
               pattern: "^k1te-backend/src/.+|^k1te-serverless/src/.+",
+            },
+          ],
+        },
+      ],
+    });
+
+    new CodebuildWebhook(this, "tag-codebuild-webhook", {
+      projectName: tagCodeBuild.name,
+      buildType: "BUILD",
+      filterGroup: [
+        {
+          filter: [
+            {
+              type: "EVENT",
+              pattern: "PUSH",
+            },
+            {
+              type: "HEAD_REF",
+              pattern: "^refs/tags/.*",
             },
           ],
         },

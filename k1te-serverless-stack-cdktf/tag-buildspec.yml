@@ -1,0 +1,14 @@
+version: 0.2
+
+phases:
+  build:
+    on-failure: ABORT
+    commands:
+      - echo new GitHub Tag is published
+      - echo Updating Prod Lambda to the latest published version
+      - LAST_VERSION=$(aws lambda list-versions-by-function --function-name $FUNCTION --query 'Versions[-1].Version' --output text)
+      - echo "the latest publish version is $LAST_VERSION"
+      - ALIAS="${FUNCTION#prod-}-alias"
+      - echo "Alias is $ALIAS"
+      - aws lambda update-alias --function-name $FUNCTION --name $ALIAS --function-version $LAST_VERSION
+      - echo Lambda has been successfully updated

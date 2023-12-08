@@ -196,6 +196,7 @@ export class KiteStack extends TerraformStack {
     if (codeBuildProjectUrl) {
       new Codebuild(this, "arm-lambda-build", {
         functions,
+        prodFunctionName: prod.lambdaFunction.functionName,
         gitProjectUrl: codeBuildProjectUrl,
       });
     }
