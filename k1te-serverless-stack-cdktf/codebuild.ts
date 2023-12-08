@@ -3,13 +3,12 @@ import { CodebuildProject } from "@cdktf/provider-aws/lib/codebuild-project";
 import { S3Bucket } from "@cdktf/provider-aws/lib/s3-bucket";
 import { CodebuildWebhook } from "@cdktf/provider-aws/lib/codebuild-webhook";
 import { Role } from "./iam";
-import { Lambda as Function } from "./lambda";
-import { Lambda, S3 } from "iam-floyd/lib/generated";
+import { Lambda } from "./lambda";
+import { S3 } from "iam-floyd/lib/generated";
 import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group";
 
 export type CodebuildProps = {
-  prodLambda: Function;
-  devLambda?: Function;
+  functions: Lambda[];
   gitProjectUrl: string;
   buildspecPath?: string;
   buildTimeout?: number;
@@ -22,8 +21,7 @@ export class Codebuild extends Construct {
     super(scope, id);
 
     const {
-      prodLambda,
-      devLambda,
+      functions,
       gitProjectUrl,
       buildspecPath = "k1te-serverless-stack-cdktf/buildspec.yml",
       buildTimeout = 12,
@@ -45,27 +43,18 @@ export class Codebuild extends Construct {
       .toGetBucketAcl()
       .toGetBucketLocation()
       .on(s3Bucket.arn, `${s3Bucket.arn}/*`, "arn:aws:s3:::codepipeline-*");
-    const lambdaPolicyStatement = new Lambda()
-      .allow()
-      .toUpdateFunctionCode()
-      .toUpdateAlias()
-      .toPublishVersion()
-      .onAllResources();
 
     role.grant(`allow-crud-${s3Bucket.bucket}`, s3PolicyStatement);
-    role.grant(`allow-all-lambda-updates`, lambdaPolicyStatement);
     role.attachManagedPolicyArn(
       "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
     );
+    functions.forEach((fun) => fun.allowToUpdate(role));
 
     const logGroup = new CloudwatchLogGroup(this, "logs", {
       name: `/aws/${id}`,
       retentionInDays: 7,
     });
 
-    const functions = `${prodLambda.functionName}${
-      devLambda ? "," + devLambda.functionName : ""
-    }`;
     const codebuildProject = new CodebuildProject(this, "code-build", {
       name: id,
       serviceRole: role.arn,
@@ -84,7 +73,7 @@ export class Codebuild extends Construct {
         environmentVariable: [
           {
             name: "FUNCTIONS",
-            value: functions,
+            value: functions.map((fun) => fun.functionName).join(","),
           },
         ],
       },

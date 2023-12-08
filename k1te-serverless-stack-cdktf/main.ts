@@ -24,6 +24,7 @@ const kiteStackLocal = new KiteStack(app, "kite-local", {
   handler: "hello.handler",
   memorySize: 256,
   addDev: true,
+  codeBuildProjectUrl: "https://github.com/Alex21022001/arm",
 });
 new LocalBackend(kiteStackLocal);
 

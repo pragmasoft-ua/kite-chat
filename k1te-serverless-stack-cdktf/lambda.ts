@@ -132,6 +132,17 @@ export class Lambda extends Construct {
     return this;
   }
 
+  allowToUpdate(to: Grantable) {
+    const policyStatement = new LambdaPolicy()
+      .allow()
+      .toGetFunction()
+      .toUpdateFunctionCode()
+      .toUpdateAlias()
+      .toPublishVersion()
+      .on(this.fn.arn, this.arn);
+    to.grant(`allow-update-${this.fn.functionName}`, policyStatement);
+  }
+
   allowInvocationForService(service: ServicePrincipal) {
     const { principal, sourceArn } = service;
     const serviceName = principal.replaceAll(".", "-");

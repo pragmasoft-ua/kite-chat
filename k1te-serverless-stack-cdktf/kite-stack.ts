@@ -5,7 +5,7 @@ import { ApiGatewayPrincipal } from "./apigateway-principal";
 import { ArchiveResource, LambdaAsset } from "./asset";
 import { CloudflareDnsZone } from "./dns-zone";
 import { Role } from "./iam";
-import { LAMBDA_SERVICE_PRINCIPAL } from "./lambda";
+import { Lambda, LAMBDA_SERVICE_PRINCIPAL } from "./lambda";
 import { RestApi } from "./rest-api";
 import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
 import { TlsCertificate } from "./tls-certificate";
@@ -27,7 +27,7 @@ export type KiteStackProps = {
     | "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest";
   memorySize?: number;
   addDev?: boolean;
-  addCodeBuild?: boolean;
+  codeBuildProjectUrl?: string;
 };
 
 export class KiteStack extends TerraformStack {
@@ -41,7 +41,7 @@ export class KiteStack extends TerraformStack {
       handler = "hello.handler",
       memorySize = 256,
       addDev = false,
-      addCodeBuild = false,
+      codeBuildProjectUrl,
     } = props;
 
     new AwsProvider(this, "AWS");
@@ -127,6 +127,7 @@ export class KiteStack extends TerraformStack {
       }
     );
 
+    const functions: Lambda[] = [];
     const prod = new MainComponent(this, "prod", {
       role,
       lambda: {
@@ -139,6 +140,7 @@ export class KiteStack extends TerraformStack {
       wsApi,
       telegramToken: telegramProdBotToken.value,
     });
+    functions.push(prod.lambdaFunction);
 
     let devHandler;
     if (addDev) {
@@ -166,6 +168,7 @@ export class KiteStack extends TerraformStack {
         telegramToken: telegramDevBotToken.value,
       });
       devHandler = dev.lambdaFunction;
+      functions.push(devHandler);
     }
 
     // Creating Integration, adding Routes to it and complementing Role to invoke Lambda
@@ -190,10 +193,10 @@ export class KiteStack extends TerraformStack {
       .allowInvocation({ handler: prod.lambdaFunction, stage: "prod" })
       .allowInvocation({ handler: devHandler, stage: "dev" });
 
-    if (addCodeBuild) {
+    if (codeBuildProjectUrl) {
       new Codebuild(this, "arm-lambda-build", {
-        prodLambda: prod.lambdaFunction,
-        gitProjectUrl: "https://github.com/Alex21022001/arm",
+        functions,
+        gitProjectUrl: codeBuildProjectUrl,
       });
     }
 

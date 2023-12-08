@@ -21,14 +21,15 @@ phases:
         for i in "${functions[@]}"; do
           echo "Processing function: $i"
           aws lambda update-function-code --function-name $i --zip-file fileb://k1te-serverless/target/function.zip
+          aws lambda wait function-updated-v2 --function-name $i
+          VERSION=$(aws lambda publish-version --function-name $i --query 'Version' --output text)
+          echo "New version of function is $VERSION"
+          if [[ $i == dev-* ]]; then
+            echo "Updating alias for function: $i"
+            alias="${i#dev-}-alias"
+            aws lambda update-alias --function-name $i --name $alias --function-version $VERSION
+        fi
         done
-#      - echo Build completed on `date`
-#      - echo Updating Lambda
-#      - aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://k1te-serverless/target/function.zip
-#      - echo Publishing new Lambda version
-#      - VERSION=$(aws lambda publish-version --function-name $FUNCTION_NAME --query 'Version' --output text)
-#      - echo Updating Lambda alias
-#      - aws lambda update-alias --function-name $FUNCTION_NAME --name "$FUNCTION_NAME-alias" --function-version $VERSION
 artifacts:
   files:
     - k1te-serverless/target/function.zip
