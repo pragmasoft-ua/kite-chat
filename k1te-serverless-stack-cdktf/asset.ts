@@ -5,6 +5,8 @@ import path = require("node:path");
 import fs = require("node:fs");
 import assert = require("node:assert");
 import { DataArchiveFile } from "@cdktf/provider-archive/lib/data-archive-file";
+import { S3Bucket } from "@cdktf/provider-aws/lib/s3-bucket";
+import { S3Object } from "@cdktf/provider-aws/lib/s3-object";
 
 type Runtime = "java11" | "java17" | "java21" | "nodejs18.x" | "provided.al2";
 type Handler =
@@ -125,6 +127,63 @@ export class ArchiveResource extends Construct implements Resource {
     this.hash = lifecycleArchive.outputBase64Sha256;
   }
 }
+
+export class S3Source extends Construct {
+  readonly s3Bucket: string;
+  readonly s3Key: string;
+  readonly handler: string;
+  readonly runtime: Runtime;
+
+  constructor(scope: Construct, id: string, props: Readonly<S3SourceProps>) {
+    super(scope, id);
+
+    const { asset, s3Bucket, s3Props } = props;
+
+    if (asset) {
+      let s3BucketName;
+      if (!s3Bucket) {
+        const s3Bucket = new S3Bucket(this, "lambda-source-storage", {
+          bucketPrefix: "lambda-source-storage-",
+        });
+        s3BucketName = s3Bucket.bucket;
+      } else {
+        s3BucketName = s3Bucket;
+      }
+
+      const s3Object = new S3Object(this, "main-lambda-handler", {
+        bucket: s3BucketName,
+        key: `${id}.zip`,
+        source: asset.path,
+        etag: asset.hash,
+      });
+
+      this.s3Bucket = s3BucketName;
+      this.s3Key = s3Object.key;
+      this.handler = asset.handler;
+      this.runtime = asset.runtime;
+    } else if (s3Props) {
+      assert(s3Bucket);
+      this.s3Bucket = s3Bucket;
+      this.s3Key = s3Props.s3Key;
+      this.runtime = s3Props.runtime;
+      this.handler = s3Props.handler;
+    } else {
+      throw new Error(
+        "You must specify at least Resource or S3Bucket and S3Key"
+      );
+    }
+  }
+}
+
+export type S3SourceProps = {
+  asset?: Resource;
+  s3Bucket?: string;
+  s3Props?: {
+    s3Key: string;
+    handler: string;
+    runtime: Runtime;
+  };
+};
 
 export interface Resource {
   readonly path: string;

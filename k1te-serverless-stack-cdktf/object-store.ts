@@ -22,7 +22,7 @@ export class ObjectStore extends Construct {
   ) {
     super(scope, id);
 
-    this.bucket = new S3Bucket(this, "object-store", {
+    this.bucket = new S3Bucket(this, "s3-object-store", {
       bucketPrefix,
     });
 

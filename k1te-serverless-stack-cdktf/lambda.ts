@@ -5,7 +5,7 @@ import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group
 import { LambdaAlias } from "@cdktf/provider-aws/lib/lambda-alias";
 import { Lazy } from "cdktf";
 import { Construct } from "constructs";
-import { Resource } from "./asset";
+import { S3Source } from "./asset";
 import { Grantable, ServicePrincipal } from "./grantable";
 import { Role } from "./iam";
 import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
@@ -13,7 +13,7 @@ import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
 export const LAMBDA_SERVICE_PRINCIPAL = "lambda.amazonaws.com";
 
 export type LambdaProps = {
-  asset: Resource;
+  asset: S3Source;
   isSnapStart?: boolean;
   architecture?: string;
   role?: Role;
@@ -68,7 +68,6 @@ export class Lambda extends Construct {
       ...props,
     };
     this.environment = environment ?? {};
-    const publish = isSnapStart;
     const snapStart = isSnapStart
       ? {
           applyOn: "PublishedVersions",
@@ -91,9 +90,9 @@ export class Lambda extends Construct {
       },
       architectures: [architecture!],
       snapStart,
-      publish,
-      filename: asset.path,
-      sourceCodeHash: asset.hash,
+      publish: true,
+      s3Bucket: asset.s3Bucket,
+      s3Key: asset.s3Key,
       runtime: asset.runtime,
       handler: asset.handler,
       lifecycle: {
@@ -102,7 +101,7 @@ export class Lambda extends Construct {
     });
 
     this.alias = new LambdaAlias(this, "alias", {
-      name: `${this.fn.functionName}-alias`,
+      name: `${id.replaceAll(/dev-|prod-/gi, "")}-alias`,
       functionName: this.fn.functionName,
       functionVersion: this.fn.version,
       lifecycle: {
@@ -131,6 +130,18 @@ export class Lambda extends Construct {
       .on(this.alias.arn);
     to.grant(`allow-invoke-${this.fn.functionName}`, policyStatement);
     return this;
+  }
+
+  allowToUpdate(to: Grantable) {
+    const policyStatement = new LambdaPolicy()
+      .allow()
+      .toListVersionsByFunction()
+      .toGetFunction()
+      .toUpdateFunctionCode()
+      .toUpdateAlias()
+      .toPublishVersion()
+      .on(this.fn.arn, this.arn);
+    to.grant(`allow-update-${this.fn.functionName}`, policyStatement);
   }
 
   allowInvocationForService(service: ServicePrincipal) {

@@ -1,27 +1,23 @@
-import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
-import {
-  Aspects,
-  TerraformOutput,
-  TerraformStack,
-  TerraformVariable,
-} from "cdktf";
+import { Aspects, TerraformStack, TerraformVariable } from "cdktf";
 import { Construct } from "constructs";
 import { ApiGatewayPrincipal } from "./apigateway-principal";
-import { ArchiveResource, LambdaAsset } from "./asset";
+import { ArchiveResource, LambdaAsset, S3Source } from "./asset";
 import { CloudflareDnsZone } from "./dns-zone";
-import { DynamoDbSchema } from "./dynamodb-schema";
 import { Role } from "./iam";
-import { LAMBDA_SERVICE_PRINCIPAL, Lambda } from "./lambda";
+import { Lambda, LAMBDA_SERVICE_PRINCIPAL } from "./lambda";
 import { RestApi } from "./rest-api";
 import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
 import { TlsCertificate } from "./tls-certificate";
 import { WebsocketApi } from "./websocket-api";
-import { ObjectStore } from "./object-store";
 import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
+import { MainComponent } from "./main-component";
+import { DataAwsRegion } from "@cdktf/provider-aws/lib/data-aws-region";
+import { DataAwsCallerIdentity } from "@cdktf/provider-aws/lib/data-aws-caller-identity";
+import { CiCdCodebuild } from "./ci-cd-codebuild";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
-
+export const TELEGRAM_ROUTE = "/tg";
 export type KiteStackProps = {
   domainName?: string;
   architecture?: "x86_64" | "arm64";
@@ -30,6 +26,9 @@ export type KiteStackProps = {
     | "hello.handler"
     | "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest";
   memorySize?: number;
+  devEnv?: boolean;
+  cicd?: boolean;
+  s3LambdaStorage?: boolean;
 };
 
 export class KiteStack extends TerraformStack {
@@ -42,10 +41,16 @@ export class KiteStack extends TerraformStack {
       runtime = "provided.al2",
       handler = "hello.handler",
       memorySize = 256,
+      devEnv = false,
+      cicd = false,
+      s3LambdaStorage = false,
     } = props;
 
     new AwsProvider(this, "AWS");
     new ArchiveProvider(this, "archive-provider");
+
+    const region = new DataAwsRegion(this, "current-region");
+    const callerIdentity = new DataAwsCallerIdentity(this, "current-caller");
 
     const dnsZone = domainName
       ? new CloudflareDnsZone(this, domainName)
@@ -53,13 +58,6 @@ export class KiteStack extends TerraformStack {
 
     const certificate =
       dnsZone && new TlsCertificate(this, `${domainName}-cert`, dnsZone);
-
-    const prod = "prod";
-
-    const schema = new DynamoDbSchema(this, prod, {
-      pointInTimeRecovery: false,
-      preventDestroy: false,
-    });
 
     const role = new Role(this, "lambda-execution-role", {
       forService: LAMBDA_SERVICE_PRINCIPAL,
@@ -69,20 +67,10 @@ export class KiteStack extends TerraformStack {
       "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
     );
 
-    schema.allowAll(role);
-
-    const objectStore = new ObjectStore(this, "prod-object-store", {
-      bucketPrefix: "prod-k1te-chat-object-store-",
-    });
-
-    objectStore.allowReadWrite(role);
-
     const apiGatewayPrincipal = new ApiGatewayPrincipal(
       this,
       "apigateway-principal"
     );
-
-    const telegramRoute = "/tg";
 
     const wsApiProps = certificate && {
       domainName: `ws.${domainName}`,
@@ -115,30 +103,53 @@ export class KiteStack extends TerraformStack {
         value: restApi.domainName.domainNameConfiguration.targetDomainName,
       });
 
-    const wsApiStage = wsApi.addStage({ stage: prod });
-    const restApiStage = restApi.addStage(prod);
+    const telegramProdBotToken = new TerraformVariable(
+      this,
+      "TELEGRAM_BOT_TOKEN",
+      {
+        type: "string",
+        nullable: false,
+        description: "telegram bot token, obtain in telegram from botfather",
+        sensitive: true,
+      }
+    );
 
-    const telegramBotToken = new TerraformVariable(this, "TELEGRAM_BOT_TOKEN", {
-      type: "string",
-      nullable: false,
-      description: "telegram bot token, obtain in telegram from botfather",
-      sensitive: true,
-    });
-
-    const PROD_ENV = {
-      SERVERLESS_ENVIRONMENT: prod,
-      WS_API_EXECUTION_ENDPOINT: wsApiStage.invokeUrl,
-      TELEGRAM_BOT_TOKEN: telegramBotToken.value,
-      TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
-      BUCKET_NAME: objectStore.bucket.bucket,
-      DISABLE_SIGNAL_HANDLERS: "true",
-    };
-
-    const quarkusAsset = new LambdaAsset(this, "k1te-serverless-quarkus", {
-      relativeProjectPath: "../k1te-serverless",
-      handler,
-      runtime,
-    });
+    let mainHandlerSource;
+    if (s3LambdaStorage) {
+      const s3BucketVariable = new TerraformVariable(
+        this,
+        "MAIN_LAMBDA_S3_BUCKET",
+        {
+          type: "string",
+          nullable: false,
+        }
+      );
+      const s3KeyVariable = new TerraformVariable(
+        this,
+        "MAIN_LAMBDA_S3_OBJECT_KEY",
+        {
+          type: "string",
+          nullable: false,
+        }
+      );
+      mainHandlerSource = new S3Source(this, "main-handler-source", {
+        s3Bucket: s3BucketVariable.stringValue,
+        s3Props: {
+          s3Key: s3KeyVariable.stringValue,
+          runtime,
+          handler,
+        },
+      });
+    } else {
+      const asset = new LambdaAsset(this, "k1te-serverless-quarkus", {
+        relativeProjectPath: "../k1te-serverless",
+        handler,
+        runtime,
+      });
+      mainHandlerSource = new S3Source(this, "main-handler-source", {
+        asset,
+      });
+    }
 
     const archiveResource = new ArchiveResource(
       this,
@@ -148,43 +159,83 @@ export class KiteStack extends TerraformStack {
         sourceFile: "lifecycle-handler/index.mjs",
       }
     );
-
-    const mainHandler = new Lambda(this, "request-dispatcher", {
-      role,
-      asset: quarkusAsset,
-      environment: {
-        ...PROD_ENV,
-      },
-      architecture,
-      memorySize,
-      timeout: 30,
-    });
-
-    wsApiStage.addDefaultRoutes(mainHandler, apiGatewayPrincipal);
-    restApiStage.addHandler(telegramRoute, "POST", mainHandler);
-
-    const lifecycleHandler = new Lambda(this, "lifecycle-handler", {
-      role,
+    const lifecycleSource = new S3Source(this, "lifecycle-handler-source", {
       asset: archiveResource,
-      environment: {
-        TELEGRAM_BOT_TOKEN: telegramBotToken.value,
-        TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${telegramRoute}`,
+      s3Bucket: mainHandlerSource.s3Bucket, //In order not to create a new S3Bucket
+    });
+
+    const functions: Lambda[] = [];
+    const prod = new MainComponent(this, "prod", {
+      role,
+      lambda: {
+        asset: mainHandlerSource,
+        memorySize,
+        architecture,
       },
-      memorySize: 128,
-      architecture: "arm64",
+      lifecycleAsset: lifecycleSource,
+      restApi,
+      wsApi,
+      telegramToken: telegramProdBotToken.value,
     });
+    functions.push(prod.lambdaFunction);
 
-    const lifecycle = new LambdaInvocation(this, "lifecycle-invocation", {
-      functionName: lifecycleHandler.functionName,
-      input: JSON.stringify({}),
-      lifecycleScope: "CRUD",
-      triggers: PROD_ENV,
-      dependsOn: [lifecycleHandler.fn],
-    });
+    let devHandler;
+    if (devEnv) {
+      const telegramDevBotToken = new TerraformVariable(
+        this,
+        "TELEGRAM_DEV_BOT_TOKEN",
+        {
+          type: "string",
+          nullable: false,
+          description: "telegram bot token, obtain in telegram from botfather",
+          sensitive: true,
+        }
+      );
 
-    new TerraformOutput(this, "lifecycle-output", {
-      value: lifecycle.result,
-    });
+      const dev = new MainComponent(this, "dev", {
+        role,
+        lambda: {
+          asset: mainHandlerSource,
+          memorySize,
+          architecture,
+        },
+        lifecycleAsset: lifecycleSource,
+        restApi,
+        wsApi,
+        telegramToken: telegramDevBotToken.value,
+      });
+      devHandler = dev.lambdaFunction;
+      functions.push(devHandler);
+    }
+
+    // Creating Integration, adding Routes to it and complementing Role to invoke Lambda
+    wsApi
+      .attachDefaultIntegration({
+        region: region.name,
+        accountId: callerIdentity.accountId,
+        integrationName: "default-integration",
+        principal: apiGatewayPrincipal,
+      })
+      .addRouteDefaultRoutes()
+      .allowInvocation({ handler: prod.lambdaFunction, stage: "prod" })
+      .allowInvocation({ handler: devHandler, stage: "dev" }); //If dev env is not specified - does nothing
+
+    restApi
+      .attachDefaultIntegration({
+        region: region.name,
+        accountId: callerIdentity.accountId,
+        integrationName: "default-integration",
+      })
+      .addRouteDefaultRoutes({ route: TELEGRAM_ROUTE, method: "POST" })
+      .allowInvocation({ handler: prod.lambdaFunction, stage: "prod" })
+      .allowInvocation({ handler: devHandler, stage: "dev" }); //If dev env is not specified - does nothing
+
+    if (cicd) {
+      new CiCdCodebuild(this, "ci-cd-codebuild", {
+        functions,
+        prodFunctionName: prod.lambdaFunction.functionName,
+      });
+    }
 
     Aspects.of(this).add(TAGGING_ASPECT);
   }
