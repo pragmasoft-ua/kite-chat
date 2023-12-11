@@ -2,7 +2,7 @@ import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
 import { Aspects, TerraformStack, TerraformVariable } from "cdktf";
 import { Construct } from "constructs";
 import { ApiGatewayPrincipal } from "./apigateway-principal";
-import { ArchiveResource, LambdaAsset } from "./asset";
+import { ArchiveResource, LambdaAsset, S3Source } from "./asset";
 import { CloudflareDnsZone } from "./dns-zone";
 import { Role } from "./iam";
 import { Lambda, LAMBDA_SERVICE_PRINCIPAL } from "./lambda";
@@ -11,10 +11,10 @@ import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
 import { TlsCertificate } from "./tls-certificate";
 import { WebsocketApi } from "./websocket-api";
 import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
-import { Codebuild } from "./codebuild";
 import { MainComponent } from "./main-component";
 import { DataAwsRegion } from "@cdktf/provider-aws/lib/data-aws-region";
 import { DataAwsCallerIdentity } from "@cdktf/provider-aws/lib/data-aws-caller-identity";
+import { CiCdCodebuild } from "./ci-cd-codebuild";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 export const TELEGRAM_ROUTE = "/tg";
@@ -26,8 +26,9 @@ export type KiteStackProps = {
     | "hello.handler"
     | "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest";
   memorySize?: number;
-  addDev?: boolean;
-  codeBuildProjectUrl?: string;
+  devEnv?: boolean;
+  cicd?: boolean;
+  s3LambdaStorage?: boolean;
 };
 
 export class KiteStack extends TerraformStack {
@@ -40,8 +41,9 @@ export class KiteStack extends TerraformStack {
       runtime = "provided.al2",
       handler = "hello.handler",
       memorySize = 256,
-      addDev = false,
-      codeBuildProjectUrl,
+      devEnv = false,
+      cicd = false,
+      s3LambdaStorage = false,
     } = props;
 
     new AwsProvider(this, "AWS");
@@ -112,11 +114,42 @@ export class KiteStack extends TerraformStack {
       }
     );
 
-    const quarkusAsset = new LambdaAsset(this, "k1te-serverless-quarkus", {
-      relativeProjectPath: "../k1te-serverless",
-      handler,
-      runtime,
-    });
+    let mainHandlerSource;
+    if (s3LambdaStorage) {
+      const s3BucketVariable = new TerraformVariable(
+        this,
+        "MAIN_LAMBDA_S3_BUCKET",
+        {
+          type: "string",
+          nullable: false,
+        }
+      );
+      const s3KeyVariable = new TerraformVariable(
+        this,
+        "MAIN_LAMBDA_S3_OBJECT_KEY",
+        {
+          type: "string",
+          nullable: false,
+        }
+      );
+      mainHandlerSource = new S3Source(this, "main-handler-source", {
+        s3Bucket: s3BucketVariable.stringValue,
+        s3Props: {
+          s3Key: s3KeyVariable.stringValue,
+          runtime,
+          handler,
+        },
+      });
+    } else {
+      const asset = new LambdaAsset(this, "k1te-serverless-quarkus", {
+        relativeProjectPath: "../k1te-serverless",
+        handler,
+        runtime,
+      });
+      mainHandlerSource = new S3Source(this, "main-handler-source", {
+        asset,
+      });
+    }
 
     const archiveResource = new ArchiveResource(
       this,
@@ -126,16 +159,20 @@ export class KiteStack extends TerraformStack {
         sourceFile: "lifecycle-handler/index.mjs",
       }
     );
+    const lifecycleSource = new S3Source(this, "lifecycle-handler-source", {
+      asset: archiveResource,
+      s3Bucket: mainHandlerSource.s3Bucket, //In order not to create a new S3Bucket
+    });
 
     const functions: Lambda[] = [];
     const prod = new MainComponent(this, "prod", {
       role,
       lambda: {
-        asset: quarkusAsset,
+        asset: mainHandlerSource,
         memorySize,
         architecture,
       },
-      lifecycleAsset: archiveResource,
+      lifecycleAsset: lifecycleSource,
       restApi,
       wsApi,
       telegramToken: telegramProdBotToken.value,
@@ -143,7 +180,7 @@ export class KiteStack extends TerraformStack {
     functions.push(prod.lambdaFunction);
 
     let devHandler;
-    if (addDev) {
+    if (devEnv) {
       const telegramDevBotToken = new TerraformVariable(
         this,
         "TELEGRAM_DEV_BOT_TOKEN",
@@ -158,11 +195,11 @@ export class KiteStack extends TerraformStack {
       const dev = new MainComponent(this, "dev", {
         role,
         lambda: {
-          asset: quarkusAsset,
+          asset: mainHandlerSource,
           memorySize,
           architecture,
         },
-        lifecycleAsset: archiveResource,
+        lifecycleAsset: lifecycleSource,
         restApi,
         wsApi,
         telegramToken: telegramDevBotToken.value,
@@ -181,7 +218,7 @@ export class KiteStack extends TerraformStack {
       })
       .addRouteDefaultRoutes()
       .allowInvocation({ handler: prod.lambdaFunction, stage: "prod" })
-      .allowInvocation({ handler: devHandler, stage: "dev" });
+      .allowInvocation({ handler: devHandler, stage: "dev" }); //If dev env is not specified - does nothing
 
     restApi
       .attachDefaultIntegration({
@@ -191,13 +228,12 @@ export class KiteStack extends TerraformStack {
       })
       .addRouteDefaultRoutes({ route: TELEGRAM_ROUTE, method: "POST" })
       .allowInvocation({ handler: prod.lambdaFunction, stage: "prod" })
-      .allowInvocation({ handler: devHandler, stage: "dev" });
+      .allowInvocation({ handler: devHandler, stage: "dev" }); //If dev env is not specified - does nothing
 
-    if (codeBuildProjectUrl) {
-      new Codebuild(this, "arm-lambda-build", {
+    if (cicd) {
+      new CiCdCodebuild(this, "ci-cd-codebuild", {
         functions,
         prodFunctionName: prod.lambdaFunction.functionName,
-        gitProjectUrl: codeBuildProjectUrl,
       });
     }
 

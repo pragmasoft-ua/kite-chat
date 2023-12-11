@@ -5,7 +5,7 @@ import { ObjectStore } from "./object-store";
 import { WebsocketApi } from "./websocket-api";
 import { RestApi } from "./rest-api";
 import { Lambda } from "./lambda";
-import { ArchiveResource, Resource } from "./asset";
+import { S3Source } from "./asset";
 import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
 import { TerraformOutput } from "cdktf";
 import { TELEGRAM_ROUTE } from "./kite-stack";
@@ -16,11 +16,11 @@ export type MainComponentProps = {
   restApi: RestApi;
   telegramToken: string;
   lambda: {
-    asset: Resource;
+    asset: S3Source;
     architecture: "x86_64" | "arm64";
     memorySize: number;
   };
-  lifecycleAsset: ArchiveResource;
+  lifecycleAsset: S3Source;
 };
 
 export class MainComponent extends Construct {

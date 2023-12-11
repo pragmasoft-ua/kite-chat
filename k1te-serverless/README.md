@@ -24,7 +24,9 @@ The deployment flow is following:
 
 ### Build native function version
 
-`./mvnw package -Dnative -DskipTests -Dquarkus.native.container-build=true`
+```bash
+./mvnw -pl k1te-serverless -am install -Dnative -DskipTests
+```
 
 ### Deploy serverless function version
 
