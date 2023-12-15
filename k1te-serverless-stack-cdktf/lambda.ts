@@ -37,6 +37,7 @@ export type LambdaProps = {
    * The timout in seconds. Defaults to 15.
    */
   timeout?: number;
+  publish?: boolean;
 };
 
 const DEFAULT_PROPS: Partial<LambdaProps> = {
@@ -63,6 +64,7 @@ export class Lambda extends Construct {
       environment,
       architecture,
       isSnapStart = false,
+      publish = false,
     } = {
       ...DEFAULT_PROPS,
       ...props,
@@ -90,7 +92,7 @@ export class Lambda extends Construct {
       },
       architectures: [architecture!],
       snapStart,
-      publish: true,
+      publish,
       s3Bucket: asset.s3Bucket,
       s3Key: asset.s3Key,
       runtime: asset.runtime,
@@ -119,7 +121,7 @@ export class Lambda extends Construct {
     return new Role(this, "default-role", {
       forService: LAMBDA_SERVICE_PRINCIPAL,
     }).attachManagedPolicyArn(
-      "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
     );
   }
 

@@ -15,7 +15,6 @@ import {
 import { TerraformOutput } from "cdktf";
 
 export const CODEBUILD_SERVICE_PRINCIPAL = "codebuild.amazonaws.com";
-const GITHUB_URL = "https://github.com/pragmasoft-ua/kite-chat";
 const LAMBDA_BUILD_SPEC = `
 version: 0.2
 phases:
@@ -31,6 +30,7 @@ artifacts:
 
 export type LambdaBuildProps = {
   role: Role;
+  gitRepositoryUrl: string;
   buildspec?: string;
   image?: string;
   artifactType?: "S3" | "NO_ARTIFACTS";
@@ -48,12 +48,13 @@ export class BuildComponent extends Construct {
 
     const {
       role,
+      gitRepositoryUrl,
       buildspec,
       image = "quay.io/quarkus/ubi-quarkus-graalvmce-builder-image:jdk-21",
       artifactType = "S3",
       environmentVariable,
       buildTimeout = 12,
-      description = "It's used to create native executable for ARM64 platform",
+      description,
     } = props;
 
     let artifacts: CodebuildProjectArtifacts = {
@@ -93,21 +94,23 @@ export class BuildComponent extends Construct {
 
     const cloudwatchPolicyStatement = new Cloudwatch()
       .allow()
-      .to("logs:*")
-      .on(logGroup.arn, `${logGroup.arn}:log-stream:*`);
+      .to("logs:CreateLogGroup")
+      .to("logs:CreateLogStream")
+      .to("logs:PutLogEvents")
+      .on(logGroup.arn, `${logGroup.arn}:*`);
     role.grant(
       `allow-all-logs-actions-to-${id}-logs`,
-      cloudwatchPolicyStatement
+      cloudwatchPolicyStatement,
     );
 
-    this.codeBuildProject = new CodebuildProject(this, "lambda-build-project", {
+    this.codeBuildProject = new CodebuildProject(this, id, {
       name: id,
       description,
       serviceRole: role.arn,
       source: {
         type: "GITHUB",
         gitCloneDepth: 1,
-        location: GITHUB_URL,
+        location: gitRepositoryUrl,
         buildspec: buildspec ?? LAMBDA_BUILD_SPEC,
       },
       sourceVersion: "main",
@@ -171,5 +174,9 @@ export class BuildComponent extends Construct {
         },
       ],
     });
+  }
+
+  get arn() {
+    return this.codeBuildProject.arn;
   }
 }

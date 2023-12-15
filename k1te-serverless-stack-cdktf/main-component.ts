@@ -29,7 +29,7 @@ export class MainComponent extends Construct {
   constructor(
     scope: Construct,
     id: string,
-    props: Readonly<MainComponentProps>
+    props: Readonly<MainComponentProps>,
   ) {
     super(scope, id);
 
@@ -73,6 +73,7 @@ export class MainComponent extends Construct {
       environment: {
         ...ENV,
       },
+      publish: true,
       architecture: lambda.architecture,
       memorySize: lambda.memorySize,
       timeout: 30,

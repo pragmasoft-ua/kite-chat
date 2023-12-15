@@ -4,9 +4,15 @@ import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
 import { BuildComponent, CODEBUILD_SERVICE_PRINCIPAL } from "./build-component";
 import { Role } from "./iam";
 
+export type BuildSpecProps = {
+  gitRepositoryUrl: string;
+};
+
 export class BuildStack extends TerraformStack {
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, props: Readonly<BuildSpecProps>) {
     super(scope, id);
+
+    const { gitRepositoryUrl } = props;
 
     new AwsProvider(this, "AWS");
 
@@ -14,6 +20,9 @@ export class BuildStack extends TerraformStack {
       forService: CODEBUILD_SERVICE_PRINCIPAL,
     });
 
-    new BuildComponent(this, "arm64-lambda-build", { role }).showOutput();
+    new BuildComponent(this, "arm64-lambda-build", {
+      role,
+      gitRepositoryUrl,
+    }).showOutput();
   }
 }

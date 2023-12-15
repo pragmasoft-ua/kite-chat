@@ -48,14 +48,14 @@ export class LambdaAsset extends Construct implements Resource {
     const absoluteAssetPath = path.resolve(
       __dirname,
       relativeProjectPath,
-      target
+      target,
     );
 
     assert(
       fs.existsSync(absoluteAssetPath),
       `Lambda asset does not exist: "${absoluteAssetPath}".
        Go to the asset's project directory and build asset with the command
-       "./mvnw package -DskipTests" then redeploy this stack.`
+       "./mvnw package -DskipTests" then redeploy this stack.`,
     );
 
     this.asset = new TerraformAsset(this, "asset", {
@@ -103,7 +103,7 @@ export class ArchiveResource extends Construct implements Resource {
   constructor(
     scope: Construct,
     id: string,
-    props: Readonly<ArchiveResourceProps>
+    props: Readonly<ArchiveResourceProps>,
   ) {
     super(scope, id);
 
@@ -140,21 +140,20 @@ export class S3Source extends Construct {
     const { asset, s3Bucket, s3Props } = props;
 
     if (asset) {
-      let s3BucketName;
-      if (!s3Bucket) {
-        const s3Bucket = new S3Bucket(this, "lambda-source-storage", {
+      const s3BucketName =
+        s3Bucket ??
+        new S3Bucket(this, "lambda-source-storage", {
           bucketPrefix: "lambda-source-storage-",
-        });
-        s3BucketName = s3Bucket.bucket;
-      } else {
-        s3BucketName = s3Bucket;
-      }
+        }).bucket;
 
       const s3Object = new S3Object(this, "main-lambda-handler", {
         bucket: s3BucketName,
         key: `${id}.zip`,
         source: asset.path,
         etag: asset.hash,
+        lifecycle: {
+          ignoreChanges: ["etag", "source"],
+        },
       });
 
       this.s3Bucket = s3BucketName;
@@ -169,7 +168,7 @@ export class S3Source extends Construct {
       this.handler = s3Props.handler;
     } else {
       throw new Error(
-        "You must specify at least Resource or S3Bucket and S3Key"
+        "You must specify at least Resource or S3Bucket and S3Key",
       );
     }
   }

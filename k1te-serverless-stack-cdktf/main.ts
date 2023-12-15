@@ -31,10 +31,21 @@ const kiteStackLocal = new KiteStack(app, "kite-local", {
   runtime: "provided.al2",
   handler: "hello.handler",
   memorySize: 256,
+  cicd: {
+    gitRepositoryUrl: "https://github.com/Alex21022001/drift-check2",
+    s3BucketWithState: "my-test-arm-bucket",
+    emailToSendAlarm: "alexeysitiy@gmail.com",
+  },
 });
-new LocalBackend(kiteStackLocal);
+new S3Backend(kiteStackLocal, {
+  bucket: "my-test-arm-bucket",
+  key: `kite/terraform.tfstate`,
+  region: "us-west-2",
+});
 
-const buildStack = new BuildStack(app, "lambda-build");
+const buildStack = new BuildStack(app, "lambda-build", {
+  gitRepositoryUrl: "https://github.com/Alex21022001/drift-check2",
+});
 new LocalBackend(buildStack);
 
 new LocalStack(app, "local");

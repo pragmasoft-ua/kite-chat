@@ -1,0 +1,23 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - cd k1te-serverless-stack-cdktf
+      - npm install
+  build:
+    commands:
+      - echo "CDKTF is synthesizing source code"
+      - cdktf synth
+      - cd cdktf.out/stacks/kite-local
+      - terraform init -reconfigure
+      - echo "Drift check"
+      - terraform plan -detailed-exitcode -refresh=false || EXITCODE=$?
+  post_build:
+    commands:
+      - echo $EXITCODE
+      - |
+        if [ $EXITCODE -eq 2 ]; then
+          echo Drift is detected, event is published
+          aws events put-events --entries $EVENT
+        fi

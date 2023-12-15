@@ -73,6 +73,9 @@ export class RestApiStage extends Construct {
         throttlingRateLimit: 10,
         throttlingBurstLimit: 5,
       },
+      lifecycle: {
+        ignoreChanges: ["default_route_settings[0].logging_level"]
+      }
     });
 
     new TerraformOutput(this, "url", {

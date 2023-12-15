@@ -62,7 +62,7 @@ export class CloudflareDnsZone extends Construct implements DnsZone {
 
     assert(
       apiToken,
-      "CLOUDFLARE_API_TOKEN env variable is not configured in the .env file"
+      "CLOUDFLARE_API_TOKEN env variable is not configured in the .env file",
     );
 
     new CloudflareProvider(this, "cloudflare-provider", {
