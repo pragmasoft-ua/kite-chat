@@ -2,22 +2,27 @@ import { LambdaFunction } from "@cdktf/provider-aws/lib/lambda-function";
 import { Lambda as LambdaPolicy } from "iam-floyd/lib/generated";
 
 import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group";
-import { LambdaAlias } from "@cdktf/provider-aws/lib/lambda-alias";
 import { Lazy } from "cdktf";
 import { Construct } from "constructs";
-import { S3Source } from "./asset";
 import { Grantable, ServicePrincipal } from "./grantable";
 import { Role } from "./iam";
 import { LambdaPermission } from "@cdktf/provider-aws/lib/lambda-permission";
 
 export const LAMBDA_SERVICE_PRINCIPAL = "lambda.amazonaws.com";
+export type Runtime =
+  | "java11"
+  | "java17"
+  | "java21"
+  | "nodejs18.x"
+  | "provided.al2";
+export type Handler =
+  | "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
+  | "index.handler"
+  | "hello.handler";
+export type Architecture = "x86_64" | "arm64";
 
 export type LambdaProps = {
-  asset: S3Source;
-  isSnapStart?: boolean;
-  architecture?: string;
   role?: Role;
-
   /**
    * The environment variables to be passed to the Lambda function.
    */
@@ -37,19 +42,23 @@ export type LambdaProps = {
    * The timout in seconds. Defaults to 15.
    */
   timeout?: number;
-  publish?: boolean;
-};
 
+  architecture?: Architecture;
+  runtime?: Runtime;
+  handler?: Handler;
+  s3Bucket: string;
+  s3Key: string;
+};
 const DEFAULT_PROPS: Partial<LambdaProps> = {
   logRetentionInDays: 7,
   timeout: 15,
   memorySize: 256,
-  architecture: "x86_64",
+  architecture: "arm64",
+  handler: "hello.handler",
 };
 
 export class Lambda extends Construct {
   readonly fn: LambdaFunction;
-  readonly alias: LambdaAlias;
   readonly role: Role;
   readonly environment: { [key: string]: string };
 
@@ -58,23 +67,19 @@ export class Lambda extends Construct {
 
     const {
       role,
-      asset,
       memorySize,
       timeout,
       environment,
       architecture,
-      isSnapStart = false,
-      publish = false,
+      s3Bucket,
+      s3Key,
+      runtime,
+      handler,
     } = {
       ...DEFAULT_PROPS,
       ...props,
     };
     this.environment = environment ?? {};
-    const snapStart = isSnapStart
-      ? {
-          applyOn: "PublishedVersions",
-        }
-      : undefined;
 
     this.role = role ?? this.defaultRole();
 
@@ -91,23 +96,12 @@ export class Lambda extends Construct {
         }) as unknown as Record<string, string>,
       },
       architectures: [architecture!],
-      snapStart,
-      publish,
-      s3Bucket: asset.s3Bucket,
-      s3Key: asset.s3Key,
-      runtime: asset.runtime,
-      handler: asset.handler,
+      s3Bucket,
+      s3Key,
+      runtime,
+      handler,
       lifecycle: {
         ignoreChanges: ["s3_key", "s3_bucket", "layers"], //, "filename"],
-      },
-    });
-
-    this.alias = new LambdaAlias(this, "alias", {
-      name: `${id.replaceAll(/dev-|prod-/gi, "")}-alias`,
-      functionName: this.fn.functionName,
-      functionVersion: this.fn.version,
-      lifecycle: {
-        ignoreChanges: ["function_version", "description", "routing_config"],
       },
     });
 
@@ -129,21 +123,9 @@ export class Lambda extends Construct {
     const policyStatement = new LambdaPolicy()
       .allow()
       .toInvokeFunction()
-      .on(this.alias.arn);
+      .on(this.fn.arn);
     to.grant(`allow-invoke-${this.fn.functionName}`, policyStatement);
     return this;
-  }
-
-  allowToUpdate(to: Grantable) {
-    const policyStatement = new LambdaPolicy()
-      .allow()
-      .toListVersionsByFunction()
-      .toGetFunction()
-      .toUpdateFunctionCode()
-      .toUpdateAlias()
-      .toPublishVersion()
-      .on(this.fn.arn, this.arn);
-    to.grant(`allow-update-${this.fn.functionName}`, policyStatement);
   }
 
   allowInvocationForService(service: ServicePrincipal) {
@@ -153,7 +135,6 @@ export class Lambda extends Construct {
     new LambdaPermission(this, statementId, {
       statementId,
       functionName: this.fn.functionName,
-      qualifier: this.alias.name,
       action: "lambda:InvokeFunction",
       principal,
       sourceArn,
@@ -162,7 +143,7 @@ export class Lambda extends Construct {
   }
 
   get arn() {
-    return this.alias.arn;
+    return this.fn.arn;
   }
 
   get functionName() {

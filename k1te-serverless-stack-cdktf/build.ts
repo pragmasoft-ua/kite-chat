@@ -1,7 +1,6 @@
 import { Construct } from "constructs";
 import { Role } from "./iam";
-import { S3Bucket } from "@cdktf/provider-aws/lib/s3-bucket";
-import { Cloudwatch, S3 } from "iam-floyd/lib/generated";
+import { Cloudwatch } from "iam-floyd/lib/generated";
 import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group";
 import {
   CodebuildProject,
@@ -12,35 +11,23 @@ import {
   CodebuildWebhook,
   CodebuildWebhookFilterGroupFilter,
 } from "@cdktf/provider-aws/lib/codebuild-webhook";
-import { TerraformOutput } from "cdktf";
 
+export const BUILD_DIR = "build";
+export const OUTPUT_PATH = `${BUILD_DIR}/function.zip`;
 export const CODEBUILD_SERVICE_PRINCIPAL = "codebuild.amazonaws.com";
-const LAMBDA_BUILD_SPEC = `
-version: 0.2
-phases:
-  build:
-    on-failure: ABORT
-    commands:
-      - ./mvnw -pl k1te-serverless -am install -Dnative -Dquarkus.native.native-image-xmx=1700m
-artifacts:
-  files:
-    - k1te-serverless/target/function.zip
-  name: build
-  discard-paths: yes`;
 
 export type LambdaBuildProps = {
   role: Role;
   gitRepositoryUrl: string;
-  buildspec?: string;
-  image?: string;
-  artifactType?: "S3" | "NO_ARTIFACTS";
+  buildspec: string;
+  image: string;
+  s3BucketName?: string;
   environmentVariable?: CodebuildProjectEnvironmentEnvironmentVariable[];
   buildTimeout?: number;
   description?: string;
 };
 
-export class BuildComponent extends Construct {
-  private readonly s3Bucket?: S3Bucket;
+export class Build extends Construct {
   private readonly codeBuildProject: CodebuildProject;
 
   constructor(scope: Construct, id: string, props: Readonly<LambdaBuildProps>) {
@@ -50,42 +37,23 @@ export class BuildComponent extends Construct {
       role,
       gitRepositoryUrl,
       buildspec,
-      image = "quay.io/quarkus/ubi-quarkus-graalvmce-builder-image:jdk-21",
-      artifactType = "S3",
+      image,
+      s3BucketName,
       environmentVariable,
       buildTimeout = 12,
       description,
     } = props;
 
-    let artifacts: CodebuildProjectArtifacts = {
-      type: artifactType,
-    };
-
-    if (artifactType === "S3") {
-      const s3Bucket = new S3Bucket(this, "s3-build-bucket", {
-        bucketPrefix: "build-bucket-",
-        forceDestroy: true,
-      });
-
-      const s3PolicyStatement = new S3()
-        .allow()
-        .toPutObject()
-        .toGetObject()
-        .toGetObjectVersion()
-        .toGetBucketAcl()
-        .toGetBucketLocation()
-        .on(s3Bucket.arn, `${s3Bucket.arn}/*`, "arn:aws:s3:::codepipeline-*");
-
-      role.grant(`allow-crud-${s3Bucket.bucket}`, s3PolicyStatement);
-
-      artifacts = {
-        type: artifactType,
-        location: s3Bucket.bucket,
-        name: "build",
-        packaging: "NONE",
-      };
-      this.s3Bucket = s3Bucket;
-    }
+    const artifacts: CodebuildProjectArtifacts = s3BucketName
+      ? {
+          type: "S3",
+          location: s3BucketName,
+          name: BUILD_DIR,
+          packaging: "NONE",
+        }
+      : {
+          type: "NO_ARTIFACTS",
+        };
 
     const logGroup = new CloudwatchLogGroup(this, `${id}-logs`, {
       name: `/aws/${id}`,
@@ -111,7 +79,7 @@ export class BuildComponent extends Construct {
         type: "GITHUB",
         gitCloneDepth: 1,
         location: gitRepositoryUrl,
-        buildspec: buildspec ?? LAMBDA_BUILD_SPEC,
+        buildspec,
       },
       sourceVersion: "main",
       environment: {
@@ -133,28 +101,6 @@ export class BuildComponent extends Construct {
         },
       },
     });
-  }
-
-  showOutput() {
-    new TerraformOutput(this, "CODEBUILD_PROJECT", {
-      value: this.codeBuildProject.name,
-      description:
-        "Name of CodeBuild Project that you can use to start build manually",
-    });
-
-    if (this.s3Bucket) {
-      new TerraformOutput(this, "LAMBDA_S3_BUCKET", {
-        value: this.s3Bucket.bucket,
-        description:
-          "This S3 Bucket will contain function.zip archive with built Lambda for ARM64 platform",
-      });
-
-      new TerraformOutput(this, "LAMBDA_BUILT_OBJECT_KEY", {
-        value: "build/function.zip",
-        description:
-          "S3 Object Key of archive with built Lambda for ARM64 platform",
-      });
-    }
   }
 
   /**

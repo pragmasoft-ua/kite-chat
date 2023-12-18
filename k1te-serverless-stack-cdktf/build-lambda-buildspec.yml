@@ -1,0 +1,12 @@
+version: 0.2
+
+phases:
+  build:
+    on-failure: ABORT
+    commands:
+      - ./mvnw -pl k1te-serverless -am install -Dnative -Dquarkus.native.native-image-xmx=1700m
+artifacts:
+  files:
+    - k1te-serverless/target/function.zip
+  name: build
+  discard-paths: yes

@@ -1,4 +1,4 @@
-import { App, LocalBackend, S3Backend } from "cdktf";
+import { App, S3Backend } from "cdktf";
 import "dotenv/config";
 import { LocalStack } from "./local-stack";
 import { KiteStack } from "./kite-stack";
@@ -13,17 +13,32 @@ const app = new App();
  * but it also required several variable defined in .env file, please check README.md
  * Deploying Stack and Stack Variables section
  * */
-const kiteStack = new KiteStack(app, "kite", {
-  domainName: "k1te.chat",
-  architecture: "x86_64",
-  runtime: "provided.al2",
-  handler: "hello.handler",
-  memorySize: 256,
+// const kiteStack = new KiteStack(app, "kite", {
+//   domainName: "k1te.chat",
+//   architecture: "x86_64",
+//   runtime: "provided.al2",
+//   handler: "hello.handler",
+//   memorySize: 256,
+//   lambdaBuildS3Key: "kite/terraform.tfstate",
+//   lambdaBuildS3Bucket: "k1te-chat-tfstate",
+// });
+// new S3Backend(kiteStack, {
+//   bucket: "k1te-chat-tfstate",
+//   key: `kite/terraform.tfstate`,
+//   region: "eu-north-1",
+// });
+
+// Local
+const buildStack = new BuildStack(app, "lambda-build", {
+  gitRepositoryUrl: "https://github.com/Alex21022001/drift",
+  s3BucketWithState: "my-test-arm-bucket",
+  devLambdaName: "dev-request-dispatcher",
+  // prodLambdaName: "prod-request-dispatcher",
 });
-new S3Backend(kiteStack, {
-  bucket: "k1te-chat-tfstate",
-  key: `kite/terraform.tfstate`,
-  region: "eu-north-1",
+new S3Backend(buildStack, {
+  bucket: "my-test-arm-bucket",
+  key: `kite/terraform-build.tfstate`,
+  region: "us-west-2",
 });
 
 const kiteStackLocal = new KiteStack(app, "kite-local", {
@@ -31,22 +46,17 @@ const kiteStackLocal = new KiteStack(app, "kite-local", {
   runtime: "provided.al2",
   handler: "hello.handler",
   memorySize: 256,
-  cicd: {
-    gitRepositoryUrl: "https://github.com/Alex21022001/drift-check2",
-    s3BucketWithState: "my-test-arm-bucket",
-    emailToSendAlarm: "alexeysitiy@gmail.com",
-  },
+  devFunctionName: buildStack.devFunctionName,
+  prodFunctionName: buildStack.prodFunctionName,
+  sourceBucketName: buildStack.sourceBucketName,
+  functionS3Key: buildStack.functionS3Key,
+  lifecycleS3Key: buildStack.lifecycleS3Key,
 });
 new S3Backend(kiteStackLocal, {
   bucket: "my-test-arm-bucket",
   key: `kite/terraform.tfstate`,
   region: "us-west-2",
 });
-
-const buildStack = new BuildStack(app, "lambda-build", {
-  gitRepositoryUrl: "https://github.com/Alex21022001/drift-check2",
-});
-new LocalBackend(buildStack);
 
 new LocalStack(app, "local");
 app.synth();

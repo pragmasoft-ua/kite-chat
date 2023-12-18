@@ -4,8 +4,7 @@ import { Role } from "./iam";
 import { ObjectStore } from "./object-store";
 import { WebsocketApi } from "./websocket-api";
 import { RestApi } from "./rest-api";
-import { Lambda } from "./lambda";
-import { S3Source } from "./asset";
+import { Architecture, Handler, Lambda, Runtime } from "./lambda";
 import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
 import { TerraformOutput } from "cdktf";
 import { TELEGRAM_ROUTE } from "./kite-stack";
@@ -15,12 +14,19 @@ export type MainComponentProps = {
   wsApi: WebsocketApi;
   restApi: RestApi;
   telegramToken: string;
-  lambda: {
-    asset: S3Source;
-    architecture: "x86_64" | "arm64";
-    memorySize: number;
+  mainLambda: {
+    functionName: string;
+    s3Bucket: string;
+    s3Key: string;
+    architecture?: Architecture;
+    runtime?: Runtime;
+    handler?: Handler;
+    memorySize?: number;
   };
-  lifecycleAsset: S3Source;
+  lifecycleLambda: {
+    s3Bucket: string;
+    s3Key: string;
+  };
 };
 
 export class MainComponent extends Construct {
@@ -33,16 +39,16 @@ export class MainComponent extends Construct {
   ) {
     super(scope, id);
 
-    const { role, wsApi, restApi, telegramToken, lambda, lifecycleAsset } =
+    const { role, wsApi, restApi, telegramToken, mainLambda, lifecycleLambda } =
       props;
-    const baseMainFunctionName = "request-dispatcher";
-    const mainFunctionName = `${id}-${baseMainFunctionName}`;
+
     const stageProps = {
       stage: id,
-      functionStageVariable: `${mainFunctionName}:${baseMainFunctionName}-alias`,
+      functionStageVariable: mainLambda.functionName,
     };
 
     const schema = new DynamoDbSchema(this, `${id}`, {
+      //todo not to delete for prod
       pointInTimeRecovery: false,
       preventDestroy: false,
     });
@@ -50,6 +56,7 @@ export class MainComponent extends Construct {
     schema.allowAll(role);
 
     const objectStore = new ObjectStore(this, "object-store", {
+      //todo not to destroy for prod
       bucketPrefix: `${id}-k1te-chat-object-store-`,
     });
 
@@ -67,21 +74,26 @@ export class MainComponent extends Construct {
       DISABLE_SIGNAL_HANDLERS: "true",
     };
 
-    this.lambdaFunction = new Lambda(this, mainFunctionName, {
+    this.lambdaFunction = new Lambda(this, mainLambda.functionName, {
       role,
-      asset: lambda.asset,
+      s3Bucket: mainLambda.s3Bucket,
+      s3Key: mainLambda.s3Key,
+      runtime: mainLambda.runtime,
+      handler: mainLambda.handler,
       environment: {
         ...ENV,
       },
-      publish: true,
-      architecture: lambda.architecture,
-      memorySize: lambda.memorySize,
+      architecture: mainLambda.architecture,
+      memorySize: mainLambda.memorySize,
       timeout: 30,
     });
 
     const lifecycleHandler = new Lambda(this, `${id}-lifecycle-handler`, {
       role,
-      asset: lifecycleAsset,
+      runtime: "nodejs18.x",
+      handler: "index.handler",
+      s3Bucket: lifecycleLambda.s3Bucket,
+      s3Key: lifecycleLambda.s3Key,
       environment: {
         TELEGRAM_BOT_TOKEN: telegramToken,
         TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${TELEGRAM_ROUTE}`,

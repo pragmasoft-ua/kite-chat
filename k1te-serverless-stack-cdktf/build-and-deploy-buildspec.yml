@@ -1,0 +1,28 @@
+version: 0.2
+
+phases:
+  install:
+    on-failure: ABORT
+    commands:
+      - echo downloading AWS CLI
+      - curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
+      - unzip awscliv2.zip
+      - ./aws/install
+  build:
+    on-failure: ABORT
+    commands:
+      - echo build started
+      - ./mvnw -pl k1te-serverless -am install -Dnative -Dquarkus.native.native-image-xmx=1700m
+  post_build:
+    on-failure: CONTINUE
+    commands:
+      - echo Updating Lambda Function $FUNCTION
+      - aws lambda update-function-code --function-name $FUNCTION --zip-file fileb://k1te-serverless/target/function.zip
+artifacts:
+  files:
+    - k1te-serverless/target/function.zip
+  name: build
+  discard-paths: yes
+cache:
+  paths:
+    - '/root/.m2/**/*'

@@ -116,7 +116,7 @@ This dev environment incorporates additional Rest/WebSocket stages, Lambda, Logs
 - **cicd** - If set to **true**, add CodeBuild projects which Build 
 updated ARM64 Lambda and publish new Lambda version for both dev(if exists)/prod, and also updates
 Lambda Alias for dev Lambda when code in GitHub Repository is updated. When a new Tag is pushed to GitHub it updates
-Lambda Alias for prod env function. GitHub URL is specified in `build-component.ts` as a `https://github.com/pragmasoft-ua/kite-chat`
+Lambda Alias for prod env function. GitHub URL is specified in `build.ts` as a `https://github.com/pragmasoft-ua/kite-chat`
 - **s3LambdaStorage** - if set to **true**, uses defined **MAIN_LAMBDA_S3_BUCKET**
 and **MAIN_LAMBDA_S3_OBJECT_KEY** variables in **.env** file which point at function.zip archive of ARM64 Lambda to create a **mainHandler** that will
 be used for both **prod/dev**(if devEnv is true) Lambdas.
