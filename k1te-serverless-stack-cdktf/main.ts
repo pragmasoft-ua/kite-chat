@@ -33,7 +33,8 @@ const buildStack = new BuildStack(app, "lambda-build", {
   gitRepositoryUrl: "https://github.com/Alex21022001/drift",
   s3BucketWithState: "my-test-arm-bucket",
   devLambdaName: "dev-request-dispatcher",
-  // prodLambdaName: "prod-request-dispatcher",
+  prodLambdaName: "prod-request-dispatcher",
+  buildLambdaViaAsset: true,
 });
 new S3Backend(buildStack, {
   bucket: "my-test-arm-bucket",

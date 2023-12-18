@@ -29,7 +29,7 @@ export type MainComponentProps = {
   };
 };
 
-export class MainComponent extends Construct {
+export class Stage extends Construct {
   readonly lambdaFunction: Lambda;
 
   constructor(
@@ -74,7 +74,7 @@ export class MainComponent extends Construct {
       DISABLE_SIGNAL_HANDLERS: "true",
     };
 
-    this.lambdaFunction = new Lambda(this, mainLambda.functionName, {
+    const lambdaFunction = new Lambda(this, mainLambda.functionName, {
       role,
       s3Bucket: mainLambda.s3Bucket,
       s3Key: mainLambda.s3Key,
@@ -87,6 +87,9 @@ export class MainComponent extends Construct {
       memorySize: mainLambda.memorySize,
       timeout: 30,
     });
+
+    restApiStage.allowInvocation(lambdaFunction);
+    wsApiStage.allowInvocation(lambdaFunction);
 
     const lifecycleHandler = new Lambda(this, `${id}-lifecycle-handler`, {
       role,
@@ -113,5 +116,7 @@ export class MainComponent extends Construct {
     new TerraformOutput(this, "lifecycle-output", {
       value: lifecycle.result,
     });
+
+    this.lambdaFunction = lambdaFunction;
   }
 }

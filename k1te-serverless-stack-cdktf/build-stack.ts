@@ -36,11 +36,11 @@ export type BuildSpecProps = {
 };
 
 export class BuildStack extends TerraformStack {
-  readonly devFunctionName: string;
-  readonly prodFunctionName?: string;
-  readonly sourceBucketName: string;
-  readonly functionS3Key: string;
-  readonly lifecycleS3Key: string;
+  public devFunctionName: string;
+  public prodFunctionName?: string;
+  public sourceBucketName: string;
+  public functionS3Key: string;
+  public lifecycleS3Key: string;
 
   constructor(scope: Construct, id: string, props: Readonly<BuildSpecProps>) {
     super(scope, id);
@@ -58,6 +58,7 @@ export class BuildStack extends TerraformStack {
 
     const s3Bucket = new S3Bucket(this, "s3-bucket", {
       bucketPrefix: "s3-source-bucket",
+      forceDestroy: true,
     });
 
     new CiCdCodebuild(this, "ci-cd-codebuild", {

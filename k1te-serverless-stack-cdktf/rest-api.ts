@@ -10,20 +10,14 @@ import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group
 import { Construct } from "constructs";
 import { API_GATEWAY_SERVICE_PRINCIPAL } from "./apigateway-principal";
 import { ServicePrincipal } from "./grantable";
-import { ApiProps } from "./websocket-api";
-import {
-  Api,
-  ApiIntegration,
-  ApiStageConfig,
-  IntegrationConfig,
-  InvocationConfig,
-} from "./api";
+import { TlsCertificate } from "./tls-certificate";
+import { Lambda } from "./lambda";
 
 export class RestApiStage extends Construct {
   readonly stage: Apigatewayv2Stage;
   readonly api: RestApi;
 
-  constructor(scope: RestApi, id: string, props: ApiStageConfig) {
+  constructor(scope: RestApi, id: string, props: Readonly<RestApiStageConfig>) {
     super(scope, id);
 
     this.api = scope;
@@ -74,8 +68,8 @@ export class RestApiStage extends Construct {
         throttlingBurstLimit: 5,
       },
       lifecycle: {
-        ignoreChanges: ["default_route_settings[0].logging_level"]
-      }
+        ignoreChanges: ["default_route_settings[0].logging_level"],
+      },
     });
 
     new TerraformOutput(this, "url", {
@@ -97,6 +91,10 @@ export class RestApiStage extends Construct {
     }
   }
 
+  allowInvocation(handler: Lambda) {
+    handler.allowInvocationForService(this.api);
+  }
+
   get invokeUrl() {
     if (this.api.domainName) {
       return `https://${this.api.domainName.domainName}/${this.stage.name}`;
@@ -105,50 +103,59 @@ export class RestApiStage extends Construct {
   }
 }
 
-export class RestApi extends Construct implements ServicePrincipal, Api {
+export class RestApi extends Construct implements ServicePrincipal {
   readonly api: Apigatewayv2Api;
   readonly domainName?: Apigatewayv2DomainName;
 
-  constructor(scope: Construct, id: string, props?: ApiProps) {
+  constructor(scope: Construct, id: string, props: Readonly<RestApiProps>) {
     super(scope, id);
+    const {
+      handlerArn,
+      method = "GET",
+      route,
+      domainName,
+      certificate,
+    } = props;
+    const routeKey = `${method} ${route}`;
 
-    this.api = new Apigatewayv2Api(this, "api", {
+    const api = new Apigatewayv2Api(this, "api", {
       name: this.node.id,
       protocolType: "HTTP",
     });
+    this.api = api;
 
-    if (props) {
-      const {
-        domainName,
-        certificate: { cert, validation },
-      } = props;
+    const integration = new Apigatewayv2Integration(
+      this,
+      "default-integration",
+      {
+        apiId: api.id,
+        integrationType: "AWS_PROXY",
+        integrationUri: handlerArn,
+        payloadFormatVersion: "2.0",
+      },
+    );
 
+    new Apigatewayv2Route(this, "route", {
+      apiId: api.id,
+      routeKey,
+      target: "integrations/" + integration.id,
+    });
+
+    if (domainName && certificate) {
       this.domainName = new Apigatewayv2DomainName(this, "domain-name", {
         domainName,
         domainNameConfiguration: {
-          certificateArn: cert.arn,
+          certificateArn: certificate.cert.arn,
           endpointType: "REGIONAL",
           securityPolicy: "TLS_1_2",
         },
-        dependsOn: [validation],
+        dependsOn: [certificate.validation],
       });
     }
   }
 
-  addStage(props: Readonly<ApiStageConfig>) {
+  addStage(props: Readonly<RestApiStageConfig>) {
     return new RestApiStage(this, `${props.stage}-stage`, props);
-  }
-
-  attachDefaultIntegration(integrationConfig: IntegrationConfig) {
-    const { region, accountId, integrationName } = integrationConfig;
-
-    const handlerArn =
-      "arn:aws:lambda:" +
-      region +
-      ":" +
-      accountId +
-      ":function:$${stageVariables.function}";
-    return new RestApiIntegration(this, integrationName, handlerArn);
   }
 
   get name() {
@@ -164,39 +171,17 @@ export class RestApi extends Construct implements ServicePrincipal, Api {
   }
 }
 
-export class RestApiIntegration extends Construct implements ApiIntegration {
-  private readonly integration: Apigatewayv2Integration;
-  private readonly restApi: RestApi;
+export type RestApiProps = {
+  handlerArn: string;
+  method?: string;
+  route: string;
+  domainName?: string;
+  certificate?: TlsCertificate;
+};
 
-  constructor(scope: RestApi, id: string, handlerArn: string) {
-    super(scope, id);
-    this.restApi = scope;
-
-    this.integration = new Apigatewayv2Integration(this, id, {
-      apiId: scope.api.id,
-      integrationType: "AWS_PROXY",
-      integrationUri: handlerArn,
-      payloadFormatVersion: "2.0",
-    });
-  }
-
-  addRouteDefaultRoutes(props?: any) {
-    const { route, method = "GET" } = props;
-    const routeKey = `${method} ${route}`;
-
-    new Apigatewayv2Route(this, "route", {
-      apiId: this.restApi.api.id,
-      routeKey,
-      target: "integrations/" + this.integration.id,
-    });
-    return this;
-  }
-
-  allowInvocation({ handler }: InvocationConfig) {
-    if (!handler) {
-      return this;
-    }
-    handler.allowInvocationForService(this.restApi);
-    return this;
-  }
-}
+export type RestApiStageConfig = {
+  stage: string;
+  functionStageVariable: string;
+  logRetentionDays?: number;
+  loggingLevel?: "ERROR" | "INFO" | "OFF";
+};

@@ -10,12 +10,12 @@ import {
   LAMBDA_SERVICE_PRINCIPAL,
   Runtime,
 } from "./lambda";
-import { RestApi } from "./rest-api";
+import { RestApi, RestApiProps } from "./rest-api";
 import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
 import { TlsCertificate } from "./tls-certificate";
-import { WebsocketApi } from "./websocket-api";
+import { WebsocketApi, WebSocketApiProps } from "./websocket-api";
 import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
-import { MainComponent } from "./main-component";
+import { Stage } from "./stage";
 import { DataAwsRegion } from "@cdktf/provider-aws/lib/data-aws-region";
 import { DataAwsCallerIdentity } from "@cdktf/provider-aws/lib/data-aws-caller-identity";
 import assert = require("assert");
@@ -23,12 +23,28 @@ import assert = require("assert");
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 export const TELEGRAM_ROUTE = "/tg";
 export type KiteStackProps = {
-  domainName?: string;
+  /**
+   * Name of the MainLambda that is used in 'dev' stage.
+   * */
   devFunctionName: string;
+  /**
+   * Optional: Name of the MainLambda that is used in 'prod' stage.
+   * If set, 'prod' stage and all related resources will be created.
+   * */
   prodFunctionName?: string;
+  /**
+   * Name of S3Bucket that contains Lambdas.
+   * */
   sourceBucketName: string;
+  /**
+   * S3Key of SourceBucket that point at MainHandler zip archive.
+   * */
   functionS3Key: string;
+  /**
+   * S3Key of SourceBucket that point at Lifecycle zip archive.
+   * */
   lifecycleS3Key: string;
+  domainName?: string;
   architecture?: Architecture;
   runtime?: Runtime;
   handler?: Handler;
@@ -57,6 +73,9 @@ export class KiteStack extends TerraformStack {
 
     const region = new DataAwsRegion(this, "current-region");
     const callerIdentity = new DataAwsCallerIdentity(this, "current-caller");
+    const handlerArn =
+      `arn:aws:lambda:${region.name}:${callerIdentity.accountId}:function:` +
+      "$${stageVariables.function}";
 
     const dnsZone = domainName
       ? new CloudflareDnsZone(this, domainName)
@@ -78,12 +97,17 @@ export class KiteStack extends TerraformStack {
       "apigateway-principal",
     );
 
-    const wsApiProps = certificate && {
+    const wsApiProps: WebSocketApiProps = {
+      principal: apiGatewayPrincipal,
+      handlerArn,
       domainName: `ws.${domainName}`,
       certificate,
     };
 
-    const restApiProps = certificate && {
+    const restApiProps: RestApiProps = {
+      handlerArn,
+      method: "POST",
+      route: TELEGRAM_ROUTE,
       domainName: `api.${domainName}`,
       certificate,
     };
@@ -109,16 +133,16 @@ export class KiteStack extends TerraformStack {
         value: restApi.domainName.domainNameConfiguration.targetDomainName,
       });
 
-    const telegramDevBotToken = process.env.TELEGRAM_BOT_TOKEN;
-
-    const createMainComponent = (
+    const createStage = (
       name: string,
       functionName: string,
-      token: string,
+      telegramToken: string,
     ) =>
-      new MainComponent(this, name, {
-        //todo rename
+      new Stage(this, name, {
         role,
+        restApi,
+        wsApi,
+        telegramToken,
         mainLambda: {
           functionName,
           runtime,
@@ -132,55 +156,17 @@ export class KiteStack extends TerraformStack {
           s3Bucket: sourceBucketName,
           s3Key: lifecycleS3Key,
         },
-        restApi,
-        wsApi,
-        telegramToken: token,
       });
 
+    const telegramDevBotToken = process.env.TELEGRAM_BOT_TOKEN;
     assert(telegramDevBotToken, "You need to specify TELEGRAM_BOT_TOKEN");
-    const devStage = createMainComponent(
-      "dev",
-      devFunctionName,
-      telegramDevBotToken,
-    );
+    createStage("dev", devFunctionName, telegramDevBotToken);
 
-    let prodHandler;
     if (prodFunctionName) {
-      const telegramProdBotToken = process.env.TELEGRAM_PROD_BOT_TOKEN;
-      assert(
-        telegramProdBotToken,
-        "In order to create Prod stage you need to specify TELEGRAM_PROD_BOT_TOKEN in .env",
-      );
-
-      const prodStage = createMainComponent(
-        "prod",
-        prodFunctionName,
-        telegramProdBotToken,
-      );
-      prodHandler = prodStage.lambdaFunction;
+      const telegramProdToken = process.env.TELEGRAM_PROD_BOT_TOKEN;
+      assert(telegramProdToken, "You need to specify TELEGRAM_PROD_BOT_TOKEN");
+      createStage("prod", prodFunctionName, telegramProdToken);
     }
-
-    // Creating Integration, adding Routes to it and complementing Role to invoke Lambda
-    wsApi
-      .attachDefaultIntegration({
-        region: region.name,
-        accountId: callerIdentity.accountId,
-        integrationName: "default-integration",
-        principal: apiGatewayPrincipal,
-      })
-      .addRouteDefaultRoutes()
-      .allowInvocation({ handler: devStage.lambdaFunction, stage: "dev" })
-      .allowInvocation({ handler: prodHandler, stage: "prod" }); //If dev env is not specified - does nothing
-
-    restApi
-      .attachDefaultIntegration({
-        region: region.name,
-        accountId: callerIdentity.accountId,
-        integrationName: "default-integration",
-      })
-      .addRouteDefaultRoutes({ route: TELEGRAM_ROUTE, method: "POST" })
-      .allowInvocation({ handler: devStage.lambdaFunction, stage: "dev" })
-      .allowInvocation({ handler: prodHandler, stage: "prod" }); //If dev env is not specified - does nothing
 
     Aspects.of(this).add(TAGGING_ASPECT);
   }
