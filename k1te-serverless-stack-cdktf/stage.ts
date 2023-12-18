@@ -41,23 +41,22 @@ export class Stage extends Construct {
 
     const { role, wsApi, restApi, telegramToken, mainLambda, lifecycleLambda } =
       props;
-
+    const isProd = id === "prod";
     const stageProps = {
       stage: id,
       functionStageVariable: mainLambda.functionName,
     };
 
     const schema = new DynamoDbSchema(this, `${id}`, {
-      //todo not to delete for prod
       pointInTimeRecovery: false,
-      preventDestroy: false,
+      preventDestroy: isProd,
     });
 
     schema.allowAll(role);
 
     const objectStore = new ObjectStore(this, "object-store", {
-      //todo not to destroy for prod
       bucketPrefix: `${id}-k1te-chat-object-store-`,
+      forceDestroy: !isProd,
     });
 
     objectStore.allowReadWrite(role);
@@ -72,6 +71,7 @@ export class Stage extends Construct {
       TELEGRAM_WEBHOOK_ENDPOINT: `${restApiStage.invokeUrl}${TELEGRAM_ROUTE}`,
       BUCKET_NAME: objectStore.bucket.bucket,
       DISABLE_SIGNAL_HANDLERS: "true",
+      QUARKUS_LOG_CATEGORY__UA_COM_PRAGMASOFT__LEVEL: isProd ? "INFO" : "DEBUG",
     };
 
     const lambdaFunction = new Lambda(this, mainLambda.functionName, {

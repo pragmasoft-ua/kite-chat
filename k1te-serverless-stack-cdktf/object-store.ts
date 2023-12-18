@@ -11,6 +11,7 @@ import { S3BucketLifecycleConfiguration } from "@cdktf/provider-aws/lib/s3-bucke
 export type ObjectStoreProps = {
   bucketPrefix: string;
   allowAnonymousRead?: boolean;
+  forceDestroy?: boolean;
 };
 
 export class ObjectStore extends Construct {
@@ -18,12 +19,17 @@ export class ObjectStore extends Construct {
   constructor(
     scope: Construct,
     id: string,
-    { bucketPrefix, allowAnonymousRead = false }: ObjectStoreProps
+    {
+      bucketPrefix,
+      allowAnonymousRead = false,
+      forceDestroy = false,
+    }: ObjectStoreProps,
   ) {
     super(scope, id);
 
     this.bucket = new S3Bucket(this, "s3-object-store", {
       bucketPrefix,
+      forceDestroy,
     });
 
     new S3BucketLifecycleConfiguration(this, "object-store-lifecycle-config", {
