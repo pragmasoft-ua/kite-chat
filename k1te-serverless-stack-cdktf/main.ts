@@ -1,8 +1,7 @@
-import { App, S3Backend } from "cdktf";
+import { App } from "cdktf";
 import "dotenv/config";
 import { LocalStack } from "./local-stack";
-import { KiteStack } from "./kite-stack";
-import { BuildStack } from "./build-stack";
+import { MainStack } from "./main-stack";
 
 const app = new App();
 
@@ -29,34 +28,49 @@ const app = new App();
 // });
 
 // Local
-const buildStack = new BuildStack(app, "lambda-build", {
-  gitRepositoryUrl: "https://github.com/Alex21022001/drift",
-  s3BucketWithState: "my-test-arm-bucket",
-  devLambdaName: "dev-request-dispatcher",
-  prodLambdaName: "prod-request-dispatcher",
-  buildLambdaViaAsset: true,
-});
-new S3Backend(buildStack, {
-  bucket: "my-test-arm-bucket",
-  key: `kite/terraform-build.tfstate`,
-  region: "us-west-2",
-});
+// const buildStack = new BuildStack(app, "lambda-build", {
+//   gitRepositoryUrl: "https://github.com/Alex21022001/drift",
+//   s3BucketWithState: "my-test-arm-bucket",
+//   // prodStage: true,
+//   buildLambdaViaAsset: true,
+// });
+// const buildBackend = new S3Backend(buildStack, {
+//   bucket: "my-test-arm-bucket",
+//   key: `kite/terraform-build.tfstate`,
+//   region: "us-west-2",
+// });
+//
+// const kiteStackLocal = new KiteStack(app, "kite-local", {
+//   architecture: "arm64",
+//   runtime: "provided.al2",
+//   handler: "hello.handler",
+//   memorySize: 256,
+//   s3Backend: buildBackend,
+//   buildName: buildStack.node.id,
+// });
+// new S3Backend(kiteStackLocal, {
+//   bucket: "my-test-arm-bucket",
+//   key: `kite/terraform.tfstate`,
+//   region: "us-west-2",
+// });
 
-const kiteStackLocal = new KiteStack(app, "kite-local", {
-  architecture: "arm64",
-  runtime: "provided.al2",
-  handler: "hello.handler",
-  memorySize: 256,
-  devFunctionName: buildStack.devFunctionName,
-  prodFunctionName: buildStack.prodFunctionName,
-  sourceBucketName: buildStack.sourceBucketName,
-  functionS3Key: buildStack.functionS3Key,
-  lifecycleS3Key: buildStack.lifecycleS3Key,
-});
-new S3Backend(kiteStackLocal, {
-  bucket: "my-test-arm-bucket",
-  key: `kite/terraform.tfstate`,
-  region: "us-west-2",
+new MainStack(app, "kite", {
+  build: {
+    gitRepositoryUrl: "https://github.com/Alex21022001/drift",
+    prodStage: true,
+    buildLambdaViaAsset: true,
+  },
+  kite: {
+    architecture: "arm64",
+    runtime: "provided.al2",
+    handler: "hello.handler",
+    memorySize: 256,
+  },
+  s3Backend: {
+    bucket: "my-test-arm-bucket",
+    key: `kite/terraform.tfstate`,
+    region: "us-west-2",
+  },
 });
 
 new LocalStack(app, "local");

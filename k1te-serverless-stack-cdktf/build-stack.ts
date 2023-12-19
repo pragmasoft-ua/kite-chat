@@ -22,26 +22,20 @@ export type BuildSpecProps = {
    * */
   prodLambdaName?: string;
   /**
+   * The name of S3 Bucket where Terraform state is stored. It's used for DriftCheck.
+   * If specified - DriftCheck CodeBuild Project and all related resources will be created.
+   * */
+  s3BucketWithState: string;
+  /**
    * If set to true - MainHandler Lambda will be uploaded from source and not built via CodeBuild. It will look for
    * function.zip in k1te-serverless/target. If there will be no function.zip the error will be thrown. Default is false.
    * IMPORTANT: if this set to true - CodeBuild Project that responsible for DriftCheck will not be created
    * due to function.zip doesn't exist in GitHub Source that is used for drift check because of that Error will always be thrown
    * */
   buildLambdaViaAsset?: boolean;
-  /**
-   * The name of S3 Bucket where Terraform state is stored. It's used for DriftCheck.
-   * If not specified - DriftCheck CodeBuild Project and all related resources will be omitted.
-   * */
-  s3BucketWithState?: string;
 };
 
 export class BuildStack extends TerraformStack {
-  public devFunctionName: string;
-  public prodFunctionName?: string;
-  public sourceBucketName: string;
-  public functionS3Key: string;
-  public lifecycleS3Key: string;
-
   constructor(scope: Construct, id: string, props: Readonly<BuildSpecProps>) {
     super(scope, id);
 
@@ -66,10 +60,7 @@ export class BuildStack extends TerraformStack {
       s3SourceBucket: s3Bucket,
       devLambdaName,
       prodLambdaName,
-      s3BucketWithState:
-        !buildLambdaViaAsset && s3BucketWithState
-          ? s3BucketWithState
-          : undefined,
+      s3BucketWithState: !buildLambdaViaAsset ? s3BucketWithState : undefined,
     });
 
     if (buildLambdaViaAsset) {
@@ -104,11 +95,5 @@ export class BuildStack extends TerraformStack {
       value: `build/lifecycle.zip`,
       description: "Name of the S3 Key to Lifecycle function",
     });
-
-    this.devFunctionName = devLambdaName;
-    this.prodFunctionName = prodLambdaName;
-    this.sourceBucketName = s3Bucket.bucket;
-    this.functionS3Key = OUTPUT_PATH;
-    this.lifecycleS3Key = `build/lifecycle.zip`;
   }
 }
