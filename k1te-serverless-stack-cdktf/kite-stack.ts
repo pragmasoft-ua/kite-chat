@@ -68,10 +68,6 @@ export class KiteStack extends TerraformStack {
       forService: LAMBDA_SERVICE_PRINCIPAL,
     });
 
-    role.attachManagedPolicyArn(
-      "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-    );
-
     const apiGatewayPrincipal = new ApiGatewayPrincipal(
       this,
       "apigateway-principal",

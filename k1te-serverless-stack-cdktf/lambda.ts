@@ -1,5 +1,5 @@
 import { LambdaFunction } from "@cdktf/provider-aws/lib/lambda-function";
-import { Lambda as LambdaPolicy } from "iam-floyd/lib/generated";
+import { Cloudwatch, Lambda as LambdaPolicy } from "iam-floyd/lib/generated";
 
 import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group";
 import { Lazy } from "cdktf";
@@ -83,6 +83,18 @@ export class Lambda extends Construct {
 
     this.role = role ?? this.defaultRole();
 
+    const logGroup = new CloudwatchLogGroup(this, "logs", {
+      name: `/aws/lambda/${id}`,
+      retentionInDays: 7,
+    });
+
+    const logPolicy = new Cloudwatch()
+      .allow()
+      .to("logs:CreateLogStream")
+      .to("logs:PutLogEvents")
+      .on(logGroup.arn, `${logGroup.arn}:*`);
+    role?.grant(`allow-logs-${id}`, logPolicy);
+
     this.fn = new LambdaFunction(this, "fn", {
       functionName: id,
       role: this.role.arn,
@@ -103,11 +115,6 @@ export class Lambda extends Construct {
       lifecycle: {
         ignoreChanges: ["s3_key", "s3_bucket", "layers"], //, "filename"],
       },
-    });
-
-    new CloudwatchLogGroup(this, "logs", {
-      name: `/aws/lambda/${id}`,
-      retentionInDays: 7,
     });
   }
 

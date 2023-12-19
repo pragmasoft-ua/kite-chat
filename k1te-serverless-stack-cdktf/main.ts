@@ -27,33 +27,6 @@ const app = new App();
 //   region: "eu-north-1",
 // });
 
-// Local
-// const buildStack = new BuildStack(app, "lambda-build", {
-//   gitRepositoryUrl: "https://github.com/Alex21022001/drift",
-//   s3BucketWithState: "my-test-arm-bucket",
-//   // prodStage: true,
-//   buildLambdaViaAsset: true,
-// });
-// const buildBackend = new S3Backend(buildStack, {
-//   bucket: "my-test-arm-bucket",
-//   key: `kite/terraform-build.tfstate`,
-//   region: "us-west-2",
-// });
-//
-// const kiteStackLocal = new KiteStack(app, "kite-local", {
-//   architecture: "arm64",
-//   runtime: "provided.al2",
-//   handler: "hello.handler",
-//   memorySize: 256,
-//   s3Backend: buildBackend,
-//   buildName: buildStack.node.id,
-// });
-// new S3Backend(kiteStackLocal, {
-//   bucket: "my-test-arm-bucket",
-//   key: `kite/terraform.tfstate`,
-//   region: "us-west-2",
-// });
-
 new MainStack(app, "kite", {
   build: {
     gitRepositoryUrl: "https://github.com/Alex21022001/drift",
@@ -68,7 +41,7 @@ new MainStack(app, "kite", {
   },
   s3Backend: {
     bucket: "my-test-arm-bucket",
-    key: `kite/terraform.tfstate`,
+    key: `kite/terraform`,
     region: "us-west-2",
   },
 });
