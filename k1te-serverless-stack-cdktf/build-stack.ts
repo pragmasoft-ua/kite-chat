@@ -28,14 +28,14 @@ export type BuildSpecProps = {
   stackName: string;
   /**
    * The name of S3 Bucket where Terraform state is stored. It's used for DriftCheck.
-   * If specified - DriftCheck CodeBuild Project and all related resources will be created.
    * */
   s3BucketWithState: string;
   /**
    * If set to true - MainHandler Lambda will be uploaded from source and not built via CodeBuild. It will look for
    * function.zip in k1te-serverless/target. If there will be no function.zip the error will be thrown. Default is false.
    * IMPORTANT: if this set to true - CodeBuild Project that responsible for DriftCheck will not be created
-   * due to function.zip doesn't exist in GitHub Source that is used for drift check because of that Error will always be thrown
+   * due to function.zip doesn't exist in GitHub Source that is used for drift check because of that Error will always be thrown,
+   * and it will make DriftCheck impossible.
    * */
   buildLambdaViaAsset?: boolean;
 };

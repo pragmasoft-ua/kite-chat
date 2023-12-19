@@ -23,9 +23,22 @@ const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 export const TELEGRAM_ROUTE = "/tg";
 
 export type KiteStackProps = {
+  /**
+   * S3Backend of build stack that is used for building and uploading Main lambda
+   * and Lifecycle lambda to S3. It's used to get S3Bucket name, and S3Key of main & lifecycle lambdas.
+   * */
   s3Backend: S3Backend;
   buildStackName: string;
+  /**
+   * Name of Main lambda function that will be used for 'dev' stage, it should contain
+   * dev prefix.
+   * */
   devLambdaName: string;
+  /**
+   * Name of Main lambda function that will be used for 'prod' stage, it should contain
+   * prod prefix.
+   * If specified - prod stage and all related resources will be created.
+   * */
   prodLambdaName?: string;
   domainName?: string;
   architecture?: Architecture;

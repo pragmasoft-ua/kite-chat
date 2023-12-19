@@ -35,93 +35,155 @@ Then, create `.env` file in the cdktf project root with the content:
 `CLOUDFLARE_API_TOKEN="your cloudflare api token"`
 
 Alternatively, copy `.env.example.txt`, rename it to `.env` and add your token there.
-
 ## Structure
+### Local Stack
+The **_local_** stack sets up a local DynamoDB container, listening on http://localhost:8000, and initializes the DynamoDB schema for local development. The local stack requires a Docker runtime on the local machine.
 
-This application consists of several CDKTF stacks:
+### Kite Stack
+The **_kite-stack_** is a production stack that creates a serverless environment in AWS. It includes the following resources:
+- DomainName (CloudFlare...)
+- WebSocket API Gateway (API, stage, integration, route...)
+- HTTP API Gateway (API, stage, integration, route...)
+- Lambda (request-dispatcher, lifecycle)
+- DynamoDB
+- S3
+- CloudWatch
+- IAM
 
-- **local** stack starts local dynamodb container to listen on http://localhost:8000 and initializes dynamodb schema for local development
+### Build Stack
+The **_build-stack_** is used to establish CI/CD for the app. It can also build the native executable for the Main lambda or upload it from the source. It contains the following resources:
+- S3
+- CodeBuild
+- IAM
+- CloudWatch
+- EventBridge (event rule, scheduler)
+- SNS
 
-Local stack requires docker runtime on the local machine.
+## Deploying Kite-Stack
+The **_kite-stack_** is dependent on the **_build-stack_**, which is used to build the native
+executable for the **Main** lambda or upload it from the source. It also rolls out the CI/CD
+infrastructure for the **_kite-stack_**. The **_kite-stack_** utilizes DataTerraformRemoteState
+to retrieve necessary variables from the **_build-stack_**, such as S3Bucket containing Main
+and Lifecycle lambdas and S3Keys to them. Deploying **_kite-stack_** without deploying
+**_build-stack_** first will result in a CDKTF Error.
 
-- **kite** stack is a production stack and creates serverless environment in the AWS, including dynamodb, api gateway, lambda function, iam roles.
+To deploy **_kite-stack_**, we recommend using the main-stack that combines both **_kite-stack_** and **_build-stack_**. It can be created using the following TypeScript code:
 
-## Deploying Stack
-In order to run the cdktf stack you will need to have built native executable
-of **k1te-serverless**. You can do it in two different ways:
-
-I. This way utilizes separate cdktf stack called `lambda-build` that will create
-AWS **CodeBuild** project and **S3** bucket which you will have to use to build
-native executable Lambda function for ARM64 platform.
-**It's important to noticed that this way requires to Sing In your GitHub account via aws cli so that it
-has access to your Repository, please follow the [instruction](https://docs.aws.amazon.com/codebuild/latest/userguide/access-tokens.html).**
-
-To do so follow these steps:
-1. Go to cdktf directory via `cd k1te-serverless-stack-cdktf`
-2. Run `lambda-build` stack (it can take some time to deploy):
-```bash
-cdktf deploy lambda-build 
+```typescript
+new MainStack(app, "kite", {
+   prodStage: true,
+   build: {
+      gitRepositoryUrl: "https://github.com/pragmasoft-ua/kite-chat",
+      buildLambdaViaAsset: false
+   },
+   kite: {
+      domainName: "k1te.chat",
+      architecture: "arm64",
+      runtime: "provided.al2",
+      handler: "hello.handler",
+      memorySize: 256,
+   },
+   s3Backend: {
+      bucket: "my-test-arm-bucket",
+      key: `kite/terraform`,
+      region: "us-west-2",
+   },
+});
 ```
-3. When stack is successfully deployed it will output several values (if it doesn't use `cdktf output lambda-build`) namely:
-    - S3 Bucket name that will contain built Lambda archive.
-    - S3 Object Key to built Lambda.
-    - Name of CodeBuild Project that you need to run it manually.
+This code unites two stacks (kite-stack and build-stack), with the names depending on
+the specified name of MainStack. In the example above, **_kite-stack_** will be **_kite-stack_**
+and **_build-stack_** will be **_kite-build_**. It also utilizes one S3Bucket for state storing,
+with slightly different keys for kite-stack (kite/terraform.tfstate) and
+build-stack (kite/terraform-build.tfstate).
 
-4. Afterward you will need to manually start just created CodeBuild Project
-   and retrieve BuildProject id that we will use in the future. To do so run the next command and
-   replace **your-project-name** with the value that you got from the previous step.
+### Build-Stack
+To deploy **_kite-stack_**, you need to deploy **_build-stack_** first. **_build-stack_** creates CodeBuild projects with the following capabilities:
+- **build-and-deploy-project**: Builds the native executable lambda and deploys a new version for the `dev`
+  stage. It can also be used to build the native executable manually via **AWS CLI**.
+  This project automatically starts building when new changes are pushed to the **main** branch of the
+  specified Git repository.
+- **deploy-on-tag-project** (optional): Updates the existing **Main** lambda function for the `prod` stage.
+  It is automatically triggered when a new **TAG** is pushed to the Git repository.
+  This project is omitted if the `prod` stage is not created.
+- **drift-check-project** (optional): Checks drift in the specified stack (default is **_kite-stack_**).
+  This project uses EventBridge Scheduler with a CRON expression to run it on a regular
+  basis (Monday-Friday at 12 PM). It also uses SNS (email) to inform you of drift in the specified stack.
+  **Important: When you deploy **_build-stack_** and DriftCheck is created, you will have to confirm the
+  email that you need to specify in the .env file like this `EMAIL="example@gmail.com"` first**.
+  The DriftCheck project is not created if `buildLambdaViaAsset=true` due to the function.zip not
+  existing in the GitHub source used for drift check, resulting in an Error.
+  If drift is detected and the email is confirmed, you will receive an email similar to this: `Drift was detected in the Stack! You should re-deploy the stack manually`.
+
+With **_build-stack_**, you can build or upload the lambda needed for **_kite-stack_**. **_kite-stack_** can work with both `arm64` and `x86_64` architectures and `common` and `native` lambdas. You can specify all these properties in **_kite-stack_**.
+
+#### Uploading Existing Lambda
+If you use `x86_64` or have an `ARM64` OS, you can build a zip archive locally containing the
+lambda using the following commands:
 
 ```bash
-aws codebuild start-build --project-name your-project-name --query 'build.id' --output text
-```
-this command will return Project id that you can assign to variable like that:
-```bash
-id=$(aws codebuild start-build --project-name your-project-name --query 'build.id' --output text)
-```
-5. Wait until build finish (It usually takes 8 min). In order to check the status of the build you can use the following command,
-   but don't forget to replace **your-build-id** with the value that you got in the previous step.
-```bash
-aws codebuild batch-get-builds --ids "your-build-id" --query 'builds[].buildStatus' --output text 
-```
-6. When the status of the Build is **SUCCEEDED** you successfully built Lambda function for ARM64.
-7. In order to deploy main stack you need to specify retrieved S3 and S3 Object values in `.env` file, like this:
-   `MAIN_LAMBDA_S3_BUCKET="build-bucket-20231211093835484800000001"`
-   `MAIN_LAMBDA_S3_OBJECT_KEY="build/function.zip"`
-   this values will be used to deploy Lambda function. And also go to `main.ts` and add
-   `s3LambdaStorage: true` to your stack.
-8. Now you can deploy the main stack via:
-```bash
-cdktf deploy "kite" --var-file=.env --auto-approve=true
-```
-9. After successful deployment of the main stack you can delete `lambda-build` stack if you wish via:
-```bash
-cdktf destroy lambda-build 
-```
+# This will create function.zip with 'common' lambda and save it in the target directory
+./mvnw -pl k1te-serverless -am install -DskipTests
 
-**II.** This way assume that you have ARM64 based platform.
-1) Build native executable of k1te-serverless module via:
-```bash
+# This will create function.zip with 'native' lambda and save it in the target directory
 ./mvnw -pl k1te-serverless -am install -Dnative -DskipTests
 ```
-2) Deploy `kite` stack via 
+Once **function.zip** is successfully saved in the target directory, you need to specify
+`buildLambdaViaAsset=true` in **_build-stack_** and deploy it using:
+
 ```bash
-cdktf deploy "kite" --var-file=.env --auto-approve=true
+cd k1te-serverless-stack-cdktf
+# It will get function.zip from the target directory and upload it to the just created S3Bucket,
+# it will also output S3Bucket, S3Keys which are necessary for kite-stack
+cdktf deploy kite-build
 ```
 
-## Stack Variables
-When you deploy stack you can specify several non-required variables wich
-will add some additional logic to your stack namely:
-- **devEnv** - If set to **true**, add additional stack called **dev** to your stack.
-This dev environment incorporates additional Rest/WebSocket stages, Lambda, Logs, S3, DynamoDB
-- **cicd** - If set to **true**, add CodeBuild projects which Build 
-updated ARM64 Lambda and publish new Lambda version for both dev(if exists)/prod, and also updates
-Lambda Alias for dev Lambda when code in GitHub Repository is updated. When a new Tag is pushed to GitHub it updates
-Lambda Alias for prod env function. GitHub URL is specified in `build.ts` as a `https://github.com/pragmasoft-ua/kite-chat`
-- **s3LambdaStorage** - if set to **true**, uses defined **MAIN_LAMBDA_S3_BUCKET**
-and **MAIN_LAMBDA_S3_OBJECT_KEY** variables in **.env** file which point at function.zip archive of ARM64 Lambda to create a **mainHandler** that will
-be used for both **prod/dev**(if devEnv is true) Lambdas.
-If set to **false** - MainHandler Lambda will use **function.zip** from k1te-serverless/target and
-upload it to S3 Bucket.
+#### Building Lambda Manually via CodeBuild
+This method is helpful if you want to build `arm64` native executable but can't do it locally.
+To do so, make use of the **build-and-deploy-project** that builds **function.zip** with the native
+lambda and puts it into the S3Bucket. Follow these steps:
+1) Specify `buildLambdaViaAsset=false` (false by default).
+2) Deploy **_build-stack_** (check the sections above).
+3) Start the build manually.
+
+```bash
+# It will start the build, and when **function.zip** is created, upload it to S3Bucket (usually takes 7-8 minutes)
+aws codebuild start-build --project-name "build-and-deploy-project" --buildspec-override "k1te-serverless-stack-cdktf/build-lambda-buildspec.yml"
+```
+4) To check the status of the build, use the following command:
+```bash
+# Your-build-id can be seen when starting the build.
+# When the status of the build is **SUCCEEDED**, you have successfully built the Lambda function for ARM64
+aws codebuild batch-get-builds --ids "your-build-id" --query 'builds[].buildStatus' --output text 
+```
+
+### Kite-Stack
+
+Once **_build-stack_** is successfully deployed, and the Main lambda is uploaded to the S3Bucket,
+you can deploy **_kite-stack_**. However, you also need to specify some environment variables.
+**_kite-stack_** utilizes several output variables from **_build-stack_**, which will be automatically
+retrieved from there, namely:
+- "s3-source-bucket"
+- "function-s3-key"
+- "lifecycle-s3-key"
+
+The `.env` file should look like this:
+
+```dotenv
+CLOUDFLARE_API_TOKEN="your-token"
+# The Telegram token that is mandatory. The specified Bot Token is used for dev stage.
+TELEGRAM_BOT_TOKEN="your dev telegram bot token"
+# (Optional) The Telegram token that is used for prod stage. Mandatory only if prod stage is specified.
+TELEGRAM_PROD_BOT_TOKEN="your prod telegram bot token"
+# (Optional) Your email address that is used to send drift detection messages. Mandatory if you create
+# DriftCheck CodeBuild project. You also need to confirm it after build-stack is created.
+EMAIL="example@gmail.com"
+```
+In order to deploy, run the following command:
+```bash
+cd k1te-serverless-stack-cdktf
+cdktf deploy kite-stack --var-file=.env
+```
+
 
 ## Build
 

@@ -5,6 +5,9 @@ import { KiteStack } from "./kite-stack";
 import { Architecture, Handler, Runtime } from "./lambda";
 
 export type MainStackProps = {
+  /**
+   * Whether to create prod stage or not
+   * */
   prodStage?: boolean;
   build: {
     gitRepositoryUrl: string;
@@ -37,17 +40,18 @@ export class MainStack extends Construct {
       kite: { domainName, handler, runtime, memorySize, architecture },
       s3Backend: { bucket, key, region },
     } = props;
-
+    const buildStackName = `${id}-build`;
+    const mainStackName = `${id}-stack`;
     const devLambdaName = `dev-request-dispatcher`;
     const prodLambdaName = prodStage ? `prod-request-dispatcher` : undefined;
 
-    const buildStack = new BuildStack(app, `${id}-build`, {
+    const buildStack = new BuildStack(app, buildStackName, {
       gitRepositoryUrl,
       s3BucketWithState: bucket,
       buildLambdaViaAsset,
       devLambdaName,
       prodLambdaName,
-      stackName: `${id}-stack`,
+      stackName: mainStackName,
     });
     const s3Backend = new S3Backend(buildStack, {
       bucket,
@@ -55,9 +59,9 @@ export class MainStack extends Construct {
       region,
     });
 
-    const kiteStackLocal = new KiteStack(app, `${id}-stack`, {
+    const kiteStackLocal = new KiteStack(app, mainStackName, {
       s3Backend,
-      buildStackName: `${id}-build`,
+      buildStackName: buildStackName,
       devLambdaName,
       prodLambdaName,
       domainName,
