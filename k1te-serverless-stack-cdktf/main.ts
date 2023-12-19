@@ -29,9 +29,8 @@ const app = new App();
 
 new MainStack(app, "kite", {
   build: {
-    gitRepositoryUrl: "https://github.com/Alex21022001/drift",
+    gitRepositoryUrl: "https://github.com/Alex21022001/drift-check",
     prodStage: true,
-    buildLambdaViaAsset: true,
   },
   kite: {
     architecture: "arm64",
