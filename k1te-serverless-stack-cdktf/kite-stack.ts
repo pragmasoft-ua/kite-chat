@@ -9,9 +9,9 @@ import {
   LAMBDA_SERVICE_PRINCIPAL,
   Runtime,
 } from "./lambda";
-import { RestApi, RestApiProps } from "./rest-api";
+import { RestApi } from "./rest-api";
 import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
-import { WebsocketApi, WebSocketApiProps } from "./websocket-api";
+import { WebsocketApi } from "./websocket-api";
 import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
 import { Stage } from "./stage";
 import { DataAwsRegion } from "@cdktf/provider-aws/lib/data-aws-region";
@@ -44,7 +44,7 @@ export class KiteStack extends TerraformStack {
       devLambdaName,
       prodLambdaName,
       domainName,
-      architecture = "x86_64",
+      architecture = "arm64",
       runtime = "provided.al2",
       handler = "hello.handler",
       memorySize = 256,
@@ -60,9 +60,6 @@ export class KiteStack extends TerraformStack {
     );
     const region = new DataAwsRegion(this, "current-region");
     const callerIdentity = new DataAwsCallerIdentity(this, "current-caller");
-    const handlerArn =
-      `arn:aws:lambda:${region.name}:${callerIdentity.accountId}:function:` +
-      "$${stageVariables.function}";
 
     const role = new Role(this, "lambda-execution-role", {
       forService: LAMBDA_SERVICE_PRINCIPAL,
@@ -75,26 +72,26 @@ export class KiteStack extends TerraformStack {
 
     const domain = new DomainName(this, "domain-name", domainName);
 
-    const wsApiProps: WebSocketApiProps = {
+    const handlerArn =
+      `arn:aws:lambda:${region.name}:${callerIdentity.accountId}:function:` +
+      "$${stageVariables.function}";
+
+    const wsApi = new WebsocketApi(this, "ws-api", {
       principal: apiGatewayPrincipal,
       handlerArn,
       domainName: `ws.${domainName}`,
       certificate: domain.certificate,
-    };
-
-    const restApiProps: RestApiProps = {
+    });
+    const restApi = new RestApi(this, "http-api", {
       handlerArn,
       method: "POST",
       route: TELEGRAM_ROUTE,
       domainName: `api.${domainName}`,
       certificate: domain.certificate,
-    };
+    });
 
-    const wsApi = new WebsocketApi(this, "ws-api", wsApiProps);
-    const restApi = new RestApi(this, "http-api", restApiProps);
-
-    domain.createRecord(wsApi, wsApiProps);
-    domain.createRecord(restApi, restApiProps);
+    domain.createRecord(wsApi);
+    domain.createRecord(restApi);
 
     const createStage = (
       name: string,

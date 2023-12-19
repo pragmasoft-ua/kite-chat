@@ -62,18 +62,20 @@ export class DriftCheck extends Construct {
         .filter((item) => item.value !== undefined)
         .map((item) => item as CodebuildProjectEnvironmentEnvironmentVariable);
 
-    environmentVariable.push({
-      name: "EVENT",
-      value: JSON.stringify({
-        DetailType: "drift",
-        Source: "codebuild",
-        Detail: "{}",
-      }),
-    });
-    environmentVariable.push({
-      name: "STACK",
-      value: stackName,
-    });
+    environmentVariable.push(
+      {
+        name: "EVENT",
+        value: JSON.stringify({
+          DetailType: "drift",
+          Source: "codebuild",
+          Detail: "{}",
+        }),
+      },
+      {
+        name: "STACK",
+        value: stackName,
+      },
+    );
 
     const driftCheckProject = new Build(this, "drift-check-project", {
       role,
