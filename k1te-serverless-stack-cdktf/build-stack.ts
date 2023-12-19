@@ -22,6 +22,11 @@ export type BuildSpecProps = {
    * */
   prodLambdaName?: string;
   /**
+   * Name of the stack that is used in DriftCheck CodeBuild Project to
+   * verify drift of the specified stack.
+   * */
+  stackName: string;
+  /**
    * The name of S3 Bucket where Terraform state is stored. It's used for DriftCheck.
    * If specified - DriftCheck CodeBuild Project and all related resources will be created.
    * */
@@ -44,6 +49,7 @@ export class BuildStack extends TerraformStack {
       devLambdaName,
       prodLambdaName,
       buildLambdaViaAsset = false,
+      stackName,
       s3BucketWithState,
     } = props;
 
@@ -60,6 +66,7 @@ export class BuildStack extends TerraformStack {
       s3SourceBucket: s3Bucket,
       devLambdaName,
       prodLambdaName,
+      stackName,
       s3BucketWithState: !buildLambdaViaAsset ? s3BucketWithState : undefined,
     });
 

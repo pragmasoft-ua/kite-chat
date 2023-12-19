@@ -20,6 +20,7 @@ const environmentVariableNames = [
 export type DriftCheckProps = {
   role: Role;
   gitRepositoryUrl: string;
+  stackName: string;
   s3BucketWithState: string;
   emailToSendAlarmTo: string;
   driftCheckCronEx?: string;
@@ -33,6 +34,7 @@ export class DriftCheck extends Construct {
     const {
       role,
       gitRepositoryUrl,
+      stackName,
       s3BucketWithState,
       emailToSendAlarmTo,
       driftCheckCronEx = "0 12 ? * 2-6 *", // Invoke DriftCheck at 12 PM on Monday-Friday
@@ -67,6 +69,10 @@ export class DriftCheck extends Construct {
         Source: "codebuild",
         Detail: "{}",
       }),
+    });
+    environmentVariable.push({
+      name: "STACK",
+      value: stackName,
     });
 
     const driftCheckProject = new Build(this, "drift-check-project", {

@@ -28,9 +28,9 @@ const app = new App();
 // });
 
 new MainStack(app, "kite", {
+  prodStage: true,
   build: {
-    gitRepositoryUrl: "https://github.com/Alex21022001/drift-check",
-    prodStage: true,
+    gitRepositoryUrl: "https://github.com/Alex21022001/drift",
   },
   kite: {
     architecture: "arm64",

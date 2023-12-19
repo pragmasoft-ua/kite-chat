@@ -5,9 +5,9 @@ import { KiteStack } from "./kite-stack";
 import { Architecture, Handler, Runtime } from "./lambda";
 
 export type MainStackProps = {
+  prodStage?: boolean;
   build: {
     gitRepositoryUrl: string;
-    prodStage?: boolean;
     buildLambdaViaAsset?: boolean;
   };
   kite: {
@@ -32,7 +32,8 @@ export class MainStack extends Construct {
   public constructor(app: App, id: string, props: MainStackProps) {
     super(app, id);
     const {
-      build: { buildLambdaViaAsset, prodStage = false, gitRepositoryUrl },
+      prodStage = false,
+      build: { buildLambdaViaAsset, gitRepositoryUrl },
       kite: { domainName, handler, runtime, memorySize, architecture },
       s3Backend: { bucket, key, region },
     } = props;
@@ -46,6 +47,7 @@ export class MainStack extends Construct {
       buildLambdaViaAsset,
       devLambdaName,
       prodLambdaName,
+      stackName: `${id}-stack`,
     });
     const s3Backend = new S3Backend(buildStack, {
       bucket,

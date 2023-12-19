@@ -12,6 +12,7 @@ export type CodebuildProps = {
   s3SourceBucket: S3Bucket;
   devLambdaName: string;
   prodLambdaName?: string;
+  stackName: string;
   s3BucketWithState?: string;
 };
 
@@ -24,6 +25,7 @@ export class CiCdCodebuild extends Construct {
       s3SourceBucket,
       devLambdaName,
       prodLambdaName,
+      stackName,
       s3BucketWithState,
     } = props;
 
@@ -139,6 +141,7 @@ export class CiCdCodebuild extends Construct {
         role,
         gitRepositoryUrl,
         s3BucketWithState,
+        stackName,
         emailToSendAlarmTo,
       });
     }

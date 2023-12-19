@@ -9,7 +9,7 @@ phases:
     commands:
       - echo "CDKTF is synthesizing source code"
       - cdktf synth
-      - cd cdktf.out/stacks/kite-local
+      - cd cdktf.out/stacks/$STACK
       - terraform init -reconfigure
       - echo "Drift check"
       - terraform plan -detailed-exitcode -refresh=false || EXITCODE=$?
