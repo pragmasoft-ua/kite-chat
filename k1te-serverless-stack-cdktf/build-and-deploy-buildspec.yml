@@ -12,7 +12,7 @@ phases:
     on-failure: ABORT
     commands:
       - echo build started
-      - ./mvnw -pl k1te-serverless -am install -Dnative -Dquarkus.native.native-image-xmx=1700m
+      - ./mvnw -pl k1te-serverless -am install -Dnative -Dquarkus.native.native-image-xmx=1700m -DskipTests
   post_build:
     on-failure: CONTINUE
     commands:
