@@ -1,6 +1,6 @@
 import { Construct } from "constructs";
 import { Build, CODEBUILD_SERVICE_PRINCIPAL, OUTPUT_PATH } from "./build";
-import { Role } from "./iam";
+import { Role } from "../kite-stack/iam";
 import { Lambda as LambdaPolicy } from "iam-floyd/lib/generated/lambda";
 import { S3Bucket } from "@cdktf/provider-aws/lib/s3-bucket";
 import { S3 } from "iam-floyd/lib/generated";
@@ -61,7 +61,8 @@ export class CiCdCodebuild extends Construct {
       gitRepositoryUrl,
       s3BucketName: s3SourceBucket.bucket,
       image: "quay.io/quarkus/ubi-quarkus-graalvmce-builder-image:jdk-21",
-      buildspec: "k1te-serverless-stack-cdktf/build-and-deploy-buildspec.yml",
+      buildspec:
+        "k1te-serverless-stack-cdktf/build-stack/build-and-deploy-buildspec.yml",
       description:
         "It's used to create native executable for ARM64 platform and update Lambda code when code is changed in GitHub main branch",
       environmentVariable: [
@@ -100,7 +101,8 @@ export class CiCdCodebuild extends Construct {
         role,
         gitRepositoryUrl,
         image: "aws/codebuild/amazonlinux2-aarch64-standard:3.0",
-        buildspec: "k1te-serverless-stack-cdktf/deploy-on-tag-buildspec.yml",
+        buildspec:
+          "k1te-serverless-stack-cdktf/build-stack/deploy-on-tag-buildspec.yml",
         description:
           "It's invoked when new tag is published to GitHub repository then it updates prod function",
         environmentVariable: [

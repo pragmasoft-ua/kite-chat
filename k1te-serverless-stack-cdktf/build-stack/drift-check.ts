@@ -7,7 +7,7 @@ import { SnsTopicSubscription } from "@cdktf/provider-aws/lib/sns-topic-subscrip
 import { CloudwatchEventTarget } from "@cdktf/provider-aws/lib/cloudwatch-event-target";
 import { CodebuildProjectEnvironmentEnvironmentVariable } from "@cdktf/provider-aws/lib/codebuild-project";
 import { Build } from "./build";
-import { Role } from "./iam";
+import { Role } from "../kite-stack/iam";
 import { SchedulerSchedule } from "@cdktf/provider-aws/lib/scheduler-schedule";
 
 const environmentVariableNames = [
@@ -80,7 +80,8 @@ export class DriftCheck extends Construct {
     const driftCheckProject = new Build(this, "drift-check-project", {
       role,
       gitRepositoryUrl,
-      buildspec: "k1te-serverless-stack-cdktf/drift-check-buildspec.yml",
+      buildspec:
+        "k1te-serverless-stack-cdktf/build-stack/drift-check-buildspec.yml",
       image: "public.ecr.aws/b1z6s7i3/cdktf-arm64-build:latest", // It's a custom image for ARM64 with TF, CDKTF, AWS CLI, Node.js, npm
       environmentVariable,
       description:

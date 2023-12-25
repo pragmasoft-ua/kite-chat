@@ -1,7 +1,7 @@
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
 import { TerraformStack } from "cdktf";
 import { Construct } from "constructs";
-import { DynamoDbSchema } from "./dynamodb-schema";
+import { DynamoDbSchema } from "../kite-stack/dynamodb-schema";
 import { DynamodbLocalContainer } from "./local-dynamodb";
 
 export class LocalStack extends TerraformStack {
@@ -22,7 +22,7 @@ export class LocalStack extends TerraformStack {
 
     const dynamoDbLocalContainer = new DynamodbLocalContainer(
       this,
-      "dynamodb-local"
+      "dynamodb-local",
     );
 
     new DynamoDbSchema(this, id, {

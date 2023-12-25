@@ -1,8 +1,8 @@
 import { Construct } from "constructs";
 import { App, S3Backend } from "cdktf";
-import { BuildStack } from "./build-stack";
-import { KiteStack } from "./kite-stack";
-import { Architecture, Handler, Runtime } from "./lambda";
+import { BuildStack } from "./build-stack/build-stack";
+import { KiteStack } from "./kite-stack/kite-stack";
+import { Architecture, Handler, Runtime } from "./kite-stack/lambda";
 
 export type MainStackProps = {
   /**

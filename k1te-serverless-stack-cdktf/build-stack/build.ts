@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { Role } from "./iam";
+import { Role } from "../kite-stack/iam";
 import { Cloudwatch } from "iam-floyd/lib/generated";
 import { CloudwatchLogGroup } from "@cdktf/provider-aws/lib/cloudwatch-log-group";
 import {

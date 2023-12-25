@@ -3,7 +3,7 @@ import { Construct } from "constructs";
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
 import { S3Bucket } from "@cdktf/provider-aws/lib/s3-bucket";
 import { CiCdCodebuild } from "./ci-cd-codebuild";
-import { S3Source } from "./asset";
+import { ArchiveS3Source, AssetS3Source } from "./asset";
 import { OUTPUT_PATH } from "./build";
 import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
 
@@ -71,20 +71,16 @@ export class BuildStack extends TerraformStack {
     });
 
     if (buildLambdaViaAsset) {
-      new S3Source(this, "function", {
+      new AssetS3Source(this, "function", {
         s3BucketName: s3Bucket.bucket,
-        asset: {
-          relativeProjectPath: "../k1te-serverless",
-        },
+        relativeProjectPath: "../../k1te-serverless",
       });
     }
 
-    new S3Source(this, "lifecycle", {
+    new ArchiveS3Source(this, "lifecycle", {
       s3BucketName: s3Bucket.bucket,
-      archive: {
-        sourceFile: "lifecycle-handler/index.mjs",
-        output: "lifecycle-handler/lifecycle.zip",
-      },
+      sourceFile: "../lifecycle-handler/index.mjs",
+      output: "../lifecycle-handler/lifecycle.zip",
     });
 
     new TerraformOutput(this, "s3-source-bucket", {
@@ -99,7 +95,7 @@ export class BuildStack extends TerraformStack {
     });
 
     new TerraformOutput(this, "lifecycle-s3-key", {
-      value: `build/lifecycle.zip`,
+      value: "build/lifecycle.zip",
       description: "Name of the S3 Key to Lifecycle function",
     });
   }
