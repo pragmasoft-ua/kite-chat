@@ -1,8 +1,6 @@
 import { Construct } from "constructs";
 import { CloudflareDnsZone } from "./dns-zone";
 import { TlsCertificate } from "./tls-certificate";
-import { WebsocketApi } from "./websocket-api";
-import { RestApi } from "./rest-api";
 
 export class DomainName extends Construct {
   private readonly dnsZone?: CloudflareDnsZone;
@@ -19,12 +17,12 @@ export class DomainName extends Construct {
       : undefined;
   }
 
-  createRecord(api: WebsocketApi | RestApi) {
-    if (api.domainName && this.dnsZone) {
-      this.dnsZone.createRecord(api.domainName.domainName, {
+  createCname(domainName?: string, targetDomainName?: string) {
+    if (domainName && targetDomainName && this.dnsZone) {
+      this.dnsZone.createRecord(domainName, {
         type: "CNAME",
-        name: api.domainName.domainName,
-        value: api.domainName.domainNameConfiguration.targetDomainName,
+        name: domainName,
+        value: targetDomainName,
       });
     }
   }

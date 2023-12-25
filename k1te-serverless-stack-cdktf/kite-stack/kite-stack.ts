@@ -103,21 +103,41 @@ export class KiteStack extends TerraformStack {
       certificate: domain.certificate,
     });
 
-    domain.createRecord(wsApi);
-    domain.createRecord(restApi);
+    domain.createCname(wsApi.getDomainName(), wsApi.getTargetDomainName());
+    domain.createCname(restApi.getDomainName(), restApi.getTargetDomainName());
 
-    const createStage = (
-      name: string,
-      functionName: string,
-      telegramToken: string,
-    ) =>
-      new Stage(this, name, {
+    const telegramDevBotToken = process.env.TELEGRAM_BOT_TOKEN;
+    assert(telegramDevBotToken, "You need to specify TELEGRAM_BOT_TOKEN");
+    new Stage(this, "dev", {
+      role,
+      restApi,
+      wsApi,
+      telegramToken: telegramDevBotToken,
+      mainLambda: {
+        functionName: devLambdaName,
+        runtime,
+        handler,
+        s3Bucket: buildState.getString("s3-source-bucket"),
+        s3Key: buildState.getString("function-s3-key"),
+        memorySize,
+        architecture,
+      },
+      lifecycleLambda: {
+        s3Bucket: buildState.getString("s3-source-bucket"),
+        s3Key: buildState.getString("lifecycle-s3-key"),
+      },
+    });
+
+    if (prodLambdaName) {
+      const telegramProdToken = process.env.TELEGRAM_PROD_BOT_TOKEN;
+      assert(telegramProdToken, "You need to specify TELEGRAM_PROD_BOT_TOKEN");
+      new Stage(this, "prod", {
         role,
         restApi,
         wsApi,
-        telegramToken,
+        telegramToken: telegramProdToken,
         mainLambda: {
-          functionName,
+          functionName: prodLambdaName,
           runtime,
           handler,
           s3Bucket: buildState.getString("s3-source-bucket"),
@@ -130,15 +150,6 @@ export class KiteStack extends TerraformStack {
           s3Key: buildState.getString("lifecycle-s3-key"),
         },
       });
-
-    const telegramDevBotToken = process.env.TELEGRAM_BOT_TOKEN;
-    assert(telegramDevBotToken, "You need to specify TELEGRAM_BOT_TOKEN");
-    createStage("dev", devLambdaName, telegramDevBotToken);
-
-    if (prodLambdaName) {
-      const telegramProdToken = process.env.TELEGRAM_PROD_BOT_TOKEN;
-      assert(telegramProdToken, "You need to specify TELEGRAM_PROD_BOT_TOKEN");
-      createStage("prod", prodLambdaName, telegramProdToken);
     }
 
     Aspects.of(this).add(TAGGING_ASPECT);

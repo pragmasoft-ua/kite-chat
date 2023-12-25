@@ -261,6 +261,14 @@ export class WebsocketApi extends Construct {
   public addStage(props: Readonly<WebSocketApiStageProps>) {
     return new WebsocketApiStage(this, `${props.stage}-stage`, props);
   }
+
+  public getDomainName() {
+    return this.domainName?.domainName;
+  }
+
+  public getTargetDomainName() {
+    return this.domainName?.domainNameConfiguration.targetDomainName;
+  }
 }
 
 export type WebSocketApiProps = {

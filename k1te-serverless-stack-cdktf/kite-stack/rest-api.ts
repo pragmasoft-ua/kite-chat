@@ -169,6 +169,14 @@ export class RestApi extends Construct implements ServicePrincipal {
   get sourceArn() {
     return `${this.api.executionArn}/*/*`;
   }
+
+  public getDomainName() {
+    return this.domainName?.domainName;
+  }
+
+  public getTargetDomainName() {
+    return this.domainName?.domainNameConfiguration.targetDomainName;
+  }
 }
 
 export type RestApiProps = {

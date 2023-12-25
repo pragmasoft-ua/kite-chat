@@ -9,7 +9,7 @@ import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
 import { TerraformOutput } from "cdktf";
 import { TELEGRAM_ROUTE } from "./kite-stack";
 
-export type MainComponentProps = {
+export type StageProps = {
   role: Role;
   wsApi: WebsocketApi;
   restApi: RestApi;
@@ -30,13 +30,7 @@ export type MainComponentProps = {
 };
 
 export class Stage extends Construct {
-  readonly lambdaFunction: Lambda;
-
-  constructor(
-    scope: Construct,
-    id: string,
-    props: Readonly<MainComponentProps>,
-  ) {
+  constructor(scope: Construct, id: string, props: Readonly<StageProps>) {
     super(scope, id);
 
     const { role, wsApi, restApi, telegramToken, mainLambda, lifecycleLambda } =
@@ -116,7 +110,5 @@ export class Stage extends Construct {
     new TerraformOutput(this, "lifecycle-output", {
       value: lifecycle.result,
     });
-
-    this.lambdaFunction = lambdaFunction;
   }
 }
