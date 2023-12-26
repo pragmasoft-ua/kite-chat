@@ -28,7 +28,7 @@ export type KiteStackProps = {
    * */
   s3BucketWithState: string;
   /**
-   * The AWS region where S3 bucket with is located.
+   * The AWS region where S3 bucket with state is located.
    * */
   region: string;
   /**
