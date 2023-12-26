@@ -1,10 +1,5 @@
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
-import {
-  Aspects,
-  S3Backend,
-  TerraformRemoteState,
-  TerraformStack,
-} from "cdktf";
+import { Aspects, S3Backend, TerraformStack } from "cdktf";
 import { Construct } from "constructs";
 import { Role } from "./iam";
 import {
@@ -28,26 +23,49 @@ export const TELEGRAM_ROUTE = "/tg";
 
 export type KiteStackProps = {
   /**
-   * S3Backend of build stack that is used for building and uploading Main lambda
-   * and Lifecycle lambda to S3. It's used to get S3Bucket name, and S3Key of main & lifecycle lambdas.
+   * The name of the S3 bucket where Terraform state will be stored.
+   * Default name for kite-stack is 'kite/terraform.tfstate'
    * */
-  s3Backend: S3Backend;
-  buildStackName: string;
+  s3BucketWithState: string;
   /**
-   * Name of Main lambda function that will be used for 'dev' stage, it should contain
-   * dev prefix.
+   * The AWS region where S3 bucket with is located.
    * */
-  devLambdaName: string;
+  region: string;
   /**
-   * Name of Main lambda function that will be used for 'prod' stage, it should contain
-   * prod prefix.
-   * If specified - prod stage and all related resources will be created.
+   * The name of the S3 bucket where 'main' and 'lifecycle' lambdas are located.
    * */
-  prodLambdaName?: string;
+  s3SourceBucketName: string;
+  /**
+   * The S3 key to mainLambda
+   * */
+  mainLambdaS3Key: string;
+  /**
+   * The S3 key to lifecycleLambda
+   * */
+  lifecycleLambdaS3Key: string;
+  /**
+   * Whether to create prod stage or not
+   * */
+  prodStage?: boolean;
+  /**
+   * DomainName that will be used for Api Gateway
+   * */
   domainName?: string;
+  /**
+   * The Main lambda's architecture. Default is set to 'arm64'
+   * */
   architecture?: Architecture;
+  /**
+   * The Main lambda's runtime. Default is set to 'provided.al2'
+   * */
   runtime?: Runtime;
+  /**
+   * The Main lambda's handler. Default is set to 'hello.handler'
+   * */
   handler?: Handler;
+  /**
+   * The Main lambda's memorySize. Default is set to '256'
+   * */
   memorySize?: number;
 };
 
@@ -55,26 +73,24 @@ export class KiteStack extends TerraformStack {
   private readonly restApi: RestApi;
   private readonly wsApi: WebsocketApi;
   private readonly role: Role;
-  private readonly remoteState: TerraformRemoteState;
 
   constructor(scope: Construct, id: string, props: KiteStackProps) {
     super(scope, id);
     this.node.setContext(ALLOW_TAGS, true);
-    const { s3Backend, buildStackName, prodLambdaName, domainName } = props;
+    const { s3BucketWithState, region, domainName, prodStage = false } = props;
 
+    new S3Backend(this, {
+      bucket: s3BucketWithState,
+      key: "kite/terraform.tfstate",
+      region,
+    });
     new AwsProvider(this, "AWS");
     new ArchiveProvider(this, "archive-provider");
 
-    // todo
-    this.remoteState = s3Backend.getRemoteStateDataSource(
-      this,
-      "build-state",
-      buildStackName,
-    );
-    const region = new DataAwsRegion(this, "current-region");
+    const awsRegion = new DataAwsRegion(this, "current-region");
     const callerIdentity = new DataAwsCallerIdentity(this, "current-caller");
     const handlerArn =
-      `arn:aws:lambda:${region.name}:${callerIdentity.accountId}:function:` +
+      `arn:aws:lambda:${awsRegion.name}:${callerIdentity.accountId}:function:` +
       "$${stageVariables.function}";
 
     this.role = new Role(this, "lambda-execution-role", {
@@ -109,7 +125,7 @@ export class KiteStack extends TerraformStack {
     assert(telegramDevBotToken, "You need to specify TELEGRAM_BOT_TOKEN");
     this.createStage("dev", telegramDevBotToken, props);
 
-    if (prodLambdaName) {
+    if (prodStage) {
       const telegramProdToken = process.env.TELEGRAM_PROD_BOT_TOKEN;
       assert(telegramProdToken, "You need to specify TELEGRAM_PROD_BOT_TOKEN");
       this.createStage("prod", telegramProdToken, props);
@@ -120,6 +136,9 @@ export class KiteStack extends TerraformStack {
 
   createStage(name: string, telegramToken: string, props: KiteStackProps) {
     const {
+      s3SourceBucketName,
+      mainLambdaS3Key,
+      lifecycleLambdaS3Key,
       architecture = "arm64",
       runtime = "provided.al2",
       handler = "hello.handler",
@@ -134,14 +153,14 @@ export class KiteStack extends TerraformStack {
       mainLambdaProps: {
         runtime,
         handler,
-        s3Bucket: this.remoteState.getString("s3-source-bucket"),
-        s3Key: this.remoteState.getString("function-s3-key"),
+        s3Bucket: s3SourceBucketName,
+        s3Key: mainLambdaS3Key,
         memorySize,
         architecture,
       },
       lifecycleLambdaProps: {
-        s3Bucket: this.remoteState.getString("s3-source-bucket"),
-        s3Key: this.remoteState.getString("lifecycle-s3-key"),
+        s3Bucket: s3SourceBucketName,
+        s3Key: lifecycleLambdaS3Key,
       },
     });
   }

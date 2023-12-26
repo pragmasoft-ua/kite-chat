@@ -10,9 +10,9 @@ import assert = require("assert");
 export type CodebuildProps = {
   gitRepositoryUrl: string;
   s3SourceBucket: S3Bucket;
+  stackName: string;
   devLambdaName: string;
   prodLambdaName?: string;
-  stackName: string;
   s3BucketWithState?: string;
 };
 

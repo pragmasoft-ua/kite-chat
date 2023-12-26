@@ -1,4 +1,4 @@
-import { TerraformOutput, TerraformStack } from "cdktf";
+import { S3Backend, TerraformOutput, TerraformStack } from "cdktf";
 import { Construct } from "constructs";
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
 import { S3Bucket } from "@cdktf/provider-aws/lib/s3-bucket";
@@ -6,6 +6,7 @@ import { CiCdCodebuild } from "./ci-cd-codebuild";
 import { ArchiveS3Source, AssetS3Source } from "./asset";
 import { OUTPUT_PATH } from "./build";
 import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
+import { MAIN_LAMBDA_NAME } from "../kite-stack/stage";
 
 export type BuildSpecProps = {
   /**
@@ -14,22 +15,15 @@ export type BuildSpecProps = {
    * */
   gitRepositoryUrl: string;
   /**
-   * The name of dev Lambda, It's needed to updated it automatically on PUSH event
-   * */
-  devLambdaName: string;
-  /**
-   * The name of prod Lambda, It's needed to update it automatically on TAG event
-   * */
-  prodLambdaName?: string;
-  /**
-   * Name of the stack that is used in DriftCheck CodeBuild Project to
-   * verify drift of the specified stack.
-   * */
-  stackName: string;
-  /**
-   * The name of S3 Bucket where Terraform state is stored. It's used for DriftCheck.
+   * The name of S3 Bucket where Terraform state is stored. It's used for S3Backend and DriftCheck.
+   * In case with DriftCheck it should be a bucket that stores kite-stack's state. The default value
+   * for build-stack's state is 'kite/terraform-build.tfstate'
    * */
   s3BucketWithState: string;
+  /**
+   * AWS region where s3 bucket with state is located.
+   * */
+  region: string;
   /**
    * If set to true - MainHandler Lambda will be uploaded from source and not built via CodeBuild. It will look for
    * function.zip in k1te-serverless/target. If there will be no function.zip the error will be thrown. Default is false.
@@ -38,21 +32,36 @@ export type BuildSpecProps = {
    * and it will make DriftCheck impossible.
    * */
   buildLambdaViaAsset?: boolean;
+  /**
+   * Whether to create prod stage or not
+   * */
+  prodStage?: boolean;
 };
 
 export class BuildStack extends TerraformStack {
+  public readonly s3BucketWithState: string;
+  public readonly region: string;
+  public readonly prodStage: boolean;
+  public readonly s3SourceBucketName: string;
+  public readonly mainLambdaS3Key: string;
+  public readonly lifecycleLambdaS3Key: string;
+
   constructor(scope: Construct, id: string, props: Readonly<BuildSpecProps>) {
     super(scope, id);
 
     const {
       gitRepositoryUrl,
-      devLambdaName,
-      prodLambdaName,
-      buildLambdaViaAsset = false,
-      stackName,
       s3BucketWithState,
+      region,
+      buildLambdaViaAsset = false,
+      prodStage = false,
     } = props;
 
+    new S3Backend(this, {
+      bucket: s3BucketWithState,
+      key: "kite/terraform-build.tfstate",
+      region,
+    });
     new AwsProvider(this, "AWS");
     new ArchiveProvider(this, "ARCHIVE");
 
@@ -64,10 +73,10 @@ export class BuildStack extends TerraformStack {
     new CiCdCodebuild(this, "ci-cd-codebuild", {
       gitRepositoryUrl,
       s3SourceBucket: s3Bucket,
-      devLambdaName,
-      prodLambdaName,
-      stackName,
+      stackName: id.replace("-build", ""),
       s3BucketWithState: !buildLambdaViaAsset ? s3BucketWithState : undefined,
+      devLambdaName: `dev-${MAIN_LAMBDA_NAME}`,
+      prodLambdaName: prodStage ? `prod-${MAIN_LAMBDA_NAME}` : undefined,
     });
 
     if (buildLambdaViaAsset) {
@@ -98,5 +107,12 @@ export class BuildStack extends TerraformStack {
       value: "build/lifecycle.zip",
       description: "Name of the S3 Key to Lifecycle function",
     });
+
+    this.s3BucketWithState = s3BucketWithState;
+    this.region = region;
+    this.prodStage = prodStage;
+    this.s3SourceBucketName = s3Bucket.bucket;
+    this.mainLambdaS3Key = OUTPUT_PATH;
+    this.lifecycleLambdaS3Key = "build/lifecycle.zip";
   }
 }
