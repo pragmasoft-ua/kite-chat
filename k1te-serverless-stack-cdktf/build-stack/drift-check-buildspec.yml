@@ -2,13 +2,18 @@ version: 0.2
 
 phases:
   install:
+    runtime-versions:
+      nodejs: 18
     commands:
+      - yum install -y yum-utils
+      - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+      - yum -y install terraform
       - cd k1te-serverless-stack-cdktf
-      - npm install
+      - npm ci
   build:
     commands:
       - echo "CDKTF is synthesizing source code"
-      - cdktf synth
+      - npm run synth
       - cd cdktf.out/stacks/$STACK
       - terraform init -reconfigure
       - echo "Drift check"
@@ -21,3 +26,7 @@ phases:
           echo Drift is detected, event is published
           aws events put-events --entries $EVENT
         fi
+cache:
+  paths:
+    - '/k1te-serverless-stack-cdktf/node_modules/*'
+

@@ -82,7 +82,7 @@ export class DriftCheck extends Construct {
       gitRepositoryUrl,
       buildspec:
         "k1te-serverless-stack-cdktf/build-stack/drift-check-buildspec.yml",
-      image: "public.ecr.aws/b1z6s7i3/cdktf-arm64-build:latest", // It's a custom image for ARM64 with TF, CDKTF, AWS CLI, Node.js, npm
+      image: "aws/codebuild/amazonlinux2-aarch64-standard:3.0",
       environmentVariable,
       description:
         "It's used to check drift in Terraform stack and send event to EventBridge if drift is detected",
