@@ -1,7 +1,11 @@
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
-import { Aspects, S3Backend, TerraformStack } from "cdktf";
+import {
+  Aspects,
+  S3Backend,
+  TerraformRemoteState,
+  TerraformStack,
+} from "cdktf";
 import { Construct } from "constructs";
-import { ApiGatewayPrincipal } from "./apigateway-principal";
 import { Role } from "./iam";
 import {
   Architecture,
@@ -48,54 +52,43 @@ export type KiteStackProps = {
 };
 
 export class KiteStack extends TerraformStack {
+  private readonly restApi: RestApi;
+  private readonly wsApi: WebsocketApi;
+  private readonly role: Role;
+  private readonly remoteState: TerraformRemoteState;
+
   constructor(scope: Construct, id: string, props: KiteStackProps) {
     super(scope, id);
     this.node.setContext(ALLOW_TAGS, true);
-    const {
-      s3Backend,
-      buildStackName,
-      devLambdaName,
-      prodLambdaName,
-      domainName,
-      architecture = "arm64",
-      runtime = "provided.al2",
-      handler = "hello.handler",
-      memorySize = 256,
-    } = props;
+    const { s3Backend, buildStackName, prodLambdaName, domainName } = props;
 
     new AwsProvider(this, "AWS");
     new ArchiveProvider(this, "archive-provider");
 
-    const buildState = s3Backend.getRemoteStateDataSource(
+    // todo
+    this.remoteState = s3Backend.getRemoteStateDataSource(
       this,
-      `build-state`,
+      "build-state",
       buildStackName,
     );
     const region = new DataAwsRegion(this, "current-region");
     const callerIdentity = new DataAwsCallerIdentity(this, "current-caller");
-
-    const role = new Role(this, "lambda-execution-role", {
-      forService: LAMBDA_SERVICE_PRINCIPAL,
-    });
-
-    const apiGatewayPrincipal = new ApiGatewayPrincipal(
-      this,
-      "apigateway-principal",
-    );
-
-    const domain = new DomainName(this, "domain-name", domainName);
-
     const handlerArn =
       `arn:aws:lambda:${region.name}:${callerIdentity.accountId}:function:` +
       "$${stageVariables.function}";
 
-    const wsApi = new WebsocketApi(this, "ws-api", {
-      principal: apiGatewayPrincipal,
+    this.role = new Role(this, "lambda-execution-role", {
+      forService: LAMBDA_SERVICE_PRINCIPAL,
+    });
+
+    const domain = new DomainName(this, "domain-name", domainName);
+
+    this.wsApi = new WebsocketApi(this, "ws-api", {
       handlerArn,
       domainName: `ws.${domainName}`,
       certificate: domain.certificate,
     });
-    const restApi = new RestApi(this, "http-api", {
+    this.restApi = new RestApi(this, "http-api", {
       handlerArn,
       method: "POST",
       route: TELEGRAM_ROUTE,
@@ -103,55 +96,53 @@ export class KiteStack extends TerraformStack {
       certificate: domain.certificate,
     });
 
-    domain.createCname(wsApi.getDomainName(), wsApi.getTargetDomainName());
-    domain.createCname(restApi.getDomainName(), restApi.getTargetDomainName());
+    domain.createCname(
+      this.wsApi.getDomainName(),
+      this.wsApi.getTargetDomainName(),
+    );
+    domain.createCname(
+      this.restApi.getDomainName(),
+      this.restApi.getTargetDomainName(),
+    );
 
     const telegramDevBotToken = process.env.TELEGRAM_BOT_TOKEN;
     assert(telegramDevBotToken, "You need to specify TELEGRAM_BOT_TOKEN");
-    new Stage(this, "dev", {
-      role,
-      restApi,
-      wsApi,
-      telegramToken: telegramDevBotToken,
-      mainLambda: {
-        functionName: devLambdaName,
-        runtime,
-        handler,
-        s3Bucket: buildState.getString("s3-source-bucket"),
-        s3Key: buildState.getString("function-s3-key"),
-        memorySize,
-        architecture,
-      },
-      lifecycleLambda: {
-        s3Bucket: buildState.getString("s3-source-bucket"),
-        s3Key: buildState.getString("lifecycle-s3-key"),
-      },
-    });
+    this.createStage("dev", telegramDevBotToken, props);
 
     if (prodLambdaName) {
       const telegramProdToken = process.env.TELEGRAM_PROD_BOT_TOKEN;
       assert(telegramProdToken, "You need to specify TELEGRAM_PROD_BOT_TOKEN");
-      new Stage(this, "prod", {
-        role,
-        restApi,
-        wsApi,
-        telegramToken: telegramProdToken,
-        mainLambda: {
-          functionName: prodLambdaName,
-          runtime,
-          handler,
-          s3Bucket: buildState.getString("s3-source-bucket"),
-          s3Key: buildState.getString("function-s3-key"),
-          memorySize,
-          architecture,
-        },
-        lifecycleLambda: {
-          s3Bucket: buildState.getString("s3-source-bucket"),
-          s3Key: buildState.getString("lifecycle-s3-key"),
-        },
-      });
+      this.createStage("prod", telegramProdToken, props);
     }
 
     Aspects.of(this).add(TAGGING_ASPECT);
+  }
+
+  createStage(name: string, telegramToken: string, props: KiteStackProps) {
+    const {
+      architecture = "arm64",
+      runtime = "provided.al2",
+      handler = "hello.handler",
+      memorySize = 256,
+    } = props;
+
+    new Stage(this, name, {
+      role: this.role,
+      restApi: this.restApi,
+      wsApi: this.wsApi,
+      telegramToken,
+      mainLambdaProps: {
+        runtime,
+        handler,
+        s3Bucket: this.remoteState.getString("s3-source-bucket"),
+        s3Key: this.remoteState.getString("function-s3-key"),
+        memorySize,
+        architecture,
+      },
+      lifecycleLambdaProps: {
+        s3Bucket: this.remoteState.getString("s3-source-bucket"),
+        s3Key: this.remoteState.getString("lifecycle-s3-key"),
+      },
+    });
   }
 }

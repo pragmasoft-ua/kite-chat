@@ -25,6 +25,7 @@ const app = new App();
 new MainStack(app, "kite", {
   build: {
     gitRepositoryUrl: "https://github.com/Alex21022001/kite-chat",
+    buildLambdaViaAsset: true,
   },
   kite: {
     architecture: "arm64",

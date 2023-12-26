@@ -142,7 +142,8 @@ export class WebsocketApi extends Construct {
     props: Readonly<WebSocketApiProps>,
   ) {
     super(scope, id);
-    const { principal, handlerArn, domainName, certificate } = props;
+    const { handlerArn, domainName, certificate } = props;
+    const principal = new ApiGatewayPrincipal(this, "apigateway-principal");
 
     const api = new Apigatewayv2Api(this, id, {
       name: id,
@@ -272,7 +273,6 @@ export class WebsocketApi extends Construct {
 }
 
 export type WebSocketApiProps = {
-  principal: ApiGatewayPrincipal;
   handlerArn: string;
   domainName?: string;
   certificate?: TlsCertificate;
