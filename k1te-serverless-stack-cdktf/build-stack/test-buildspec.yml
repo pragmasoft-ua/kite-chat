@@ -1,0 +1,9 @@
+version: 0.2
+
+phases:
+  build:
+    on-failure: ABORT
+    commands:
+      - aws s3 cp s3://$AUTH_PATH k1te-serverless-test/auth.json
+      - ./mvnw -pl k1te-serverless-test exec:java -e -D exec.mainClass=com.microsoft.playwright.CLI -D exec.args="install --with-deps chromium"
+      - ./mvnw -pl k1te-serverless-test test
