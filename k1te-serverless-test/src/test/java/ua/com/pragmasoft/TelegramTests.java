@@ -2,12 +2,21 @@
 package ua.com.pragmasoft;
 
 import org.junit.jupiter.api.*;
+import ua.com.pragmasoft.chat.ChatPage;
 
+import java.nio.file.Path;
+
+@Disabled
 @Tag("telegram")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class TelegramTests extends BaseTest {
 
   private static final String CHANNEL_NAME = "test-kite-channel";
+
+  @Test
+  void uploadFile(){
+    System.out.println(kiteChat.uploadFile(Path.of("auth.json")));
+  }
 
   @Test
   @Order(1)

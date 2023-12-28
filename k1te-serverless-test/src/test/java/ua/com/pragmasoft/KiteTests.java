@@ -2,5 +2,22 @@
 package ua.com.pragmasoft;
 
 import org.junit.jupiter.api.*;
+import ua.com.pragmasoft.chat.ChatPage;
 
-class KiteTests extends BaseTest {}
+import static ua.com.pragmasoft.chat.ChatPage.MessageType.*;
+
+@Tag("kite")
+class KiteTests extends BaseTest {
+
+    @Test
+    void test() {
+        String helloMessage = "hello 123";
+        kiteChat.sendMessage(helloMessage);
+        telegramChat.verifyIncomingMessageText(helloMessage);
+
+        String hiMessage = "hi!";
+        telegramChat.sendMessage(hiMessage);
+        kiteChat.verifyIncomingMessageText(hiMessage);
+    }
+
+}
