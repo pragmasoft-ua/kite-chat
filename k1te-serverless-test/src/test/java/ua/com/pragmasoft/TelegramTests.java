@@ -15,7 +15,7 @@ class TelegramTests extends BaseTest {
 
   @Test
   void uploadFile(){
-    System.out.println(kiteChat.uploadFile(Path.of("auth.json")));
+    System.out.println(telegramChat.uploadFile(Path.of("sample.pdf")));
   }
 
   @Test

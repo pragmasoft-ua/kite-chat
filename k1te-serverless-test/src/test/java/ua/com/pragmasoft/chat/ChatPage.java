@@ -1,6 +1,7 @@
 package ua.com.pragmasoft.chat;
 
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.FilePayload;
 
 import java.nio.file.Path;
 
@@ -12,7 +13,7 @@ public interface ChatPage {
 
     void sendMessage(String text);
 
-    FilePayload uploadFile(Path pathToFile);
+    String uploadFile(Path pathToFile);
 
     default String lastMessage() {
         return this.lastMessage(MessageType.ANY);
@@ -37,8 +38,5 @@ public interface ChatPage {
         IN,
         OUT,
         ANY
-    }
-
-    record FilePayload(String fileName, String fileSize) {
     }
 }

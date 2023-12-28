@@ -100,7 +100,8 @@ public final class TelegramChatPage implements ChatPage {
         return this.lastMessage(MessageType.IN);
     }
 
-    public FilePayload uploadFile(Path pathToFile) {
+    @Override
+    public String uploadFile(Path pathToFile) {
         FileChooser fileChooser = page.waitForFileChooser(() -> {
             this.page.waitForTimeout(100); //If not wait - document attachment will not be invoked
             this.fileAttachment.click();
@@ -113,14 +114,12 @@ public final class TelegramChatPage implements ChatPage {
         Locator lastMessage = this.outgoingMessages.last();
         Locator documentIcon = lastMessage.locator(".document-ico");
         Locator documentName = lastMessage.locator(".document-name");
-        Locator documentSize = lastMessage.locator(".document-size");
+        String fileName = pathToFile.getFileName().toString();
 
-        assertThat(lastMessage).hasClass(Pattern.compile("document-message"));
+        assertThat(documentName).hasText(fileName);
         assertThat(documentIcon.locator(".preloader-container"))
             .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(25_000));
 
-        String fileName = documentName.innerText();
-        String fileSize = documentSize.innerText().replace(" · ", "");
-        return new FilePayload(fileName, fileSize);
+        return fileName;
     }
 }

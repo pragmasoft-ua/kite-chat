@@ -32,10 +32,10 @@ public class BaseTest {
         telegramContext =
             browser.newContext(
                 new Browser.NewContextOptions().setStorageStatePath(Path.of("auth.json")));
-//        telegramChat = TelegramChatPage.of(telegramContext.newPage(), telegramChatTitle);
+        telegramChat = TelegramChatPage.of(telegramContext.newPage(), telegramChatTitle);
 
         kiteContext = browser.newContext();
-        kiteChat = KiteChatPage.of(kiteContext.newPage(), kiteUrl);
+//        kiteChat = KiteChatPage.of(kiteContext.newPage(), kiteUrl);
     }
 
     @AfterAll
