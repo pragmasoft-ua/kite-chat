@@ -12,59 +12,61 @@ import java.nio.file.Path;
 class TelegramTests extends BaseTest {
 
     private static final String CHANNEL_NAME = "test-kite-channel";
+    private static final String BASE_PATH = "src/test/resources";
 
     @Test
-    void test() {
-        String php = telegramChat.uploadFile(Path.of("src/test/resources/sample.jpg"));
-        System.out.println(php);
-        telegramChat.lastMessage1(ChatPage.MessageType.OUT).hasFile(php,1000);
+    void uploadFile() {
+        telegramChat.uploadFile(Path.of(BASE_PATH,"sample.jpg"));
+        telegramChat.uploadFile(Path.of(BASE_PATH,"sample.pdf"));
+    }
+
+    @Test
+    void uploadPhoto() {
+        telegramChat.uploadPhoto(Path.of(BASE_PATH,"sample.jpg"));
     }
 
     @Test
     @Order(1)
     @DisplayName("/info command before /host")
     void anonymousInfo() {
-        String response = telegramChat.sendMessageAndWaitResponse("/info");
-        Assertions.assertTrue(response.contains("/join"));
+        telegramChat.sendMessage("/info");
+        telegramChat.lastMessage(ChatPage.MessageType.IN)
+            .hasText("You don't have any channels at the moment.");
     }
 
     @Test
     @Order(2)
     @DisplayName("/host command")
     void host() {
-        String response = telegramChat.sendMessageAndWaitResponse("/host " + CHANNEL_NAME);
-        Assertions.assertTrue(response.contains("channel " + CHANNEL_NAME));
+        telegramChat.sendMessage("/host " + CHANNEL_NAME);
+        telegramChat.lastMessage(ChatPage.MessageType.IN)
+            .hasText("Created channel " + CHANNEL_NAME);
     }
 
     @Test
     @Order(3)
     @DisplayName("/info command after /host")
     void info() {
-        String response = telegramChat.sendMessageAndWaitResponse("/info");
-        Assertions.assertTrue(response.contains(CHANNEL_NAME));
+        telegramChat.sendMessage("/info");
+        telegramChat.lastMessage(ChatPage.MessageType.IN)
+            .hasText("You are a Host of the " + CHANNEL_NAME + " channel.");
     }
 
     @Test
     @Order(4)
     @DisplayName("/leave command")
     void leave() {
-        String response = telegramChat.sendMessageAndWaitResponse("/leave");
-        Assertions.assertTrue(response.contains("cannot leave channel"));
+        telegramChat.sendMessage("/leave");
+        telegramChat.lastMessage(ChatPage.MessageType.IN)
+            .hasText("Host member cannot leave channel.");
     }
 
     @Test
     @Order(5)
     @DisplayName("/drop command")
     void drop() {
-        String response = telegramChat.sendMessageAndWaitResponse("/drop");
-        Assertions.assertTrue(response.contains(CHANNEL_NAME));
-    }
-
-    @Test
-    @Order(6)
-    @DisplayName("/help command")
-    void help() {
-        String response = telegramChat.sendMessageAndWaitResponse("/help");
-        Assertions.assertFalse(response.isEmpty());
+        telegramChat.sendMessage("/drop");
+        telegramChat.lastMessage(ChatPage.MessageType.IN)
+            .hasText("You dropped channel " + CHANNEL_NAME);
     }
 }

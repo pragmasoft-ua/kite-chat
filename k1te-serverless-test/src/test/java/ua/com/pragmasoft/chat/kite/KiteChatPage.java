@@ -5,6 +5,7 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.FilePayload;
+import ua.com.pragmasoft.chat.ChatMessage;
 import ua.com.pragmasoft.chat.ChatPage;
 
 import java.nio.file.Path;
@@ -50,11 +51,12 @@ public final class KiteChatPage implements ChatPage {
     }
 
     @Override
-    public String lastMessage(MessageType type) {
-        return switch (type) {
-            case IN -> this.incomingMessages.last().innerText();
-            case OUT -> this.outgoingMessages.last().innerText();
-        };
+    public KiteChatMessage lastMessage(MessageType type) {
+//        return switch (type) {
+//            case IN -> this.incomingMessages.last().innerText();
+//            case OUT -> this.outgoingMessages.last().innerText();
+//        };
+        return null;
     }
 
     @Override
@@ -81,4 +83,22 @@ public final class KiteChatPage implements ChatPage {
         return fileName;
     }
 
+    private class KiteChatMessage implements ChatMessage {
+
+        @Override public ChatMessage hasText(String expected, double timeout) {
+            return null;
+        }
+
+        @Override public ChatMessage hasFile(String expectedFileName, double timeout) {
+            return null;
+        }
+
+        @Override public ChatMessage hasPhoto(String expectedPhotoName, double timeout) {
+            return null;
+        }
+
+        @Override public void waitMessageToBeUploaded(double timeout) {
+
+        }
+    }
 }

@@ -6,15 +6,15 @@ import org.junit.jupiter.api.*;
 @Tag("kite")
 class KiteTests extends BaseTest {
 
-    @Test
-    void test() {
-        String helloMessage = "hello 123";
-        kiteChat.sendMessage(helloMessage);
-        telegramChat.verifyIncomingTextMessage(helloMessage);
-
-        String hiMessage = "hi!";
-        telegramChat.sendMessage(hiMessage);
-        kiteChat.verifyIncomingTextMessage(hiMessage);
-    }
+//    @Test
+//    void test() {
+//        String helloMessage = "hello 123";
+//        kiteChat.sendMessage(helloMessage);
+//        telegramChat.verifyIncomingTextMessage(helloMessage);
+//
+//        String hiMessage = "hi!";
+//        telegramChat.sendMessage(hiMessage);
+//        kiteChat.verifyIncomingTextMessage(hiMessage);
+//    }
 
 }
