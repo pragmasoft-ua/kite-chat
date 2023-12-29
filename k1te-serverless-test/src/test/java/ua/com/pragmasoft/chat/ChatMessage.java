@@ -1,7 +1,5 @@
 package ua.com.pragmasoft.chat;
 
-import com.microsoft.playwright.Locator;
-
 public interface ChatMessage {
 
     default ChatMessage hasText(String expected) {
@@ -16,11 +14,11 @@ public interface ChatMessage {
 
     ChatMessage hasFile(String expectedFileName, double timeout);
 
-    default ChatMessage hasPhoto(String expectedPhotoName) {
-        return this.hasPhoto(expectedPhotoName, 3000);
+    default ChatMessage isPhoto() {
+        return this.isPhoto(3000);
     }
 
-    ChatMessage hasPhoto(String expectedPhotoName, double timeout);
+    ChatMessage isPhoto(double timeout);
 
     void waitMessageToBeUploaded(double timeout);
 }

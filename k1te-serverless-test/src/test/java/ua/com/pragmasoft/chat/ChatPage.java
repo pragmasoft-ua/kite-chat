@@ -12,10 +12,18 @@ public interface ChatPage {
 
     void sendMessage(String text);
 
-    String uploadFile(Path pathToFile);
+    UploadStatus uploadFile(Path pathToFile);
+
+    void uploadPhoto(Path pathToPhoto);
 
     enum MessageType {
         IN,
         OUT,
+    }
+
+    record UploadStatus(String fileName, boolean success) {
+        public UploadStatus(boolean success) {
+            this("", success);
+        }
     }
 }

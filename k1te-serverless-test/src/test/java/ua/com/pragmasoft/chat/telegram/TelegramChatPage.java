@@ -1,12 +1,12 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
 package ua.com.pragmasoft.chat.telegram;
 
+import static com.microsoft.playwright.assertions.LocatorAssertions.*;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 import com.microsoft.playwright.FileChooser;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.assertions.LocatorAssertions;
 import com.microsoft.playwright.options.AriaRole;
 import ua.com.pragmasoft.chat.ChatMessage;
 import ua.com.pragmasoft.chat.ChatPage;
@@ -78,24 +78,22 @@ public final class TelegramChatPage implements ChatPage {
     }
 
     @Override
-    public String uploadFile(Path pathToFile) {
+    public UploadStatus uploadFile(Path pathToFile) {
         String fileName = this.attachFile(pathToFile, AttachmentType.DOC);
 
         this.lastMessage(MessageType.OUT)
             .hasFile(fileName)
             .waitMessageToBeUploaded(15_000);
 
-        return fileName;
+        return new UploadStatus(fileName, true);
     }
 
-    public String uploadPhoto(Path pathToPhoto) {
-        String photoName = this.attachFile(pathToPhoto, AttachmentType.PHOTO);
+    public void uploadPhoto(Path pathToPhoto) {
+        this.attachFile(pathToPhoto, AttachmentType.PHOTO);
 
         this.lastMessage(MessageType.OUT)
-            .hasPhoto(photoName)
+            .isPhoto()
             .waitMessageToBeUploaded(15_000);
-
-        return photoName;
     }
 
     private String attachFile(Path path, AttachmentType attachment) {
@@ -114,7 +112,7 @@ public final class TelegramChatPage implements ChatPage {
         return path.getFileName().toString();
     }
 
-    public class TelegramChatMessage implements ChatMessage {
+    public static class TelegramChatMessage implements ChatMessage {
         private final Locator message;
 
         private TelegramChatMessage(Locator message) {
@@ -126,7 +124,7 @@ public final class TelegramChatPage implements ChatPage {
         public TelegramChatMessage hasText(String expected, double timeout) {
             Locator textMessage = this.message.locator(".message");
             assertThat(textMessage).hasText(Pattern.compile(expected),
-                new LocatorAssertions.HasTextOptions()
+                new HasTextOptions()
                     .setUseInnerText(true)
                     .setIgnoreCase(true)
                     .setTimeout(timeout));
@@ -136,29 +134,24 @@ public final class TelegramChatPage implements ChatPage {
         @Override
         public TelegramChatMessage hasFile(String expectedFileName, double timeout) {
             Locator documentName = this.message.locator(".document-name");
-            assertThat(documentName).hasText(expectedFileName,
-                new LocatorAssertions.HasTextOptions()
-                    .setUseInnerText(true)
-                    .setTimeout(timeout));
+            assertThat(documentName).hasText(expectedFileName, new HasTextOptions()
+                .setUseInnerText(true)
+                .setTimeout(timeout));
             return this;
         }
 
-        /**
-         * We can not verify photo's name in Telegram
-         * since it doesn't provide any photo's metadata
-         */
         @Override
-        public TelegramChatMessage hasPhoto(String expectedPhotoName, double timeout) {
+        public TelegramChatMessage isPhoto(double timeout) {
             Locator photo = this.message.locator(".attachment >> img.media-photo");
-            assertThat(photo)
-                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(timeout));
+            assertThat(photo).isVisible(new IsVisibleOptions().setTimeout(timeout));
             return this;
         }
 
         @Override
         public void waitMessageToBeUploaded(double timeout) {
-            assertThat(this.message.locator(".preloader-container"))
-                .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(timeout));
+            Locator loader = this.message.locator(".preloader-container");
+            assertThat(loader).not()
+                .isVisible(new IsVisibleOptions().setTimeout(timeout));
         }
     }
 

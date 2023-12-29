@@ -3,19 +3,19 @@ package ua.com.pragmasoft.chat.kite;
 import com.microsoft.playwright.FileChooser;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.assertions.LocatorAssertions.IsVisibleOptions;
 import com.microsoft.playwright.options.AriaRole;
-import com.microsoft.playwright.options.FilePayload;
 import ua.com.pragmasoft.chat.ChatMessage;
 import ua.com.pragmasoft.chat.ChatPage;
 
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 
+import static com.microsoft.playwright.assertions.LocatorAssertions.*;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 public final class KiteChatPage implements ChatPage {
     private final Page page;
-    private final Locator messages;
     private final Locator incomingMessages;
     private final Locator outgoingMessages;
     private final Locator fileAttachment;
@@ -26,7 +26,6 @@ public final class KiteChatPage implements ChatPage {
         this.page = page;
         Locator chat = page.locator("#kite-dialog");
 
-        this.messages = page.locator("kite-msg");
         this.incomingMessages = page.locator("kite-msg:not([status])");
         this.outgoingMessages = page.locator("kite-msg[status]");
 
@@ -52,53 +51,91 @@ public final class KiteChatPage implements ChatPage {
 
     @Override
     public KiteChatMessage lastMessage(MessageType type) {
-//        return switch (type) {
-//            case IN -> this.incomingMessages.last().innerText();
-//            case OUT -> this.outgoingMessages.last().innerText();
-//        };
-        return null;
+        return switch (type) {
+            case IN -> new KiteChatMessage(this.incomingMessages.last());
+            case OUT -> new KiteChatMessage(this.outgoingMessages.last());
+        };
     }
 
     @Override
     public void sendMessage(String text) {
         this.input.fill(text);
         this.sendButton.click();
-        Locator lastMessage = this.outgoingMessages.last();
-        assertThat(lastMessage).hasText(Pattern.compile(text));
-        this.page.waitForCondition(() -> lastMessage.getAttribute("status").equals("delivered"));
+        this.lastMessage(MessageType.OUT)
+            .hasText(text)
+            .waitMessageToBeUploaded(5000);
     }
 
     @Override
-    public String uploadFile(Path pathToFile) {
-        FileChooser fileChooser = this.page.waitForFileChooser(this.fileAttachment::click);
-        fileChooser.setFiles(pathToFile);
+    public UploadStatus uploadFile(Path pathToFile) {
+        String fileName = this.attachFile(pathToFile);
 
-        Locator lastMessage = this.outgoingMessages.last();
-        Locator fileLink = lastMessage.locator("kite-file").getByRole(AriaRole.LINK);
-        String fileName = pathToFile.getFileName().toString();
+        KiteChatMessage fileMessage = this.lastMessage(MessageType.OUT);
+        fileMessage.hasFile(fileName)
+            .waitMessageToBeUploaded(15_000);
 
-        assertThat(fileLink).hasAttribute("download", fileName);
-        this.page.waitForCondition(() -> lastMessage.getAttribute("status").equals("delivered"),
-            new Page.WaitForConditionOptions().setTimeout(25_000));
-        return fileName;
+        String status = fileMessage.message.getAttribute("status");
+        return new UploadStatus(fileName, status.equals("delivered"));
     }
 
-    private class KiteChatMessage implements ChatMessage {
+    @Override
+    public void uploadPhoto(Path pathToPhoto) {
+        this.attachFile(pathToPhoto);
 
-        @Override public ChatMessage hasText(String expected, double timeout) {
-            return null;
+        this.lastMessage(MessageType.OUT)
+            .isPhoto()
+            .waitMessageToBeUploaded(15_000);
+    }
+
+    private String attachFile(Path path) {
+        FileChooser fileChooser = this.page.waitForFileChooser(this.fileAttachment::click);
+        fileChooser.setFiles(path);
+        return path.getFileName().toString();
+    }
+
+    public static class KiteChatMessage implements ChatMessage {
+        private final Locator message;
+
+        private KiteChatMessage(Locator message) {
+            this.message = message;
         }
 
-        @Override public ChatMessage hasFile(String expectedFileName, double timeout) {
-            return null;
+        @Override
+        public ChatMessage hasText(String expected, double timeout) {
+            assertThat(this.message).hasText(Pattern.compile(expected),
+                new HasTextOptions()
+                    .setTimeout(timeout)
+                    .setUseInnerText(true)
+                    .setIgnoreCase(true));
+            return this;
         }
 
-        @Override public ChatMessage hasPhoto(String expectedPhotoName, double timeout) {
-            return null;
+        @Override
+        public ChatMessage hasFile(String expectedFileName, double timeout) {
+            Locator fileLocator = this.message
+                .locator("kite-file")
+                .getByRole(AriaRole.LINK);
+
+            assertThat(fileLocator).hasAttribute("download", Pattern.compile(expectedFileName),
+                new HasAttributeOptions().setTimeout(timeout));
+            return this;
         }
 
-        @Override public void waitMessageToBeUploaded(double timeout) {
+        @Override
+        public ChatMessage isPhoto(double timeout) {
+            Locator photoLocator = this.message.locator("kite-file")
+                .getByRole(AriaRole.LINK)
+                .locator("img");
 
+            assertThat(photoLocator)
+                .isVisible(new IsVisibleOptions().setTimeout(timeout));
+            return this;
+        }
+
+        @Override
+        public void waitMessageToBeUploaded(double timeout) {
+            assertThat(this.message).not().hasAttribute("status", "unknown",
+                new HasAttributeOptions().setTimeout(timeout));
         }
     }
 }

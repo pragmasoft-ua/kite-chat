@@ -21,8 +21,8 @@ public class BaseTest {
     @BeforeAll
     static void init() {
         // TODO: 27.12.2023
-        String telegramChatTitle = System.getProperty("chat-title", "Kite.chat.new.bot");
-//        String telegramChatTitle = System.getProperty("chat-title", "www.k1te.chat");
+//        String telegramChatTitle = System.getProperty("chat-title", "Kite.chat.new.bot");
+        String telegramChatTitle = System.getProperty("chat-title", "www.k1te.chat");
         String kiteUrl = System.getProperty("kite-url", "https://www.k1te.chat/test");
 
         playwright = Playwright.create();
@@ -32,10 +32,10 @@ public class BaseTest {
         telegramContext =
             browser.newContext(
                 new Browser.NewContextOptions().setStorageStatePath(Path.of("auth.json")));
-        telegramChat = TelegramChatPage.of(telegramContext.newPage(), telegramChatTitle);
+//        telegramChat = TelegramChatPage.of(telegramContext.newPage(), telegramChatTitle);
 
         kiteContext = browser.newContext();
-//        kiteChat = KiteChatPage.of(kiteContext.newPage(), kiteUrl);
+        kiteChat = KiteChatPage.of(kiteContext.newPage(), kiteUrl);
     }
 
     @AfterAll
