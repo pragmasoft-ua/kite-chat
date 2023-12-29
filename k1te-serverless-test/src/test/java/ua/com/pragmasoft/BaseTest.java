@@ -21,8 +21,8 @@ public class BaseTest {
     @BeforeAll
     static void init() {
         // TODO: 27.12.2023
-//        String telegramChatTitle = System.getProperty("chat-title", "Kite.chat.new.bot");
-        String telegramChatTitle = System.getProperty("chat-title", "www.k1te.chat");
+        String telegramChatTitle = System.getProperty("chat-title", "Kite.chat.new.bot");
+//        String telegramChatTitle = System.getProperty("chat-title", "www.k1te.chat");
         String kiteUrl = System.getProperty("kite-url", "https://www.k1te.chat/test");
 
         playwright = Playwright.create();

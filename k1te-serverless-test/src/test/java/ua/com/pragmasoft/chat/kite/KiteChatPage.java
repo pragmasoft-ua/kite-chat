@@ -54,7 +54,6 @@ public final class KiteChatPage implements ChatPage {
         return switch (type) {
             case IN -> this.incomingMessages.last().innerText();
             case OUT -> this.outgoingMessages.last().innerText();
-            case ANY -> this.messages.last().innerText();
         };
     }
 
@@ -81,4 +80,5 @@ public final class KiteChatPage implements ChatPage {
             new Page.WaitForConditionOptions().setTimeout(25_000));
         return fileName;
     }
+
 }

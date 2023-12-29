@@ -21,7 +21,6 @@ public final class TelegramChatPage implements ChatPage {
     private final Locator incomingMessages;
     private final Locator outgoingMessages;
     private final Locator fileAttachment;
-    private final Locator documentAttachment;
     private final Locator sendFileButton;
     private final Locator input;
     private final Locator sendTextButton;
@@ -31,12 +30,10 @@ public final class TelegramChatPage implements ChatPage {
         Locator chat = page.locator("#column-center").locator("div.chat");
 
         this.messageGroups = chat.locator("div.bubbles").locator("div.bubbles-group");
-        this.incomingMessages = this.messageGroups.locator(".bubble.is-in").locator(".message");
-        this.outgoingMessages = this.messageGroups.locator(".bubble.is-out").locator(".message");
+        this.incomingMessages = this.messageGroups.locator(".bubble.is-in");
+        this.outgoingMessages = this.messageGroups.locator(".bubble.is-out");
 
         this.fileAttachment = page.locator(".attach-file");
-        this.documentAttachment = this.fileAttachment
-            .locator(".btn-menu-item").filter(new Locator.FilterOptions().setHasText("Document"));
         this.sendFileButton =
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Send"));
 
@@ -70,17 +67,23 @@ public final class TelegramChatPage implements ChatPage {
             switch (type) {
                 case IN -> this.incomingMessages.last().innerText();
                 case OUT -> this.outgoingMessages.last().innerText();
-                case ANY -> this.messageGroups.last().locator(".bubble")
-                    .locator(".message").last().innerText();
             };
         return message.substring(0, message.lastIndexOf("\n"));
+    }
+
+    public TelegramChatMessage lastMessage1(MessageType type) {
+        return switch (type) {
+            case IN -> new TelegramChatMessage(this.incomingMessages.last());
+            case OUT -> new TelegramChatMessage(this.outgoingMessages.last());
+        };
     }
 
     @Override
     public void sendMessage(String text) {
         this.input.fill(text);
         this.sendTextButton.click();
-        assertThat(this.outgoingMessages.last()).hasText(Pattern.compile(text));
+        assertThat(this.outgoingMessages.last()).hasText(
+            Pattern.compile(text)); // TODO: 29.12.2023
     }
 
     public String sendMessageAndWaitResponse(String text) {
@@ -103,23 +106,46 @@ public final class TelegramChatPage implements ChatPage {
     @Override
     public String uploadFile(Path pathToFile) {
         FileChooser fileChooser = page.waitForFileChooser(() -> {
-            this.page.waitForTimeout(100); //If not wait - document attachment will not be invoked
             this.fileAttachment.click();
-            this.page.waitForTimeout(100);
-            this.documentAttachment.click();
+            this.page.waitForTimeout(100);  //If not wait - document attachment may not be invoked
+            this.fileAttachment
+                .locator(".btn-menu-item")
+                .filter(new Locator.FilterOptions().setHasText("Document"))
+                .click();
         });
         fileChooser.setFiles(pathToFile);
         this.sendFileButton.click();
 
+        // TODO: 29.12.2023  
         Locator lastMessage = this.outgoingMessages.last();
         Locator documentIcon = lastMessage.locator(".document-ico");
         Locator documentName = lastMessage.locator(".document-name");
         String fileName = pathToFile.getFileName().toString();
 
         assertThat(documentName).hasText(fileName);
-        assertThat(documentIcon.locator(".preloader-container"))
+        assertThat(documentIcon.locator(".preloader-container")) // TODO: 29.12.2023 not to use icon
             .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(25_000));
 
         return fileName;
+    }
+
+    public String uploadPhoto(Path pathToPhoto) {
+        FileChooser fileChooser = page.waitForFileChooser(() -> {
+            this.fileAttachment.click();
+            this.page.waitForTimeout(100); //If not wait - photo attachment may not be invoked
+            this.fileAttachment
+                .locator(".btn-menu-item")
+                .filter(new Locator.FilterOptions().setHasText("Photo or Video"))
+                .click();
+        });
+        fileChooser.setFiles(pathToPhoto);
+        this.sendFileButton.click();
+
+        Locator photo = this.outgoingMessages.last().locator("img.media-photo");
+        assertThat(photo).isVisible();
+        assertThat(this.outgoingMessages.last().locator(".preloader-container"))
+            .not().isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(25_000));
+
+        return pathToPhoto.getFileName().toString();
     }
 }

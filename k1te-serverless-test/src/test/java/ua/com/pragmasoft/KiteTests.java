@@ -2,9 +2,6 @@
 package ua.com.pragmasoft;
 
 import org.junit.jupiter.api.*;
-import ua.com.pragmasoft.chat.ChatPage;
-
-import static ua.com.pragmasoft.chat.ChatPage.MessageType.*;
 
 @Tag("kite")
 class KiteTests extends BaseTest {
@@ -13,11 +10,11 @@ class KiteTests extends BaseTest {
     void test() {
         String helloMessage = "hello 123";
         kiteChat.sendMessage(helloMessage);
-        telegramChat.verifyIncomingMessageText(helloMessage);
+        telegramChat.verifyIncomingTextMessage(helloMessage);
 
         String hiMessage = "hi!";
         telegramChat.sendMessage(hiMessage);
-        kiteChat.verifyIncomingMessageText(hiMessage);
+        kiteChat.verifyIncomingTextMessage(hiMessage);
     }
 
 }

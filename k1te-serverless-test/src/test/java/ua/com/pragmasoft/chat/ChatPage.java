@@ -1,7 +1,6 @@
 package ua.com.pragmasoft.chat;
 
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.options.FilePayload;
 
 import java.nio.file.Path;
 
@@ -15,15 +14,11 @@ public interface ChatPage {
 
     String uploadFile(Path pathToFile);
 
-    default String lastMessage() {
-        return this.lastMessage(MessageType.ANY);
+    default void verifyIncomingTextMessage(String expectedValue) {
+        this.verifyIncomingTextMessage(expectedValue, 2000);
     }
 
-    default void verifyIncomingMessageText(String expectedValue) {
-        this.verifyIncomingMessageText(expectedValue, 2000);
-    }
-
-    default void verifyIncomingMessageText(String expectedValue, double timeout) {
+    default void verifyIncomingTextMessage(String expectedValue, double timeout) {
         double overallTimeout = 0;
         while (!this.lastMessage(MessageType.IN).contains(expectedValue)) {
             if (overallTimeout > timeout)
@@ -37,6 +32,5 @@ public interface ChatPage {
     enum MessageType {
         IN,
         OUT,
-        ANY
     }
 }
