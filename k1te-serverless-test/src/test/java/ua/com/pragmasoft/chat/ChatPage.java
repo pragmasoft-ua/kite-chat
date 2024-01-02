@@ -1,26 +1,30 @@
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2024 */
 package ua.com.pragmasoft.chat;
 
 import com.microsoft.playwright.Page;
-
 import java.nio.file.Path;
 
 public abstract class ChatPage {
-    protected final Page page;
+  protected final Page page;
 
-    protected ChatPage(Page page) {
-        this.page = page;
-    }
+  protected ChatPage(Page page) {
+    this.page = page;
+  }
 
-    public abstract ChatMessage lastMessage(MessageType type);
+  public Page getPage() {
+    return this.page;
+  }
 
-    public abstract void sendMessage(String text);
+  public abstract ChatMessage lastMessage(MessageType type);
 
-    public abstract String uploadFile(Path pathToFile);
+  public abstract void sendMessage(String text);
 
-    public abstract void uploadPhoto(Path pathToPhoto);
+  public abstract String uploadFile(Path pathToFile);
 
-    public enum MessageType {
-        IN,
-        OUT,
-    }
+  public abstract void uploadPhoto(Path pathToPhoto);
+
+  public enum MessageType {
+    IN,
+    OUT,
+  }
 }
