@@ -18,6 +18,8 @@ public class BaseTest {
     private static BrowserContext telegramContext;
     protected static TelegramChatPage telegramChat;
 
+    protected static final String BASE_PATH = "src/test/resources";
+
     @BeforeAll
     static void init() {
         // TODO: 27.12.2023
@@ -32,7 +34,7 @@ public class BaseTest {
         telegramContext =
             browser.newContext(
                 new Browser.NewContextOptions().setStorageStatePath(Path.of("auth.json")));
-//        telegramChat = TelegramChatPage.of(telegramContext.newPage(), telegramChatTitle);
+        telegramChat = TelegramChatPage.of(telegramContext.newPage(), telegramChatTitle);
 
         kiteContext = browser.newContext();
         kiteChat = KiteChatPage.of(kiteContext.newPage(), kiteUrl);

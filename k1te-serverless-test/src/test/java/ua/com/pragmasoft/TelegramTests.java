@@ -12,7 +12,6 @@ import java.nio.file.Path;
 class TelegramTests extends BaseTest {
 
     private static final String CHANNEL_NAME = "test-kite-channel";
-    private static final String BASE_PATH = "src/test/resources";
 
     @Test
     void uploadFile() {

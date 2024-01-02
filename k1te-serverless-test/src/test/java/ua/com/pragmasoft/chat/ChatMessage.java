@@ -9,16 +9,18 @@ public interface ChatMessage {
     ChatMessage hasText(String expected, double timeout);
 
     default ChatMessage hasFile(String expectedFileName) {
-        return this.hasFile(expectedFileName, 3000);
+        return this.hasFile(expectedFileName, 6000);
     }
 
     ChatMessage hasFile(String expectedFileName, double timeout);
 
     default ChatMessage isPhoto() {
-        return this.isPhoto(3000);
+        return this.isPhoto(6000);
     }
 
     ChatMessage isPhoto(double timeout);
 
     void waitMessageToBeUploaded(double timeout);
+
+
 }

@@ -14,10 +14,9 @@ import ua.com.pragmasoft.chat.ChatPage;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 
-public final class TelegramChatPage implements ChatPage {
+public final class TelegramChatPage extends ChatPage {
     private static final String TELEGRAM_WEB_URL = "https://web.telegram.org";
 
-    private final Page page;
     private final Locator incomingMessages;
     private final Locator outgoingMessages;
     private final Locator fileAttachment;
@@ -26,7 +25,7 @@ public final class TelegramChatPage implements ChatPage {
     private final Locator sendTextButton;
 
     private TelegramChatPage(Page page) {
-        this.page = page;
+        super(page);
         Locator chat = page.locator("#column-center").locator("div.chat");
 
         Locator messageGroups = chat.locator("div.bubbles").locator("div.bubbles-group");
@@ -57,11 +56,6 @@ public final class TelegramChatPage implements ChatPage {
     }
 
     @Override
-    public Page getPage() {
-        return this.page;
-    }
-
-    @Override
     public TelegramChatMessage lastMessage(MessageType type) {
         return switch (type) {
             case IN -> new TelegramChatMessage(this.incomingMessages.last());
@@ -78,14 +72,14 @@ public final class TelegramChatPage implements ChatPage {
     }
 
     @Override
-    public UploadStatus uploadFile(Path pathToFile) {
+    public String uploadFile(Path pathToFile) {
         String fileName = this.attachFile(pathToFile, AttachmentType.DOC);
 
         this.lastMessage(MessageType.OUT)
             .hasFile(fileName)
             .waitMessageToBeUploaded(15_000);
 
-        return new UploadStatus(fileName, true);
+        return fileName;
     }
 
     public void uploadPhoto(Path pathToPhoto) {

@@ -4,26 +4,23 @@ import com.microsoft.playwright.Page;
 
 import java.nio.file.Path;
 
-public interface ChatPage {
+public abstract class ChatPage {
+    protected final Page page;
 
-    Page getPage();
-
-    ChatMessage lastMessage(MessageType type);
-
-    void sendMessage(String text);
-
-    UploadStatus uploadFile(Path pathToFile);
-
-    void uploadPhoto(Path pathToPhoto);
-
-    enum MessageType {
-        IN,
-        OUT,
+    protected ChatPage(Page page) {
+        this.page = page;
     }
 
-    record UploadStatus(String fileName, boolean success) {
-        public UploadStatus(boolean success) {
-            this("", success);
-        }
+    public abstract ChatMessage lastMessage(MessageType type);
+
+    public abstract void sendMessage(String text);
+
+    public abstract String uploadFile(Path pathToFile);
+
+    public abstract void uploadPhoto(Path pathToPhoto);
+
+    public enum MessageType {
+        IN,
+        OUT,
     }
 }

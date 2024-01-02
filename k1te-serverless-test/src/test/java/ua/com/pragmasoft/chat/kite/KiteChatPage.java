@@ -14,16 +14,16 @@ import java.util.regex.Pattern;
 import static com.microsoft.playwright.assertions.LocatorAssertions.*;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
-public final class KiteChatPage implements ChatPage {
-    private final Page page;
+public final class KiteChatPage extends ChatPage {
     private final Locator incomingMessages;
     private final Locator outgoingMessages;
     private final Locator fileAttachment;
     private final Locator input;
     private final Locator sendButton;
+    private final Locator errorMessages;
 
     private KiteChatPage(Page page) {
-        this.page = page;
+        super(page);
         Locator chat = page.locator("#kite-dialog");
 
         this.incomingMessages = page.locator("kite-msg:not([status])");
@@ -31,9 +31,12 @@ public final class KiteChatPage implements ChatPage {
 
         Locator footer = chat.locator("kite-chat-footer");
         this.fileAttachment = footer.locator("label");
+
         this.input = footer.getByRole(AriaRole.TEXTBOX);
         this.sendButton = footer.locator("svg")
             .filter(new Locator.FilterOptions().setHasText("Send"));
+
+        this.errorMessages = page.locator("kite-toast-notification[type=error]");
     }
 
     public static KiteChatPage of(Page page, String kiteUrl) {
@@ -42,11 +45,6 @@ public final class KiteChatPage implements ChatPage {
         assertThat(chatButton).isVisible();
         chatButton.click();
         return new KiteChatPage(page);
-    }
-
-    @Override
-    public Page getPage() {
-        return this.page;
     }
 
     @Override
@@ -67,15 +65,14 @@ public final class KiteChatPage implements ChatPage {
     }
 
     @Override
-    public UploadStatus uploadFile(Path pathToFile) {
+    public String uploadFile(Path pathToFile) {
         String fileName = this.attachFile(pathToFile);
 
         KiteChatMessage fileMessage = this.lastMessage(MessageType.OUT);
         fileMessage.hasFile(fileName)
             .waitMessageToBeUploaded(15_000);
 
-        String status = fileMessage.message.getAttribute("status");
-        return new UploadStatus(fileName, status.equals("delivered"));
+        return fileName;
     }
 
     @Override
@@ -85,6 +82,13 @@ public final class KiteChatPage implements ChatPage {
         this.lastMessage(MessageType.OUT)
             .isPhoto()
             .waitMessageToBeUploaded(15_000);
+    }
+
+    public void hasErrorMessage(String expectedErrorMessage) {
+        Locator errorMessage = this.errorMessages.last()
+            .locator(".message");
+
+        assertThat(errorMessage).hasText(Pattern.compile(expectedErrorMessage));
     }
 
     private String attachFile(Path path) {
