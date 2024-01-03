@@ -1,4 +1,4 @@
-/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023-2024 */
 package ua.com.pragmasoft.chat.telegram;
 
 import static com.microsoft.playwright.assertions.LocatorAssertions.*;
@@ -37,7 +37,7 @@ public final class TelegramChatPage extends ChatPage {
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Send"));
 
     this.input = chat.locator("div.input-message-input:not(.input-field-input-fake)");
-    this.sendTextButton = chat.locator("button.send");
+    this.sendTextButton = chat.locator("button.send").or(chat.locator("button.edit"));
 
     this.menuItems = page.locator(".btn-menu-items");
   }
@@ -88,17 +88,22 @@ public final class TelegramChatPage extends ChatPage {
     this.lastMessage(MessageType.OUT).isPhoto().waitMessageToBeUploaded(15_000);
   }
 
-  public void replyMessage(TelegramChatMessage message, String text) {
-    this.replyMessage(message.element(), text);
+  public void replyMessage(ChatMessage message, String text) {
+    this.openMessageMenuItem(message, MenuItem.REPLY);
+    this.sendMessage(text);
   }
 
-  public void replyMessage(ElementHandle message, String text) {
-    message.click(new ElementHandle.ClickOptions().setButton(MouseButton.RIGHT));
-    this.menuItems
-        .locator(".btn-menu-item", new LocatorOptions().setHasText(MenuItem.REPLY.value))
-        .click();
+  public void editMessage(ChatMessage message, String newText) {
+    this.openMessageMenuItem(message, MenuItem.EDIT);
+    this.input.clear();
+    this.input.fill(newText);
+    this.sendTextButton.click();
+    message.hasText(newText);
+  }
 
-    this.sendMessage(text);
+  private void openMessageMenuItem(ChatMessage message, MenuItem item) {
+    message.locator().click(new Locator.ClickOptions().setButton(MouseButton.RIGHT));
+    this.menuItems.locator(".btn-menu-item", new LocatorOptions().setHasText(item.value)).click();
   }
 
   private String attachFile(Path path, AttachmentType attachment) {
@@ -106,7 +111,7 @@ public final class TelegramChatPage extends ChatPage {
         page.waitForFileChooser(
             () -> {
               this.fileAttachment.click();
-              this.page.waitForTimeout(100); // If not wait - file attachment may not be invoked
+              this.page.waitForTimeout(100); // If not wait,file attachment may not be invoked
               this.fileAttachment
                   .locator(".btn-menu-item")
                   .filter(new Locator.FilterOptions().setHasText(attachment.type))
@@ -120,15 +125,22 @@ public final class TelegramChatPage extends ChatPage {
   }
 
   public static class TelegramChatMessage implements ChatMessage {
-    private final Locator messageLocator;
+    private final Page page;
+    private Locator messageLocator;
 
     private TelegramChatMessage(Locator messageLocator) {
       assertThat(messageLocator).hasClass(Pattern.compile("bubble"));
       this.messageLocator = messageLocator;
+      this.page = messageLocator.page();
     }
 
     @Override
-    public TelegramChatMessage hasText(String expected, double timeout) {
+    public Locator locator() {
+      return this.messageLocator;
+    }
+
+    @Override
+    public ChatMessage hasText(String expected, double timeout) {
       Locator textMessage = this.messageLocator.locator(".message");
       assertThat(textMessage)
           .hasText(
@@ -138,7 +150,7 @@ public final class TelegramChatPage extends ChatPage {
     }
 
     @Override
-    public TelegramChatMessage hasFile(String expectedFileName, double timeout) {
+    public ChatMessage hasFile(String expectedFileName, double timeout) {
       Locator documentName = this.messageLocator.locator(".document-name");
       assertThat(documentName)
           .hasText(
@@ -147,7 +159,7 @@ public final class TelegramChatPage extends ChatPage {
     }
 
     @Override
-    public TelegramChatMessage isPhoto(double timeout) {
+    public ChatMessage isPhoto(double timeout) {
       Locator photo = this.messageLocator.locator(".attachment >> img.media-photo");
       assertThat(photo).isVisible(new IsVisibleOptions().setTimeout(timeout));
       return this;
@@ -160,8 +172,14 @@ public final class TelegramChatPage extends ChatPage {
     }
 
     @Override
-    public ElementHandle element() {
-      return this.messageLocator.elementHandle();
+    public ChatMessage snapshot() {
+      // Sometimes data-mid may not be set immediately or be the same as the previous message
+      // because of it we need to wait a little bit
+      this.page.waitForTimeout(500);
+      String messageId = this.messageLocator.getAttribute("data-mid");
+      String messageByIdSelector = ".bubble[data-mid=\"" + messageId + "\"]";
+      this.messageLocator = this.page.locator(messageByIdSelector);
+      return this;
     }
   }
 

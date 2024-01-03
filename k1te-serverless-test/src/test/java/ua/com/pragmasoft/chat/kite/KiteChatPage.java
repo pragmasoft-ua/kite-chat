@@ -98,15 +98,21 @@ public final class KiteChatPage extends ChatPage {
   }
 
   public static class KiteChatMessage implements ChatMessage {
-    private final Locator message;
+    private final Locator messageLocator;
+    private ElementHandle element;
 
-    private KiteChatMessage(Locator message) {
-      this.message = message;
+    private KiteChatMessage(Locator messageLocator) {
+      this.messageLocator = messageLocator;
     }
 
     @Override
-    public ChatMessage hasText(String expected, double timeout) {
-      assertThat(this.message)
+    public Locator locator() {
+      return this.messageLocator;
+    }
+
+    @Override
+    public KiteChatMessage hasText(String expected, double timeout) {
+      assertThat(this.messageLocator)
           .hasText(
               Pattern.compile(expected),
               new HasTextOptions().setTimeout(timeout).setUseInnerText(true).setIgnoreCase(true));
@@ -114,8 +120,8 @@ public final class KiteChatPage extends ChatPage {
     }
 
     @Override
-    public ChatMessage hasFile(String expectedFileName, double timeout) {
-      Locator fileLocator = this.message.locator("kite-file").getByRole(AriaRole.LINK);
+    public KiteChatMessage hasFile(String expectedFileName, double timeout) {
+      Locator fileLocator = this.messageLocator.locator("kite-file").getByRole(AriaRole.LINK);
 
       assertThat(fileLocator)
           .hasAttribute(
@@ -126,9 +132,9 @@ public final class KiteChatPage extends ChatPage {
     }
 
     @Override
-    public ChatMessage isPhoto(double timeout) {
+    public KiteChatMessage isPhoto(double timeout) {
       Locator photoLocator =
-          this.message.locator("kite-file").getByRole(AriaRole.LINK).locator("img");
+          this.messageLocator.locator("kite-file").getByRole(AriaRole.LINK).locator("img");
 
       assertThat(photoLocator).isVisible(new IsVisibleOptions().setTimeout(timeout));
       return this;
@@ -136,14 +142,15 @@ public final class KiteChatPage extends ChatPage {
 
     @Override
     public void waitMessageToBeUploaded(double timeout) {
-      assertThat(this.message)
+      assertThat(this.messageLocator)
           .not()
           .hasAttribute("status", "unknown", new HasAttributeOptions().setTimeout(timeout));
     }
 
     @Override
-    public ElementHandle element() {
-      return this.message.elementHandle();
+    public KiteChatMessage snapshot() {
+      this.element = this.messageLocator.elementHandle();
+      return this;
     }
   }
 }

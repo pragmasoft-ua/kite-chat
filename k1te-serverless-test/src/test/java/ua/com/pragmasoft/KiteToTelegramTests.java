@@ -1,7 +1,8 @@
-/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023-2024 */
 package ua.com.pragmasoft;
 
 import static ua.com.pragmasoft.chat.ChatPage.MessageType.IN;
+import static ua.com.pragmasoft.chat.ChatPage.MessageType.OUT;
 
 import com.microsoft.playwright.*;
 import java.io.IOException;
@@ -10,6 +11,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import ua.com.pragmasoft.chat.ChatMessage;
 import ua.com.pragmasoft.chat.kite.KiteChatPage;
 import ua.com.pragmasoft.chat.telegram.TelegramChatPage;
 import ua.com.pragmasoft.chat.telegram.TelegramChatPage.TelegramChatMessage;
@@ -107,7 +109,8 @@ class KiteToTelegramTests {
 
   // tiff currently is shown as regular file
   @ParameterizedTest(
-      name = "User sends an unsupported image with {argumentsWithNames} to the Host, should be"
+      name =
+          "User sends an unsupported image with {argumentsWithNames} to the Host, should be"
               + " converted into zip")
   @ValueSource(strings = {"bmp"})
   @DisplayName("User sends unsupported files to Host")
@@ -200,9 +203,9 @@ class KiteToTelegramTests {
 
       String firstUserHelloText = "Hello, I'm First User";
       kiteChat.sendMessage(firstUserHelloText);
-      TelegramChatMessage message = telegramChat.lastMessage(IN);
-      message.hasText(firstUserHelloText);
-      ElementHandle firstMessage = message.element();
+      ChatMessage message = telegramChat.lastMessage(IN)
+          .hasText(firstUserHelloText)
+          .snapshot();
 
       String firstUserText = "I need your support";
       kiteChat.sendMessage(firstUserText);
@@ -213,9 +216,27 @@ class KiteToTelegramTests {
       telegramChat.lastMessage(IN).hasText(secondUserText);
 
       String hostText = "Hello, First User. How can I help you?";
-      telegramChat.replyMessage(firstMessage, hostText);
+      telegramChat.replyMessage(message, hostText);
       kiteChat.lastMessage(IN).hasText(hostText);
     }
+  }
+
+  @Test
+  @DisplayName("Host edits a sent message")
+  @Disabled("Edit message currently doesn't work")
+  void host_edits_message() {
+    String userText = "Hello! I'm User";
+    kiteChat.sendMessage(userText);
+    telegramChat.lastMessage(IN).hasText(userText);
+
+    String wrongHostText = "Hello! I'm Hos";
+    telegramChat.sendMessage(wrongHostText);
+    kiteChat.lastMessage(IN).hasText(wrongHostText);
+
+    TelegramChatMessage message = telegramChat.lastMessage(OUT);
+    String correctHostText = "Hello! I'm Host!";
+    telegramChat.editMessage(message, correctHostText);
+    // TODO: 02.01.2024 check updated message in kite chat
   }
 
   @AfterAll

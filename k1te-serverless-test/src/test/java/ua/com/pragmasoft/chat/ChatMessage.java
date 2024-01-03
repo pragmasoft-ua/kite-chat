@@ -1,7 +1,7 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2024 */
 package ua.com.pragmasoft.chat;
 
-import com.microsoft.playwright.ElementHandle;
+import com.microsoft.playwright.Locator;
 
 public interface ChatMessage {
 
@@ -25,5 +25,7 @@ public interface ChatMessage {
 
   void waitMessageToBeUploaded(double timeout);
 
-  ElementHandle element();
+  ChatMessage snapshot();
+
+  Locator locator();
 }
