@@ -5,17 +5,23 @@ import com.microsoft.playwright.*;
 import java.nio.file.Path;
 
 /**
- * This app is used to log in Telegram Web and retrieve auth.json that stores cookies and local
- * storage which are necessary for testing. You can run this app via exec plugin being in kite-chat
- * directory <br>
- * ./mvnw -pl k1te-serverless-test compile exec:java -D
- * exec.mainClass=ua.com.pragmasoft.TelegramAuthenticationApp <br>
- * It will launch Chromium browser and open Telegram Web Page, you will need to log in there, once
- * you successfully logged in, the browser will close and auth.json file will be created. <br>
- * You also can pass timeout as a system property, it's responsible for time to log in, default is
- * 60s <br>
- * ./mvnw -pl k1te-serverless-test compile exec:java -D
- * exec.mainClass=ua.com.pragmasoft.TelegramAuthenticationApp -Dtimeout=80000
+ * This application is designed to facilitate the authentication process for Telegram Web and retrieve the 'auth.json' file.
+ * The 'auth.json' file stores essential cookies and local storage data necessary for conducting tests in the Kite Chat application.
+ * To run this application, execute it via the Maven exec plugin while located in the 'kite-chat' directory.
+ *
+ * <p>You can use the following Maven command to run the application:
+ * <pre>{@code
+ * ./mvnw -pl k1te-serverless-test compile exec:java -Dexec.mainClass=ua.com.pragmasoft.TelegramAuthenticationApp
+ * }</pre>
+ *
+ * <p>This command launches the Chromium browser, navigates to the Telegram Web page, and prompts you to log in.
+ * Once the login is successful, the browser closes, and the 'auth.json' file is generated in the 'k1te-serverless-test' directory.
+ *
+ * <p>You can also specify the login timeout as a system property. The default timeout is 60 seconds.
+ * To set a custom timeout, include the '-Dtimeout' parameter in the command. For example:
+ * <pre>{@code
+ * ./mvnw -pl k1te-serverless-test compile exec:java -Dexec.mainClass=ua.com.pragmasoft.TelegramAuthenticationApp -Dtimeout=80000
+ * }</pre>
  */
 public class TelegramAuthenticationApp {
   private static final String TELEGRAM_WEB_URL = "https://web.telegram.org/";

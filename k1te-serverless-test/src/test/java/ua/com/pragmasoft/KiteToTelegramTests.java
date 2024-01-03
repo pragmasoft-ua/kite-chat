@@ -334,6 +334,10 @@ class KiteToTelegramTests {
     playwright.close();
   }
 
+  /**
+   * This nested test class is used to run host_replies_to_specific_user() test separately
+   * from the main tests because it involves the other instance of KiteChat.
+   * */
   @Nested
   class HostReplyToUserTest {
 
