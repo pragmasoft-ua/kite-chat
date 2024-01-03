@@ -12,7 +12,9 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.com.pragmasoft.chat.ChatMessage;
+import ua.com.pragmasoft.chat.ChatPage;
 import ua.com.pragmasoft.chat.kite.KiteChatPage;
+import ua.com.pragmasoft.chat.kite.KiteChatPage.KiteChatMessage;
 import ua.com.pragmasoft.chat.telegram.TelegramChatPage;
 import ua.com.pragmasoft.chat.telegram.TelegramChatPage.TelegramChatMessage;
 
@@ -20,6 +22,7 @@ import ua.com.pragmasoft.chat.telegram.TelegramChatPage.TelegramChatMessage;
 class KiteToTelegramTests {
   private static final String DEFAULT_TELEGRAM_CHAT_TITLE = "www.k1te.chat";
   private static final String DEFAULT_KITE_URL = "https://www.k1te.chat/test";
+  private static final double DEFAULT_TIMEOUT = 6000;
 
   private static final String BASE_RESOURCE_PATH = "src/test/resources";
   private static final String BASE_FILE_NAME = "sample.";
@@ -42,15 +45,17 @@ class KiteToTelegramTests {
     telegramContext =
         browser.newContext(
             new Browser.NewContextOptions().setStorageStatePath(Path.of("auth.json")));
+    telegramContext.setDefaultTimeout(DEFAULT_TIMEOUT);
     telegramChat = TelegramChatPage.of(telegramContext.newPage(), telegramChatTitle);
 
     kiteContext = browser.newContext();
+    kiteContext.setDefaultTimeout(DEFAULT_TIMEOUT);
     kiteChat = KiteChatPage.of(kiteContext.newPage(), kiteUrl);
   }
 
   @Test
   @DisplayName("User sends a text message")
-  void sending_text_message_to_host() {
+  void user_sends_text_message_to_host() {
     String text = "hello!";
     kiteChat.sendMessage(text);
     telegramChat.lastMessage(IN).hasText(text);
@@ -58,7 +63,7 @@ class KiteToTelegramTests {
 
   @Test
   @DisplayName("User sends a large text message that exceeds limit")
-  void send_large_text_message_to_host() {
+  void user_sends_large_text_message_to_host() {
     int size = 4 * 1024;
     kiteChat.sendMessage("a".repeat(size + 1));
     kiteChat.hasErrorMessage("Text message size exceeds 4.00 KB limit");
@@ -67,7 +72,7 @@ class KiteToTelegramTests {
   @ParameterizedTest(name = "User sends a supported file with {argumentsWithNames} to the Host")
   @ValueSource(strings = {"pdf", "zip"})
   @DisplayName("User sends supported files to Host")
-  void send_supported_files_to_host(String type) {
+  void user_sends_supported_files_to_host(String type) {
     String uploadedFileName =
         kiteChat.uploadFile(Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type));
     telegramChat.lastMessage(IN).hasFile(uploadedFileName);
@@ -79,7 +84,7 @@ class KiteToTelegramTests {
               + " converted into zip")
   @ValueSource(strings = {"docx", "txt", "csv", "json"})
   @DisplayName("User sends unsupported files to Host")
-  void send_unsupported_files_to_host(String type) {
+  void user_sends_unsupported_files_to_host(String type) {
     String uploadedFileName =
         kiteChat.uploadFile(Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type));
     telegramChat.lastMessage(IN).hasFile(uploadedFileName.replaceAll("\\..\\w+", ".zip"));
@@ -87,7 +92,7 @@ class KiteToTelegramTests {
 
   @Test
   @DisplayName("User sends an exceeding file to Host")
-  void send_large_file_to_host() throws IOException {
+  void user_sends_large_file_to_host() throws IOException {
     Path file = null;
     try {
       file = Files.write(Path.of(BASE_RESOURCE_PATH, "test-sample.zip"), new byte[21_000_000]);
@@ -102,7 +107,7 @@ class KiteToTelegramTests {
   @ParameterizedTest(name = "User sends a supported image with {argumentsWithNames} to the Host")
   @ValueSource(strings = {"jpg", "png", "gif"})
   @DisplayName("User sends supported images to Host")
-  void send_supported_photos_to_host(String type) {
+  void user_sends_supported_photos_to_host(String type) {
     kiteChat.uploadPhoto(Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type));
     telegramChat.lastMessage(IN).isPhoto();
   }
@@ -114,14 +119,76 @@ class KiteToTelegramTests {
               + " converted into zip")
   @ValueSource(strings = {"bmp"})
   @DisplayName("User sends unsupported files to Host")
-  void send_unsupported_photos_to_host(String type) {
+  void user_sends_unsupported_photos_to_host(String type) {
     kiteChat.uploadPhoto(Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type));
     telegramChat.lastMessage(IN).hasFile("sample.zip");
   }
 
   @Test
+  @DisplayName("User edits a sent message")
+  void user_edits_sent_message() {
+    String wrongText = "Hello!, I'm Alev";
+    kiteChat.sendMessage(wrongText);
+    telegramChat.lastMessage(IN).hasText(wrongText);
+    KiteChatMessage message = kiteChat.lastMessage(OUT).snapshot();
+
+    String helpText = "I need your help";
+    kiteChat.sendMessage(helpText);
+    telegramChat.lastMessage(IN).hasText(helpText);
+
+    kiteChat.editMessage(message, "Hello!, I'm Alex!");
+    // TODO: 03.01.2024 Verify changed message in Telegram
+  }
+
+  @Test
+  @DisplayName("User deletes a sent text message")
+  void user_deletes_sent_text_message() {
+    String text = "Hello! I need help";
+    kiteChat.sendMessage(text);
+    telegramChat.lastMessage(IN).hasText(text);
+
+    String deletableMessage = "Another message";
+    kiteChat.sendMessage(deletableMessage);
+    telegramChat.lastMessage(IN).hasText(deletableMessage);
+    KiteChatMessage message = kiteChat.lastMessage(OUT).snapshot();
+
+    kiteChat.deleteMessage(message);
+    // TODO: 03.01.2024 Verify message is deleted in Telegram
+  }
+
+  @Test
+  @DisplayName("User deletes a sent file message")
+  void user_deletes_sent_file_message() {
+    String text = "Hello! I need help";
+    kiteChat.sendMessage(text);
+    telegramChat.lastMessage(IN).hasText(text);
+
+    String uploadedFile = kiteChat.uploadFile(Path.of(BASE_RESOURCE_PATH, "sample.pdf"));
+    telegramChat.lastMessage(IN).hasFile(uploadedFile);
+    KiteChatMessage message = kiteChat.lastMessage(OUT).snapshot();
+
+    kiteChat.deleteMessage(message);
+    // TODO: 03.01.2024 Verify message is deleted in Telegram
+  }
+
+  @Test
+  @DisplayName("User deletes a sent photo message")
+  void user_deletes_sent_photo_message() {
+    String text = "Hello! I need help";
+    kiteChat.sendMessage(text);
+    telegramChat.lastMessage(IN).hasText(text);
+
+    kiteChat.uploadPhoto(Path.of(BASE_RESOURCE_PATH, "sample.jpg"));
+    telegramChat.lastMessage(IN).isPhoto();
+    KiteChatMessage message = kiteChat.lastMessage(OUT).snapshot();
+
+    kiteChat.deleteMessage(message);
+    // TODO: 03.01.2024 Verify message is deleted in Telegram
+  }
+
+  @Test
   @DisplayName("User reconnects to the chat and recovers chat history")
-  void reconnect_and_recover_history() {
+  void user_reconnects_and_recover_history() {
     String first = "first";
     kiteChat.sendMessage(first);
     telegramChat.lastMessage(IN).hasText(first);
@@ -147,7 +214,7 @@ class KiteToTelegramTests {
 
   @Test
   @DisplayName("Host sends a text message to User")
-  void send_text_message_to_user() {
+  void host_sends_text_message_to_user() {
     String userText = "Hello, I'm User";
     kiteChat.sendMessage(userText);
     telegramChat.lastMessage(IN).hasText(userText);
@@ -160,7 +227,7 @@ class KiteToTelegramTests {
   @ParameterizedTest(name = "Host sends a file with {argumentsWithNames} to the User")
   @ValueSource(strings = {"pdf", "zip", "docx", "txt", "csv", "json"})
   @DisplayName("Host sends files to User")
-  void send_file_to_user(String type) {
+  void host_sends_file_to_user(String type) {
     String userText = "Hello, I'm User";
     kiteChat.sendMessage(userText);
     telegramChat.lastMessage(IN).hasText(userText);
@@ -172,7 +239,7 @@ class KiteToTelegramTests {
   @ParameterizedTest(name = "Host sends an image with {argumentsWithNames} to the User")
   @ValueSource(strings = {"jpg", "png", "gif", "webp", "bmp"})
   @DisplayName("Host sends images to User")
-  void send_image_to_user(String type) {
+  void host_sends_image_to_user(String type) {
     String userText = "Hello, I'm User";
     kiteChat.sendMessage(userText);
     telegramChat.lastMessage(IN).hasText(userText);
@@ -203,9 +270,8 @@ class KiteToTelegramTests {
 
       String firstUserHelloText = "Hello, I'm First User";
       kiteChat.sendMessage(firstUserHelloText);
-      ChatMessage message = telegramChat.lastMessage(IN)
-          .hasText(firstUserHelloText)
-          .snapshot();
+      TelegramChatMessage message =
+          telegramChat.lastMessage(IN).hasText(firstUserHelloText).snapshot();
 
       String firstUserText = "I need your support";
       kiteChat.sendMessage(firstUserText);
@@ -223,7 +289,6 @@ class KiteToTelegramTests {
 
   @Test
   @DisplayName("Host edits a sent message")
-  @Disabled("Edit message currently doesn't work")
   void host_edits_message() {
     String userText = "Hello! I'm User";
     kiteChat.sendMessage(userText);
@@ -233,10 +298,16 @@ class KiteToTelegramTests {
     telegramChat.sendMessage(wrongHostText);
     kiteChat.lastMessage(IN).hasText(wrongHostText);
 
-    TelegramChatMessage message = telegramChat.lastMessage(OUT);
+    TelegramChatMessage message = telegramChat.lastMessage(OUT).snapshot();
     String correctHostText = "Hello! I'm Host!";
     telegramChat.editMessage(message, correctHostText);
     // TODO: 02.01.2024 check updated message in kite chat
+  }
+
+  @AfterEach
+  void waiter() {
+    kiteChat.getPage().waitForTimeout(500);
+    telegramChat.getPage().waitForTimeout(500);
   }
 
   @AfterAll
@@ -246,5 +317,23 @@ class KiteToTelegramTests {
 
     browser.close();
     playwright.close();
+  }
+
+  private ChatMessage sendText(ChatPage from, ChatPage to, String text) {
+    from.sendMessage(text);
+    to.lastMessage(IN).hasText(text);
+    return from.lastMessage(OUT);
+  }
+
+  private ChatMessage sendFile(ChatPage from, ChatPage to, Path path) {
+    String uploadedFile = from.uploadFile(path);
+    to.lastMessage(IN).hasFile(uploadedFile);
+    return from.lastMessage(OUT);
+  }
+
+  private ChatMessage sendPhoto(ChatPage from, ChatPage to, Path path) {
+    from.uploadPhoto(path);
+    to.lastMessage(IN).isPhoto();
+    return from.lastMessage(OUT);
   }
 }

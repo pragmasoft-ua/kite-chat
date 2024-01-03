@@ -5,23 +5,11 @@ import com.microsoft.playwright.Locator;
 
 public interface ChatMessage {
 
-  default ChatMessage hasText(String expected) {
-    return this.hasText(expected, 3000);
-  }
+  ChatMessage hasText(String expected);
 
-  ChatMessage hasText(String expected, double timeout);
+  ChatMessage hasFile(String expectedFileName);
 
-  default ChatMessage hasFile(String expectedFileName) {
-    return this.hasFile(expectedFileName, 6000);
-  }
-
-  ChatMessage hasFile(String expectedFileName, double timeout);
-
-  default ChatMessage isPhoto() {
-    return this.isPhoto(6000);
-  }
-
-  ChatMessage isPhoto(double timeout);
+  ChatMessage isPhoto();
 
   void waitMessageToBeUploaded(double timeout);
 

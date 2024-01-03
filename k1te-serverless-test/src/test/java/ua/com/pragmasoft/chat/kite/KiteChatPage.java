@@ -4,11 +4,9 @@ package ua.com.pragmasoft.chat.kite;
 import static com.microsoft.playwright.assertions.LocatorAssertions.*;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
-import com.microsoft.playwright.ElementHandle;
 import com.microsoft.playwright.FileChooser;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.assertions.LocatorAssertions.IsVisibleOptions;
 import com.microsoft.playwright.options.AriaRole;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
@@ -23,6 +21,8 @@ public final class KiteChatPage extends ChatPage {
   private final Locator input;
   private final Locator sendButton;
   private final Locator errorMessages;
+  private final Locator menuItems;
+  private final Locator editMessage;
 
   private KiteChatPage(Page page) {
     super(page);
@@ -39,6 +39,8 @@ public final class KiteChatPage extends ChatPage {
     this.sendButton = footer.locator("svg").filter(new Locator.FilterOptions().setHasText("Send"));
 
     this.errorMessages = page.locator("kite-toast-notification[type=error]");
+    this.menuItems = chat.locator("kite-context-menu").getByRole(AriaRole.LISTITEM);
+    this.editMessage = footer.locator(".edit-message");
   }
 
   public static KiteChatPage of(Page page, String kiteUrl) {
@@ -61,15 +63,14 @@ public final class KiteChatPage extends ChatPage {
   public void sendMessage(String text) {
     this.input.fill(text);
     this.sendButton.click();
-    this.lastMessage(MessageType.OUT).hasText(text).waitMessageToBeUploaded(5000);
+    this.lastMessage(MessageType.OUT).hasText(text).waitMessageToBeUploaded(10_000);
   }
 
   @Override
   public String uploadFile(Path pathToFile) {
     String fileName = this.attachFile(pathToFile);
 
-    KiteChatMessage fileMessage = this.lastMessage(MessageType.OUT);
-    fileMessage.hasFile(fileName).waitMessageToBeUploaded(15_000);
+    this.lastMessage(MessageType.OUT).hasFile(fileName).waitMessageToBeUploaded(15_000);
 
     return fileName;
   }
@@ -91,6 +92,27 @@ public final class KiteChatPage extends ChatPage {
     assertThat(errorMessage).hasText(Pattern.compile(expectedErrorMessage));
   }
 
+  public void editMessage(KiteChatMessage message, String newText) {
+    this.chooseMessageMenuItem(message, MenuItem.EDIT);
+    assertThat(this.editMessage).isVisible();
+    this.input.clear();
+    this.input.fill(newText);
+    this.sendButton.click();
+    message.hasText(newText);
+  }
+
+  public void deleteMessage(KiteChatMessage message) {
+    this.chooseMessageMenuItem(message, MenuItem.DELETE);
+    assertThat(message.locator()).hasCount(0);
+  }
+
+  private void chooseMessageMenuItem(KiteChatMessage message, MenuItem item) {
+    message.locator().dispatchEvent("click"); // todo currently simple click doesn't work
+    this.menuItems
+        .filter(new Locator.FilterOptions().setHasText(Pattern.compile(item.value)))
+        .click();
+  }
+
   private String attachFile(Path path) {
     FileChooser fileChooser = this.page.waitForFileChooser(this.fileAttachment::click);
     fileChooser.setFiles(path);
@@ -98,8 +120,7 @@ public final class KiteChatPage extends ChatPage {
   }
 
   public static class KiteChatMessage implements ChatMessage {
-    private final Locator messageLocator;
-    private ElementHandle element;
+    private Locator messageLocator;
 
     private KiteChatMessage(Locator messageLocator) {
       this.messageLocator = messageLocator;
@@ -111,32 +132,26 @@ public final class KiteChatPage extends ChatPage {
     }
 
     @Override
-    public KiteChatMessage hasText(String expected, double timeout) {
+    public KiteChatMessage hasText(String expected) {
       assertThat(this.messageLocator)
-          .hasText(
-              Pattern.compile(expected),
-              new HasTextOptions().setTimeout(timeout).setUseInnerText(true).setIgnoreCase(true));
+          .hasText(Pattern.compile(expected), new HasTextOptions().setUseInnerText(true));
       return this;
     }
 
     @Override
-    public KiteChatMessage hasFile(String expectedFileName, double timeout) {
+    public KiteChatMessage hasFile(String expectedFileName) {
       Locator fileLocator = this.messageLocator.locator("kite-file").getByRole(AriaRole.LINK);
 
-      assertThat(fileLocator)
-          .hasAttribute(
-              "download",
-              Pattern.compile(expectedFileName),
-              new HasAttributeOptions().setTimeout(timeout));
+      assertThat(fileLocator).hasAttribute("download", Pattern.compile(expectedFileName));
       return this;
     }
 
     @Override
-    public KiteChatMessage isPhoto(double timeout) {
+    public KiteChatMessage isPhoto() {
       Locator photoLocator =
           this.messageLocator.locator("kite-file").getByRole(AriaRole.LINK).locator("img");
 
-      assertThat(photoLocator).isVisible(new IsVisibleOptions().setTimeout(timeout));
+      assertThat(photoLocator).isVisible();
       return this;
     }
 
@@ -149,8 +164,25 @@ public final class KiteChatPage extends ChatPage {
 
     @Override
     public KiteChatMessage snapshot() {
-      this.element = this.messageLocator.elementHandle();
+      String messageId = this.messageLocator.getAttribute("messageid");
+      String messageByIdSelector = "kite-msg[messageid=\"" + messageId + "\"]";
+      this.messageLocator = this.messageLocator.page().locator(messageByIdSelector);
       return this;
+    }
+  }
+
+  private enum MenuItem {
+    EDIT("Edit"),
+    DELETE("Delete"),
+    SHARE("Share"),
+    COPY("Copy"),
+    SELECT("Select"),
+    SELECT_ALL("Select all");
+
+    final String value;
+
+    MenuItem(String value) {
+      this.value = value;
     }
   }
 }

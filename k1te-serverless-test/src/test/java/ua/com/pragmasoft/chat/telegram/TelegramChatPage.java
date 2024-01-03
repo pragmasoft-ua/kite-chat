@@ -5,7 +5,6 @@ import static com.microsoft.playwright.assertions.LocatorAssertions.*;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 import com.microsoft.playwright.*;
-import com.microsoft.playwright.Locator.LocatorOptions;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.MouseButton;
 import java.nio.file.Path;
@@ -23,6 +22,7 @@ public final class TelegramChatPage extends ChatPage {
   private final Locator input;
   private final Locator sendTextButton;
   private final Locator menuItems;
+  private final Locator reply;
 
   private TelegramChatPage(Page page) {
     super(page);
@@ -39,7 +39,8 @@ public final class TelegramChatPage extends ChatPage {
     this.input = chat.locator("div.input-message-input:not(.input-field-input-fake)");
     this.sendTextButton = chat.locator("button.send").or(chat.locator("button.edit"));
 
-    this.menuItems = page.locator(".btn-menu-items");
+    this.menuItems = page.locator(".btn-menu-items >> .btn-menu-item");
+    this.reply = chat.locator(".reply >> .reply-title").last();
   }
 
   public static TelegramChatPage of(Page page, String chatTitle) {
@@ -52,7 +53,7 @@ public final class TelegramChatPage extends ChatPage {
                     page.locator(
                         "div.user-title", new Page.LocatorOptions().setHasText(chatTitle))));
 
-    assertThat(chat).hasCount(1);
+    assertThat(chat).hasCount(1, new HasCountOptions().setTimeout(30_000));
     chat.click();
     return new TelegramChatPage(page);
   }
@@ -68,7 +69,7 @@ public final class TelegramChatPage extends ChatPage {
   @Override
   public void sendMessage(String text) {
     this.input.fill(text);
-    this.sendTextButton.click();
+    this.sendTextButton.click(new Locator.ClickOptions().setForce(true));
     this.lastMessage(MessageType.OUT).hasText(text);
   }
 
@@ -88,22 +89,26 @@ public final class TelegramChatPage extends ChatPage {
     this.lastMessage(MessageType.OUT).isPhoto().waitMessageToBeUploaded(15_000);
   }
 
-  public void replyMessage(ChatMessage message, String text) {
-    this.openMessageMenuItem(message, MenuItem.REPLY);
+  public void replyMessage(TelegramChatMessage message, String text) {
+    this.chooseMessageMenuItem(message, MenuItem.REPLY);
+    assertThat(this.reply).hasText(Pattern.compile("Reply to"));
+    assertThat(this.reply).isVisible();
     this.sendMessage(text);
   }
 
-  public void editMessage(ChatMessage message, String newText) {
-    this.openMessageMenuItem(message, MenuItem.EDIT);
+  public void editMessage(TelegramChatMessage message, String newText) {
+    this.chooseMessageMenuItem(message, MenuItem.EDIT);
+    assertThat(this.reply).hasText(Pattern.compile("Editing"));
+    assertThat(this.reply).isVisible();
     this.input.clear();
     this.input.fill(newText);
     this.sendTextButton.click();
     message.hasText(newText);
   }
 
-  private void openMessageMenuItem(ChatMessage message, MenuItem item) {
+  private void chooseMessageMenuItem(TelegramChatMessage message, MenuItem item) {
     message.locator().click(new Locator.ClickOptions().setButton(MouseButton.RIGHT));
-    this.menuItems.locator(".btn-menu-item", new LocatorOptions().setHasText(item.value)).click();
+    this.menuItems.filter(new Locator.FilterOptions().setHasText(item.value)).click();
   }
 
   private String attachFile(Path path, AttachmentType attachment) {
@@ -125,13 +130,11 @@ public final class TelegramChatPage extends ChatPage {
   }
 
   public static class TelegramChatMessage implements ChatMessage {
-    private final Page page;
     private Locator messageLocator;
 
     private TelegramChatMessage(Locator messageLocator) {
       assertThat(messageLocator).hasClass(Pattern.compile("bubble"));
       this.messageLocator = messageLocator;
-      this.page = messageLocator.page();
     }
 
     @Override
@@ -140,28 +143,25 @@ public final class TelegramChatPage extends ChatPage {
     }
 
     @Override
-    public ChatMessage hasText(String expected, double timeout) {
+    public TelegramChatMessage hasText(String expected) {
       Locator textMessage = this.messageLocator.locator(".message");
       assertThat(textMessage)
-          .hasText(
-              Pattern.compile(expected),
-              new HasTextOptions().setUseInnerText(true).setIgnoreCase(true).setTimeout(timeout));
+          .hasText(Pattern.compile(expected), new HasTextOptions().setUseInnerText(true));
       return this;
     }
 
     @Override
-    public ChatMessage hasFile(String expectedFileName, double timeout) {
+    public TelegramChatMessage hasFile(String expectedFileName) {
       Locator documentName = this.messageLocator.locator(".document-name");
       assertThat(documentName)
-          .hasText(
-              expectedFileName, new HasTextOptions().setUseInnerText(true).setTimeout(timeout));
+          .hasText(expectedFileName, new HasTextOptions().setUseInnerText(true));
       return this;
     }
 
     @Override
-    public ChatMessage isPhoto(double timeout) {
+    public TelegramChatMessage isPhoto() {
       Locator photo = this.messageLocator.locator(".attachment >> img.media-photo");
-      assertThat(photo).isVisible(new IsVisibleOptions().setTimeout(timeout));
+      assertThat(photo).isVisible();
       return this;
     }
 
@@ -172,13 +172,14 @@ public final class TelegramChatPage extends ChatPage {
     }
 
     @Override
-    public ChatMessage snapshot() {
+    public TelegramChatMessage snapshot() {
       // Sometimes data-mid may not be set immediately or be the same as the previous message
       // because of it we need to wait a little bit
-      this.page.waitForTimeout(500);
+      Page page = this.messageLocator.page(); // Closed with context
+      page.waitForTimeout(500);
       String messageId = this.messageLocator.getAttribute("data-mid");
       String messageByIdSelector = ".bubble[data-mid=\"" + messageId + "\"]";
-      this.messageLocator = this.page.locator(messageByIdSelector);
+      this.messageLocator = page.locator(messageByIdSelector);
       return this;
     }
   }
