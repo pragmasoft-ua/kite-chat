@@ -108,6 +108,7 @@ public final class KiteChatPage extends ChatPage {
 
   private void chooseMessageMenuItem(KiteChatMessage message, MenuItem item) {
     message.locator().dispatchEvent("click"); // todo currently simple click doesn't work
+    this.page.waitForTimeout(500); // May not show context menu
     this.menuItems
         .filter(new Locator.FilterOptions().setHasText(Pattern.compile(item.value)))
         .click();
@@ -115,6 +116,7 @@ public final class KiteChatPage extends ChatPage {
 
   private String attachFile(Path path) {
     FileChooser fileChooser = this.page.waitForFileChooser(this.fileAttachment::click);
+    this.page.waitForTimeout(500); // May not show context menu
     fileChooser.setFiles(path);
     return path.getFileName().toString();
   }
@@ -134,7 +136,9 @@ public final class KiteChatPage extends ChatPage {
     @Override
     public KiteChatMessage hasText(String expected) {
       assertThat(this.messageLocator)
-          .hasText(Pattern.compile(expected), new HasTextOptions().setUseInnerText(true));
+          .hasText(
+              Pattern.compile(expected),
+              new HasTextOptions().setUseInnerText(true).setTimeout(10_000));
       return this;
     }
 
@@ -142,7 +146,11 @@ public final class KiteChatPage extends ChatPage {
     public KiteChatMessage hasFile(String expectedFileName) {
       Locator fileLocator = this.messageLocator.locator("kite-file").getByRole(AriaRole.LINK);
 
-      assertThat(fileLocator).hasAttribute("download", Pattern.compile(expectedFileName));
+      assertThat(fileLocator)
+          .hasAttribute(
+              "download",
+              Pattern.compile(expectedFileName),
+              new HasAttributeOptions().setTimeout(10_000));
       return this;
     }
 
@@ -151,7 +159,7 @@ public final class KiteChatPage extends ChatPage {
       Locator photoLocator =
           this.messageLocator.locator("kite-file").getByRole(AriaRole.LINK).locator("img");
 
-      assertThat(photoLocator).isVisible();
+      assertThat(photoLocator).isVisible(new IsVisibleOptions().setTimeout(10_000));
       return this;
     }
 

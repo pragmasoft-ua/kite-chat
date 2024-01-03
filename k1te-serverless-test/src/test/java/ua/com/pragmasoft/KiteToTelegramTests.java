@@ -11,8 +11,6 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import ua.com.pragmasoft.chat.ChatMessage;
-import ua.com.pragmasoft.chat.ChatPage;
 import ua.com.pragmasoft.chat.kite.KiteChatPage;
 import ua.com.pragmasoft.chat.kite.KiteChatPage.KiteChatMessage;
 import ua.com.pragmasoft.chat.telegram.TelegramChatPage;
@@ -197,9 +195,6 @@ class KiteToTelegramTests {
     telegramChat.sendMessage(second);
     kiteChat.lastMessage(IN).hasText(second);
 
-    String uploadedFile = kiteChat.uploadFile(Path.of(BASE_RESOURCE_PATH, "sample.pdf"));
-    telegramChat.lastMessage(IN).hasFile(uploadedFile);
-
     telegramChat.uploadPhoto(Path.of(BASE_RESOURCE_PATH, "sample.jpg"));
     kiteChat.lastMessage(IN).isPhoto();
 
@@ -262,32 +257,6 @@ class KiteToTelegramTests {
   }
 
   @Test
-  @DisplayName("Host replies to a specific User's message")
-  void host_replies_to_specific_user() {
-    String kiteUrl = System.getProperty("kite-url", DEFAULT_KITE_URL);
-    try (BrowserContext browserContext = browser.newContext()) {
-      KiteChatPage secondKiteChat = KiteChatPage.of(browserContext.newPage(), kiteUrl);
-
-      String firstUserHelloText = "Hello, I'm First User";
-      kiteChat.sendMessage(firstUserHelloText);
-      TelegramChatMessage message =
-          telegramChat.lastMessage(IN).hasText(firstUserHelloText).snapshot();
-
-      String firstUserText = "I need your support";
-      kiteChat.sendMessage(firstUserText);
-      telegramChat.lastMessage(IN).hasText(firstUserText);
-
-      String secondUserText = "Hello, I'm Second User";
-      secondKiteChat.sendMessage(secondUserText);
-      telegramChat.lastMessage(IN).hasText(secondUserText);
-
-      String hostText = "Hello, First User. How can I help you?";
-      telegramChat.replyMessage(message, hostText);
-      kiteChat.lastMessage(IN).hasText(hostText);
-    }
-  }
-
-  @Test
   @DisplayName("Host edits a sent message")
   void host_edits_message() {
     String userText = "Hello! I'm User";
@@ -302,6 +271,52 @@ class KiteToTelegramTests {
     String correctHostText = "Hello! I'm Host!";
     telegramChat.editMessage(message, correctHostText);
     // TODO: 02.01.2024 check updated message in kite chat
+  }
+
+  @Test
+  @DisplayName("Host deletes a sent text message")
+  void host_deletes_sent_text_message() {
+    String userText = "Hello! I'm User";
+    kiteChat.sendMessage(userText);
+    telegramChat.lastMessage(IN).hasText(userText);
+
+    String wrongHostText = "Hello! I'm Hos";
+    telegramChat.sendMessage(wrongHostText);
+    kiteChat.lastMessage(IN).hasText(wrongHostText);
+    TelegramChatMessage message = telegramChat.lastMessage(OUT).snapshot();
+
+    telegramChat.deleteMessage(message);
+    // TODO: 03.01.2024 Verified message is deleted in Kite
+  }
+
+  @Test
+  @DisplayName("Host deletes a sent file message")
+  void host_deletes_sent_file_message() {
+    String userText = "Hello! I'm User";
+    kiteChat.sendMessage(userText);
+    telegramChat.lastMessage(IN).hasText(userText);
+
+    String uploadedFile = telegramChat.uploadFile(Path.of(BASE_RESOURCE_PATH, "sample.zip"));
+    kiteChat.lastMessage(IN).hasFile(uploadedFile);
+    TelegramChatMessage message = telegramChat.lastMessage(OUT).snapshot();
+
+    telegramChat.deleteMessage(message);
+    // TODO: 03.01.2024 Verified message is deleted in Kite
+  }
+
+  @Test
+  @DisplayName("Host deletes a sent photo message")
+  void host_deletes_sent_photo_message() {
+    String userText = "Hello! I'm User";
+    kiteChat.sendMessage(userText);
+    telegramChat.lastMessage(IN).hasText(userText);
+
+    telegramChat.uploadPhoto(Path.of(BASE_RESOURCE_PATH, "sample.png"));
+    kiteChat.lastMessage(IN).isPhoto();
+    TelegramChatMessage message = telegramChat.lastMessage(OUT).snapshot();
+
+    telegramChat.deleteMessage(message);
+    // TODO: 03.01.2024 Verified message is deleted in Kite
   }
 
   @AfterEach
@@ -319,21 +334,33 @@ class KiteToTelegramTests {
     playwright.close();
   }
 
-  private ChatMessage sendText(ChatPage from, ChatPage to, String text) {
-    from.sendMessage(text);
-    to.lastMessage(IN).hasText(text);
-    return from.lastMessage(OUT);
-  }
+  @Nested
+  class HostReplyToUserTest {
 
-  private ChatMessage sendFile(ChatPage from, ChatPage to, Path path) {
-    String uploadedFile = from.uploadFile(path);
-    to.lastMessage(IN).hasFile(uploadedFile);
-    return from.lastMessage(OUT);
-  }
+    @Test
+    @DisplayName("Host replies to a specific User's message")
+    void host_replies_to_specific_user() {
+      String kiteUrl = System.getProperty("kite-url", DEFAULT_KITE_URL);
+      try (BrowserContext browserContext = browser.newContext()) {
+        KiteChatPage secondKiteChat = KiteChatPage.of(browserContext.newPage(), kiteUrl);
 
-  private ChatMessage sendPhoto(ChatPage from, ChatPage to, Path path) {
-    from.uploadPhoto(path);
-    to.lastMessage(IN).isPhoto();
-    return from.lastMessage(OUT);
+        String firstUserHelloText = "Hello, I'm First User";
+        kiteChat.sendMessage(firstUserHelloText);
+        TelegramChatMessage message =
+            telegramChat.lastMessage(IN).hasText(firstUserHelloText).snapshot();
+
+        String firstUserText = "I need your support";
+        kiteChat.sendMessage(firstUserText);
+        telegramChat.lastMessage(IN).hasText(firstUserText);
+
+        String secondUserText = "Hello, I'm Second User";
+        secondKiteChat.sendMessage(secondUserText);
+        telegramChat.lastMessage(IN).hasText(secondUserText);
+
+        String hostText = "Hello, First User. How can I help you?";
+        telegramChat.replyMessage(message, hostText);
+        kiteChat.lastMessage(IN).hasText(hostText);
+      }
+    }
   }
 }

@@ -23,6 +23,8 @@ public final class TelegramChatPage extends ChatPage {
   private final Locator sendTextButton;
   private final Locator menuItems;
   private final Locator reply;
+  private final Locator deleteForAll;
+  private final Locator deleteButton;
 
   private TelegramChatPage(Page page) {
     super(page);
@@ -41,6 +43,10 @@ public final class TelegramChatPage extends ChatPage {
 
     this.menuItems = page.locator(".btn-menu-items >> .btn-menu-item");
     this.reply = chat.locator(".reply >> .reply-title").last();
+    this.deleteForAll = page.locator(".popup >> label");
+    this.deleteButton =
+        page.locator(".popup")
+            .getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Delete"));
   }
 
   public static TelegramChatPage of(Page page, String chatTitle) {
@@ -106,8 +112,18 @@ public final class TelegramChatPage extends ChatPage {
     message.hasText(newText);
   }
 
+  public void deleteMessage(TelegramChatMessage message) {
+    this.chooseMessageMenuItem(message, MenuItem.DELETE);
+    assertThat(this.deleteForAll).isVisible();
+    deleteForAll.click();
+    page.waitForTimeout(100);
+    deleteButton.click();
+    assertThat(message.locator()).hasCount(0);
+  }
+
   private void chooseMessageMenuItem(TelegramChatMessage message, MenuItem item) {
     message.locator().click(new Locator.ClickOptions().setButton(MouseButton.RIGHT));
+    this.page.waitForTimeout(100); // May not show context menu
     this.menuItems.filter(new Locator.FilterOptions().setHasText(item.value)).click();
   }
 
