@@ -5,14 +5,15 @@ import com.microsoft.playwright.Page;
 import java.nio.file.Path;
 
 /**
- * The abstract base class representing a chat page in an application, designed for automation testing.
- * This class encapsulates common functionalities related to interacting with a chat interface.
+ * The abstract base class representing a chat page in an application, designed for automation
+ * testing. This class encapsulates common functionalities related to interacting with a chat
+ * interface.
  *
  * <p>Subclasses extending this class are expected to implement specific methods for interacting
  * with chat messages, sending messages, and uploading files or photos.
  *
- * <p>The class contains an enumeration {@code MessageType} to distinguish between incoming (IN)
- * and outgoing (OUT) chat messages.
+ * <p>The class contains an enumeration {@code MessageType} to distinguish between incoming (IN) and
+ * outgoing (OUT) chat messages.
  *
  * @see Page
  */
@@ -71,9 +72,7 @@ public abstract class ChatPage {
    */
   public abstract void uploadPhoto(Path pathToPhoto);
 
-  /**
-   * Enumeration representing the type of chat messages (IN for incoming, OUT for outgoing).
-   */
+  /** Enumeration representing the type of chat messages (IN for incoming, OUT for outgoing). */
   public enum MessageType {
     IN,
     OUT,

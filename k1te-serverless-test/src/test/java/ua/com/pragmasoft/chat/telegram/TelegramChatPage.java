@@ -13,20 +13,25 @@ import ua.com.pragmasoft.chat.ChatMessage;
 import ua.com.pragmasoft.chat.ChatPage;
 
 /**
- * Represents a chat page in the Telegram Web application for automation testing.
- * Extends the {@link ChatPage} abstract class to interact with the Telegram chat interface.
- * Provides functionalities to send messages, upload files/photos, edit, delete, and reply to messages.
+ * Represents a chat page in the Telegram Web application for automation testing. Extends the {@link
+ * ChatPage} abstract class to interact with the Telegram chat interface. Provides functionalities
+ * to send messages, upload files/photos, edit, delete, and reply to messages.
  *
- * <p><strong>Important:</strong> To ensure proper functionality of the {@code edit()} and {@code delete()}
- * methods, it is recommended to invoke the {@code snapshot()} method on the {@link TelegramChatMessage}
- * instance before passing it. This ensures that the instance refers to a specific message in the chat,
- * even if new messages have been added since the instance was created.
+ * <p><strong>Important:</strong> To ensure proper functionality of the {@code editMessage()},
+ * {@code deleteMessage()} and {@code replyMessage()} methods, it is recommended to invoke the
+ * {@code snapshot()} method on the {@link TelegramChatMessage} instance before passing it. This
+ * ensures that the instance refers to a specific message in the chat, even if new messages have
+ * been added since the instance was created.
+ *
+ * <p>To create the instance of this class you should use {@link TelegramClientPage} {@code
+ * openChat()} method which will open particular chat.
  *
  * @see ChatPage
  * @see ChatMessage
  */
 public final class TelegramChatPage extends ChatPage {
   private static final String TELEGRAM_WEB_URL = "https://web.telegram.org";
+  private final String chatTitle;
 
   private final Locator incomingMessages;
   private final Locator outgoingMessages;
@@ -39,9 +44,13 @@ public final class TelegramChatPage extends ChatPage {
   private final Locator deleteForAll;
   private final Locator deleteButton;
 
-  private TelegramChatPage(Page page) {
+  public TelegramChatPage(Page page, String chatTitle) {
     super(page);
-    Locator chat = page.locator("#column-center").locator("div.chat");
+    this.chatTitle = chatTitle;
+    Locator mainColumn = page.locator("#column-center");
+    Locator title = mainColumn.locator(".chat-info >> .user-title");
+    assertThat(title).hasText(Pattern.compile(chatTitle), new HasTextOptions().setTimeout(2000));
+    Locator chat = mainColumn.locator("div.chat");
 
     Locator messageGroups = chat.locator("div.bubbles").locator("div.bubbles-group");
     this.incomingMessages = messageGroups.locator(".bubble.is-in");
@@ -63,27 +72,13 @@ public final class TelegramChatPage extends ChatPage {
   }
 
   /**
-   * Creates an instance of TelegramChatPage associated with the provided Playwright Page and navigates to the specified chat.
-   * This method is typically used to initialize a TelegramChatPage for a specific chat session.
+   * Creates an instance of {@link TelegramChatPage} the chat. This is intended to be used only for
+   * group-type chats.
    *
-   * @param page      The Playwright Page instance associated with the Telegram web application.
-   * @param chatTitle The title of the chat to be opened.
-   * @return A new instance of TelegramChatPage associated with the specified chat.
+   * @return A new instance of TelegramChatPage associated with the chat.
    */
-  public static TelegramChatPage of(Page page, String chatTitle) {
-    // TODO: 04.01.2024
-    page.navigate(TELEGRAM_WEB_URL);
-    Locator chatList = page.locator(".chatlist-top").getByRole(AriaRole.LINK);
-    Locator chat =
-        chatList.filter(
-            new Locator.FilterOptions()
-                .setHas(
-                    page.locator(
-                        "div.user-title", new Page.LocatorOptions().setHasText(chatTitle))));
-
-    assertThat(chat).hasCount(1, new HasCountOptions().setTimeout(30_000));
-    chat.click();
-    return new TelegramChatPage(page);
+  public TelegramChatConfigPage openChatConfig() {
+    return TelegramChatConfigPage.of(this.page, this.chatTitle);
   }
 
   @Override
@@ -134,32 +129,32 @@ public final class TelegramChatPage extends ChatPage {
   }
 
   /**
-   * Replies to a specific message in the Telegram chat.
-   * This method ensures synchronization by waiting for the reply UI and sends a text message as a reply to a target message.
-   * Before invoking this method, ensure to call snapshot() on the target message instance to lock it
-   * to a specific message in the chat.
+   * Replies to a specific message in the Telegram chat. This method ensures synchronization by
+   * waiting for the reply UI and sends a text message as a reply to a target message. Before
+   * invoking this method, ensure to call snapshot() on the target message instance to lock it to a
+   * specific message in the chat.
    *
    * @param message The TelegramChatMessage instance representing the message to which to reply.
-   * @param text    The text of the reply message.
+   * @param text The text of the reply message.
    */
   public void replyMessage(TelegramChatMessage message, String text) {
-    this.chooseMessageMenuItem(message, MenuItem.REPLY);
+    this.doActionOnMessage(message, MessageMenuAction.REPLY);
     assertThat(this.reply).hasText(Pattern.compile("Reply to"));
     assertThat(this.reply).isVisible();
     this.sendMessage(text);
   }
 
   /**
-   * Edits the content of a specific chat message identified by the provided TelegramChatMessage instance.
-   * This method ensures synchronization by waiting for the editing UI to be visible before proceeding.
-   * Before invoking this method, ensure to call snapshot() on the target message instance to lock it
-   * to a specific message in the chat.
+   * Edits the content of a specific chat message identified by the provided TelegramChatMessage
+   * instance. This method ensures synchronization by waiting for the editing UI to be visible
+   * before proceeding. Before invoking this method, ensure to call snapshot() on the target message
+   * instance to lock it to a specific message in the chat.
    *
    * @param message The TelegramChatMessage instance representing the message to be edited.
    * @param newText The new text content to replace the existing message text.
    */
   public void editMessage(TelegramChatMessage message, String newText) {
-    this.chooseMessageMenuItem(message, MenuItem.EDIT);
+    this.doActionOnMessage(message, MessageMenuAction.EDIT);
     assertThat(this.reply).hasText(Pattern.compile("Editing"));
     assertThat(this.reply).isVisible();
     this.input.clear();
@@ -169,14 +164,14 @@ public final class TelegramChatPage extends ChatPage {
   }
 
   /**
-   * Deletes a specific chat message identified by the provided TelegramChatMessage instance.
-   * Before invoking this method, ensure to call snapshot() on the target message instance to lock it
-   * to a specific message in the chat.
+   * Deletes a specific chat message identified by the provided TelegramChatMessage instance. Before
+   * invoking this method, ensure to call snapshot() on the target message instance to lock it to a
+   * specific message in the chat.
    *
    * @param message The TelegramChatMessage instance representing the message to be deleted.
    */
   public void deleteMessage(TelegramChatMessage message) {
-    this.chooseMessageMenuItem(message, MenuItem.DELETE);
+    this.doActionOnMessage(message, MessageMenuAction.DELETE);
     assertThat(this.deleteForAll).isVisible();
     deleteForAll.click();
     page.waitForTimeout(100);
@@ -184,10 +179,10 @@ public final class TelegramChatPage extends ChatPage {
     assertThat(message.locator()).hasCount(0);
   }
 
-  private void chooseMessageMenuItem(TelegramChatMessage message, MenuItem item) {
+  private void doActionOnMessage(TelegramChatMessage message, MessageMenuAction action) {
     message.locator().click(new Locator.ClickOptions().setButton(MouseButton.RIGHT));
     this.page.waitForTimeout(100); // May not show context menu
-    this.menuItems.filter(new Locator.FilterOptions().setHasText(item.value)).click();
+    this.menuItems.filter(new Locator.FilterOptions().setHasText(action.value)).click();
   }
 
   private String attachFile(Path path, AttachmentType attachment) {
@@ -275,7 +270,7 @@ public final class TelegramChatPage extends ChatPage {
     }
   }
 
-  private enum MenuItem {
+  private enum MessageMenuAction {
     REPLY("Reply"),
     EDIT("Edit"),
     PIN("Pin"),
@@ -286,7 +281,7 @@ public final class TelegramChatPage extends ChatPage {
 
     final String value;
 
-    MenuItem(String item) {
+    MessageMenuAction(String item) {
       this.value = item;
     }
   }

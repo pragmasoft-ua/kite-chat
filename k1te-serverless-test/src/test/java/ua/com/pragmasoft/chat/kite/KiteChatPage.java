@@ -19,13 +19,14 @@ import ua.com.pragmasoft.chat.ChatPage;
  * <p>This class extends the {@link ChatPage} class and provides specific implementations for
  * interacting with the Kite chat.
  *
- * <p><strong>Important:</strong> To ensure proper functionality of the {@code edit()} and {@code delete()}
- * methods, it is recommended to invoke the {@code snapshot()} method on the {@linkplain  KiteChatMessage}
- * instance before passing it. This ensures that the instance refers to a specific message in the chat,
- * even if new messages have been added since the instance was created.
+ * <p><strong>Important:</strong> To ensure proper functionality of the {@code edit()} and {@code
+ * delete()} methods, it is recommended to invoke the {@code snapshot()} method on the {@linkplain
+ * KiteChatMessage} instance before passing it. This ensures that the instance refers to a specific
+ * message in the chat, even if new messages have been added since the instance was created.
  *
- * <p>The {@code uploadFile()} and {@code uploadPhoto()} methods and {@code sendMessage()} method automatically wait until the message
- * is displayed in the chat, enhancing reliability in automation test scenarios.
+ * <p>The {@code uploadFile()} and {@code uploadPhoto()} methods and {@code sendMessage()} method
+ * automatically wait until the message is displayed in the chat, enhancing reliability in
+ * automation test scenarios.
  *
  * @see ChatPage
  * @see ChatMessage
@@ -42,9 +43,9 @@ public final class KiteChatPage extends ChatPage {
   private final Locator editMessage;
 
   /**
-   * Constructs a new {@code KiteChatPage} associated with the provided Playwright {@code Page}.
-   * It also creates necessary locator which are used by this class's methods.
-   * This constructor is private; instances should be created using the {@code of} method.
+   * Constructs a new {@code KiteChatPage} associated with the provided Playwright {@code Page}. It
+   * also creates necessary locator which are used by this class's methods. This constructor is
+   * private; instances should be created using the {@code of} method.
    *
    * @param page The Playwright {@code Page} instance associated with the Kite chat page.
    * @see #of(Page, String)
@@ -74,7 +75,7 @@ public final class KiteChatPage extends ChatPage {
    *
    * <p>This method is a factory method that ensures proper setup of the chat page.
    *
-   * @param page    The Playwright {@code Page} instance to navigate and interact with.
+   * @param page The Playwright {@code Page} instance to navigate and interact with.
    * @param kiteUrl The URL of the Kite chat application.
    * @return A new {@code KiteChatPage} instance for the specified Kite chat.
    */
@@ -97,7 +98,7 @@ public final class KiteChatPage extends ChatPage {
   /**
    * Sends a text message in the chat and waits for it to appear in the chat.
    *
-   * @param text  The text of the message to be sent.
+   * @param text The text of the message to be sent.
    */
   @Override
   public void sendMessage(String text) {
@@ -109,7 +110,7 @@ public final class KiteChatPage extends ChatPage {
   /**
    * Uploads a file to the chat and waits for it to appear in the chat.
    *
-   * @param pathToFile  The path to the file to be uploaded.
+   * @param pathToFile The path to the file to be uploaded.
    * @return A string representing the uploaded file's name or identifier.
    */
   @Override
@@ -124,7 +125,7 @@ public final class KiteChatPage extends ChatPage {
   /**
    * Uploads a photo to the chat and waits for it to appear in the chat.
    *
-   * @param pathToPhoto  The path to the photo file to be uploaded.
+   * @param pathToPhoto The path to the photo file to be uploaded.
    */
   @Override
   public void uploadPhoto(Path pathToPhoto) {
@@ -144,15 +145,15 @@ public final class KiteChatPage extends ChatPage {
   }
 
   /**
-   * Edits the content of a specific chat message identified by the provided KiteChatMessage instance.
-   * Before invoking this method, ensure to call snapshot() on the target message instance to lock it
-   * to a specific message in the chat.
+   * Edits the content of a specific chat message identified by the provided KiteChatMessage
+   * instance. Before invoking this method, ensure to call snapshot() on the target message instance
+   * to lock it to a specific message in the chat.
    *
-   * @param message  The KiteChatMessage instance representing the message to be edited.
-   * @param newText  The new text content to replace the existing message text.
+   * @param message The KiteChatMessage instance representing the message to be edited.
+   * @param newText The new text content to replace the existing message text.
    */
   public void editMessage(KiteChatMessage message, String newText) {
-    this.chooseMessageMenuItem(message, MenuItem.EDIT);
+    this.doActionOnMessage(message, MenuItem.EDIT);
     assertThat(this.editMessage).isVisible();
     this.input.clear();
     this.input.fill(newText);
@@ -161,22 +162,22 @@ public final class KiteChatPage extends ChatPage {
   }
 
   /**
-   * Deletes a specific chat message identified by the provided KiteChatMessage instance.
-   * Prior to using this method, make sure to call snapshot() on the intended message instance to
-   * lock it to a particular message in the chat.
+   * Deletes a specific chat message identified by the provided KiteChatMessage instance. Prior to
+   * using this method, make sure to call snapshot() on the intended message instance to lock it to
+   * a particular message in the chat.
    *
-   * @param message  The KiteChatMessage instance representing the message to be deleted.
+   * @param message The KiteChatMessage instance representing the message to be deleted.
    */
   public void deleteMessage(KiteChatMessage message) {
-    this.chooseMessageMenuItem(message, MenuItem.DELETE);
+    this.doActionOnMessage(message, MenuItem.DELETE);
     assertThat(message.locator()).hasCount(0);
   }
 
-  private void chooseMessageMenuItem(KiteChatMessage message, MenuItem item) {
+  private void doActionOnMessage(KiteChatMessage message, MenuItem action) {
     message.locator().dispatchEvent("click"); // todo currently simple click doesn't work
     this.page.waitForTimeout(500); // May not show context menu
     this.menuItems
-        .filter(new Locator.FilterOptions().setHasText(Pattern.compile(item.value)))
+        .filter(new Locator.FilterOptions().setHasText(Pattern.compile(action.value)))
         .click();
   }
 

@@ -44,7 +44,10 @@ class KiteToTelegramTests {
         browser.newContext(
             new Browser.NewContextOptions().setStorageStatePath(Path.of("auth.json")));
     telegramContext.setDefaultTimeout(DEFAULT_TIMEOUT);
-    telegramChat = TelegramChatPage.of(telegramContext.newPage(), telegramChatTitle);
+    telegramChat =
+        new TelegramChatPage(
+            telegramContext.newPage(),
+            telegramChatTitle); // todo create TelegramChat via TelegramClient
 
     kiteContext = browser.newContext();
     kiteContext.setDefaultTimeout(DEFAULT_TIMEOUT);
@@ -335,9 +338,9 @@ class KiteToTelegramTests {
   }
 
   /**
-   * This nested test class is used to run host_replies_to_specific_user() test separately
-   * from the main tests because it involves the other instance of KiteChat.
-   * */
+   * This nested test class is used to run host_replies_to_specific_user() test separately from the
+   * main tests because it involves the other instance of KiteChat.
+   */
   @Nested
   class HostReplyToUserTest {
 

@@ -5,20 +5,24 @@ import com.microsoft.playwright.*;
 import java.nio.file.Path;
 
 /**
- * This application is designed to facilitate the authentication process for Telegram Web and retrieve the 'auth.json' file.
- * The 'auth.json' file stores essential cookies and local storage data necessary for conducting tests in the Kite Chat application.
- * To run this application, execute it via the Maven exec plugin while located in the 'kite-chat' directory.
+ * This application is designed to facilitate the authentication process for Telegram Web and
+ * retrieve the 'auth.json' file. The 'auth.json' file stores essential cookies and local storage
+ * data necessary for conducting tests in the Kite Chat application. To run this application,
+ * execute it via the Maven exec plugin while located in the 'kite-chat' directory.
  *
  * <p>You can use the following Maven command to run the application:
+ *
  * <pre>{@code
  * ./mvnw -pl k1te-serverless-test compile exec:java -Dexec.mainClass=ua.com.pragmasoft.TelegramAuthenticationApp
  * }</pre>
  *
- * <p>This command launches the Chromium browser, navigates to the Telegram Web page, and prompts you to log in.
- * Once the login is successful, the browser closes, and the 'auth.json' file is generated in the 'k1te-serverless-test' directory.
+ * <p>This command launches the Chromium browser, navigates to the Telegram Web page, and prompts
+ * you to log in. Once the login is successful, the browser closes, and the 'auth.json' file is
+ * generated in the 'k1te-serverless-test' directory.
  *
- * <p>You can also specify the login timeout as a system property. The default timeout is 60 seconds.
- * To set a custom timeout, include the '-Dtimeout' parameter in the command. For example:
+ * <p>You can also specify the login timeout as a system property. The default timeout is 60
+ * seconds. To set a custom timeout, include the '-Dtimeout' parameter in the command. For example:
+ *
  * <pre>{@code
  * ./mvnw -pl k1te-serverless-test compile exec:java -Dexec.mainClass=ua.com.pragmasoft.TelegramAuthenticationApp -Dtimeout=80000
  * }</pre>
