@@ -71,6 +71,7 @@ public final class TelegramChatPage extends ChatPage {
    * @return A new instance of TelegramChatPage associated with the specified chat.
    */
   public static TelegramChatPage of(Page page, String chatTitle) {
+    // TODO: 04.01.2024
     page.navigate(TELEGRAM_WEB_URL);
     Locator chatList = page.locator(".chatlist-top").getByRole(AriaRole.LINK);
     Locator chat =
