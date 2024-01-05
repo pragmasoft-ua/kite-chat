@@ -173,15 +173,16 @@ public final class TelegramChatPage extends ChatPage {
   public void deleteMessage(TelegramChatMessage message) {
     this.doActionOnMessage(message, MessageMenuAction.DELETE);
     assertThat(this.deleteForAll).isVisible();
-    deleteForAll.click();
-    page.waitForTimeout(100);
+    this.clickAndWait(this.deleteForAll, 100);
     deleteButton.click();
     assertThat(message.locator()).hasCount(0);
   }
 
   private void doActionOnMessage(TelegramChatMessage message, MessageMenuAction action) {
-    message.locator().click(new Locator.ClickOptions().setButton(MouseButton.RIGHT));
-    this.page.waitForTimeout(100); // May not show context menu
+    this.clickAndWait(
+        message.locator(),
+        100,
+        new Locator.ClickOptions().setButton(MouseButton.RIGHT)); // May not show context menu
     this.menuItems.filter(new Locator.FilterOptions().setHasText(action.value)).click();
   }
 
@@ -189,16 +190,15 @@ public final class TelegramChatPage extends ChatPage {
     FileChooser fileChooser =
         page.waitForFileChooser(
             () -> {
-              this.fileAttachment.click();
-              this.page.waitForTimeout(100); // If not wait,file attachment may not be invoked
+              this.clickAndWait(
+                  this.fileAttachment, 100); // If not wait,file attachment may not be invoked
               this.fileAttachment
                   .locator(".btn-menu-item")
                   .filter(new Locator.FilterOptions().setHasText(attachment.type))
                   .click();
             });
     fileChooser.setFiles(path);
-    this.sendFileButton.click();
-    this.page.waitForTimeout(500);
+    this.clickAndWait(this.sendFileButton, 500);
 
     return path.getFileName().toString();
   }
@@ -220,7 +220,7 @@ public final class TelegramChatPage extends ChatPage {
     public TelegramChatMessage hasText(String expected) {
       Locator textMessage = this.messageLocator.locator(".message");
       assertThat(textMessage)
-          .hasText(Pattern.compile(expected), new HasTextOptions().setUseInnerText(true));
+          .hasText(Pattern.compile(expected), new HasTextOptions().setUseInnerText(true).setTimeout(10_000));
       return this;
     }
 
@@ -228,14 +228,14 @@ public final class TelegramChatPage extends ChatPage {
     public TelegramChatMessage hasFile(String expectedFileName) {
       Locator documentName = this.messageLocator.locator(".document-name");
       assertThat(documentName)
-          .hasText(expectedFileName, new HasTextOptions().setUseInnerText(true));
+          .hasText(expectedFileName, new HasTextOptions().setUseInnerText(true).setTimeout(10_000));
       return this;
     }
 
     @Override
     public TelegramChatMessage isPhoto() {
       Locator photo = this.messageLocator.locator(".attachment >> img.media-photo");
-      assertThat(photo).isVisible();
+      assertThat(photo).isVisible(new IsVisibleOptions().setTimeout(10_000));
       return this;
     }
 

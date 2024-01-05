@@ -10,6 +10,7 @@ import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.MouseButton;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Assertions;
+import ua.com.pragmasoft.BasePage;
 
 /**
  * Represents the main Telegram page where chats are located, providing methods to manage chats,
@@ -19,7 +20,7 @@ import org.junit.jupiter.api.Assertions;
  * @see TelegramChatPage
  * @see TelegramChatConfigPage
  */
-public class TelegramClientPage {
+public class TelegramClientPage extends BasePage {
   private static final String TELEGRAM_WEB_URL = "https://web.telegram.org";
 
   private final Locator chatList;
@@ -37,11 +38,8 @@ public class TelegramClientPage {
   private final Locator groupNameInput;
   private final Locator confirmGroupCreationButton;
 
-  private final Page page;
-
   public TelegramClientPage(Page page) {
-    this.page = page;
-
+    super(page);
     Locator mainSideSlider = page.locator(".item-main");
     this.createButton = mainSideSlider.locator("#new-menu");
     this.createChatMenuItems = this.createButton.locator(".btn-menu >> .btn-menu-item");
@@ -65,7 +63,7 @@ public class TelegramClientPage {
         newGroupContainer.locator(".sidebar-content").getByRole(AriaRole.BUTTON);
 
     this.page.navigate(TELEGRAM_WEB_URL);
-    this.page.waitForTimeout(2000); // Waits until components become functional
+    this.waitFor(2000); // Waits until components become functional
   }
 
   /**
@@ -78,7 +76,7 @@ public class TelegramClientPage {
   public TelegramChatPage openChat(String chatTitle) {
     Locator chat = this.findChatByTitle(this.chatList, chatTitle);
     assertThat(chat).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(30_000));
-    chat.click();
+    this.clickAndWait(chat,500);
     return new TelegramChatPage(this.page, chatTitle);
   }
 
@@ -106,7 +104,7 @@ public class TelegramClientPage {
     this.doActionOnCreateMenu(CreateMenuAction.NEW_GROUP);
 
     this.addPeopleInput.fill(botName);
-    this.page.waitForTimeout(500);
+    this.waitFor(500);
     Locator bot = this.findChatByTitle(this.membersList, botName);
     Assertions.assertEquals(1, bot.count(), () -> "There is no bot with name " + botName);
     bot.click();
@@ -119,7 +117,7 @@ public class TelegramClientPage {
     assertThat(group).hasCount(1);
     this.page.reload(); // This reload is necessary because Telegram page may become corrupted
     // and some functions can not be accessed in the future
-    this.page.waitForTimeout(1500);
+    this.waitFor(1500);
   }
 
   /**
@@ -151,17 +149,11 @@ public class TelegramClientPage {
   }
 
   private void doActionOnChat(Locator chat, ChatMenuAction action) {
-    chat.click(new Locator.ClickOptions().setButton(MouseButton.RIGHT));
-    this.page.waitForTimeout(200);
+    this.clickAndWait(chat, 200, new Locator.ClickOptions().setButton(MouseButton.RIGHT));
     Locator item =
         this.chatMenuItems.filter(
             new Locator.FilterOptions().setHasText(Pattern.compile(action.value)));
     this.clickAndWait(item, 500);
-  }
-
-  private void clickAndWait(Locator locator, double timeout) {
-    locator.click();
-    this.page.waitForTimeout(timeout);
   }
 
   private enum CreateMenuAction {

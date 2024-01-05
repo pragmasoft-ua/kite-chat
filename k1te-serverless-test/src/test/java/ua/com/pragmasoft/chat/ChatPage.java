@@ -3,6 +3,7 @@ package ua.com.pragmasoft.chat;
 
 import com.microsoft.playwright.Page;
 import java.nio.file.Path;
+import ua.com.pragmasoft.BasePage;
 
 /**
  * The abstract base class representing a chat page in an application, designed for automation
@@ -17,12 +18,7 @@ import java.nio.file.Path;
  *
  * @see Page
  */
-public abstract class ChatPage {
-  /**
-   * The underlying {@code Page} associated with the chat page, providing access to general
-   * functionalities of a web page or application.
-   */
-  protected final Page page;
+public abstract class ChatPage extends BasePage {
 
   /**
    * Constructs a new {@code ChatPage} with the specified {@code Page} instance.
@@ -30,16 +26,7 @@ public abstract class ChatPage {
    * @param page The {@code Page} instance associated with the chat page.
    */
   protected ChatPage(Page page) {
-    this.page = page;
-  }
-
-  /**
-   * Gets the underlying {@code Page} instance associated with the chat page.
-   *
-   * @return The {@code Page} instance.
-   */
-  public Page getPage() {
-    return this.page;
+    super(page);
   }
 
   /**

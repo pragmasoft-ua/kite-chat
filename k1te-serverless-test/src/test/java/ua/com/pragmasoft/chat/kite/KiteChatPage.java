@@ -175,7 +175,7 @@ public final class KiteChatPage extends ChatPage {
 
   private void doActionOnMessage(KiteChatMessage message, MenuItem action) {
     message.locator().dispatchEvent("click"); // todo currently simple click doesn't work
-    this.page.waitForTimeout(500); // May not show context menu
+    this.waitFor(200); // May not show context menu
     this.menuItems
         .filter(new Locator.FilterOptions().setHasText(Pattern.compile(action.value)))
         .click();
@@ -183,7 +183,7 @@ public final class KiteChatPage extends ChatPage {
 
   private String attachFile(Path path) {
     FileChooser fileChooser = this.page.waitForFileChooser(this.fileAttachment::click);
-    this.page.waitForTimeout(500); // May not show context menu
+    this.waitFor(200); // May not show context menu
     fileChooser.setFiles(path);
     return path.getFileName().toString();
   }

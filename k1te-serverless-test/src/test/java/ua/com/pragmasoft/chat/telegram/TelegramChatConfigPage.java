@@ -8,6 +8,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.assertions.LocatorAssertions;
 import com.microsoft.playwright.options.AriaRole;
 import java.util.regex.Pattern;
+import ua.com.pragmasoft.BasePage;
 
 /**
  * Represents a configuration page for a Telegram group chat, providing methods to modify group
@@ -22,14 +23,13 @@ import java.util.regex.Pattern;
  *
  * @see TelegramChatPage
  */
-public class TelegramChatConfigPage {
-  private final Page page;
+public class TelegramChatConfigPage extends BasePage {
   private final Locator sections;
   private final Locator membersList;
   private final Locator backButton;
 
   private TelegramChatConfigPage(Page page) {
-    this.page = page;
+    super(page);
     Locator rightColumn = page.locator("#column-right");
     this.sections = rightColumn.locator(".sidebar-left-section-content >> .row");
     this.membersList = rightColumn.locator(".chatlist-container >> ul.chatlist >> a");
@@ -69,17 +69,15 @@ public class TelegramChatConfigPage {
     this.openSection(ConfigSection.ADMINISTRATORS);
     Locator member = this.findMember(memberName);
     assertThat(member).hasCount(1);
-    member.click();
-    this.page.waitForTimeout(500);
-    backButton.click();
-    this.page.waitForTimeout(500);
+    this.clickAndWait(member, 500);
+    this.clickAndWait(this.backButton, 500);
   }
 
   private void openSection(ConfigSection section) {
-    this.sections
-        .filter(new Locator.FilterOptions().setHasText(Pattern.compile(section.value)))
-        .click();
-    this.page.waitForTimeout(500);
+    Locator item =
+        this.sections.filter(
+            new Locator.FilterOptions().setHasText(Pattern.compile(section.value)));
+    this.clickAndWait(item, 500);
   }
 
   private Locator findMember(String name) {

@@ -38,7 +38,7 @@ class KiteToTelegramTests {
     String kiteUrl = System.getProperty("kite-url", DEFAULT_KITE_URL);
 
     playwright = Playwright.create();
-    browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
+    browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false)); // TODO: 05.01.2024
 
     telegramContext =
         browser.newContext(
