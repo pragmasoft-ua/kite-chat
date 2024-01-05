@@ -8,11 +8,11 @@ import ua.com.pragmasoft.chat.telegram.TelegramChatPage;
 import ua.com.pragmasoft.chat.telegram.TelegramClientPage;
 
 /**
- * The base class for all page classes.
- * It provides common methods and functionalities that are shared among different page classes.
+ * The base class for all page classes. It provides common methods and functionalities that are
+ * shared among different page classes.
  *
- * <p>The primary purpose of this class is to serve as a foundation for other page classes, offering methods
- * for waiting, clicking on elements, and accessing the underlying Playwright Page instance.
+ * <p>The primary purpose of this class is to serve as a foundation for other page classes, offering
+ * methods for waiting, clicking on elements, and accessing the underlying Playwright Page instance.
  *
  * @see TelegramChatPage
  * @see KiteChatPage

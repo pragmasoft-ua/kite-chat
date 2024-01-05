@@ -9,6 +9,7 @@ import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.MouseButton;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.Assertions;
 import ua.com.pragmasoft.chat.ChatMessage;
 import ua.com.pragmasoft.chat.ChatPage;
 
@@ -131,12 +132,13 @@ public final class TelegramChatPage extends ChatPage {
    * Replies to a specific message in the Telegram chat. This method ensures synchronization by
    * waiting for the reply UI and sends a text message as a reply to a target message. Before
    * invoking this method, ensure to call snapshot() on the target message instance to lock it to a
-   * specific message in the chat.
+   * specific message in the chat. ChatMessage should be instance of {@link TelegramChatMessage}
    *
-   * @param message The TelegramChatMessage instance representing the message to which to reply.
+   * @param message The ChatMessage instance representing the message to which to reply.
    * @param text The text of the reply message.
    */
-  public void replyMessage(TelegramChatMessage message, String text) {
+  public void replyMessage(ChatMessage message, String text) {
+    Assertions.assertTrue(message instanceof TelegramChatMessage);
     this.doActionOnMessage(message, MessageMenuAction.REPLY);
     assertThat(this.reply).hasText(Pattern.compile("Reply to"));
     assertThat(this.reply).isVisible();
@@ -144,15 +146,17 @@ public final class TelegramChatPage extends ChatPage {
   }
 
   /**
-   * Edits the content of a specific chat message identified by the provided TelegramChatMessage
-   * instance. This method ensures synchronization by waiting for the editing UI to be visible
-   * before proceeding. Before invoking this method, ensure to call snapshot() on the target message
-   * instance to lock it to a specific message in the chat.
+   * Edits the content of a specific chat message identified by the provided ChatMessage instance.
+   * This method ensures synchronization by waiting for the editing UI to be visible before
+   * proceeding. Before invoking this method, ensure to call snapshot() on the target message
+   * instance to lock it to a specific message in the chat. ChatMessage should be instance of {@link
+   * TelegramChatMessage}
    *
    * @param message The TelegramChatMessage instance representing the message to be edited.
    * @param newText The new text content to replace the existing message text.
    */
-  public void editMessage(TelegramChatMessage message, String newText) {
+  public void editMessage(ChatMessage message, String newText) {
+    Assertions.assertTrue(message instanceof TelegramChatMessage);
     this.doActionOnMessage(message, MessageMenuAction.EDIT);
     assertThat(this.reply).hasText(Pattern.compile("Editing"));
     assertThat(this.reply).isVisible();
@@ -163,16 +167,17 @@ public final class TelegramChatPage extends ChatPage {
   }
 
   /**
-   * Deletes a specific chat message identified by the provided TelegramChatMessage instance. Before
+   * Deletes a specific chat message identified by the provided ChatMessage instance. Before
    * invoking this method, ensure to call snapshot() on the target message instance to lock it to a
-   * specific message in the chat.
+   * specific message in the chat. ChatMessage should be instance of {@link TelegramChatMessage}
    *
    * @param message The TelegramChatMessage instance representing the message to be deleted.
    */
-  public void deleteMessage(TelegramChatMessage message) {
+  public void deleteMessage(ChatMessage message) {
+    Assertions.assertTrue(message instanceof TelegramChatMessage);
     this.doActionOnMessage(message, MessageMenuAction.DELETE);
-    this.waitFor(300); //Wait until popup is shown
-    if (this.deleteForAll.isVisible()){
+    this.waitFor(300); // Wait until popup is shown
+    if (this.deleteForAll.isVisible()) {
       assertThat(this.deleteForAll).isVisible();
       this.clickAndWait(this.deleteForAll, 100);
     }
@@ -180,8 +185,10 @@ public final class TelegramChatPage extends ChatPage {
     assertThat(message.locator()).hasCount(0);
   }
 
-  private void doActionOnMessage(TelegramChatMessage message, MessageMenuAction action) {
-    this.clickAndWait(message.locator(), 100,
+  private void doActionOnMessage(ChatMessage message, MessageMenuAction action) {
+    this.clickAndWait(
+        message.locator(),
+        100,
         new Locator.ClickOptions().setButton(MouseButton.RIGHT)); // May not show context menu
     this.menuItems.filter(new Locator.FilterOptions().setHasText(action.value)).click();
   }
@@ -220,7 +227,9 @@ public final class TelegramChatPage extends ChatPage {
     public TelegramChatMessage hasText(String expected) {
       Locator textMessage = this.messageLocator.locator(".message");
       assertThat(textMessage)
-          .hasText(Pattern.compile(expected), new HasTextOptions().setUseInnerText(true).setTimeout(10_000));
+          .hasText(
+              Pattern.compile(expected),
+              new HasTextOptions().setUseInnerText(true).setTimeout(10_000));
       return this;
     }
 

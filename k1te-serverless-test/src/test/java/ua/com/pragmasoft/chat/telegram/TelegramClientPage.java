@@ -76,7 +76,7 @@ public class TelegramClientPage extends BasePage {
   public TelegramChatPage openChat(String chatTitle) {
     Locator chat = this.findChatByTitle(this.chatList, chatTitle);
     assertThat(chat).hasCount(1, new LocatorAssertions.HasCountOptions().setTimeout(30_000));
-    this.clickAndWait(chat,500);
+    this.clickAndWait(chat, 500);
     return new TelegramChatPage(this.page, chatTitle);
   }
 

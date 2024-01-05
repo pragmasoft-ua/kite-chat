@@ -10,6 +10,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.Assertions;
 import ua.com.pragmasoft.chat.ChatMessage;
 import ua.com.pragmasoft.chat.ChatPage;
 
@@ -32,7 +33,6 @@ import ua.com.pragmasoft.chat.ChatPage;
  * @see ChatMessage
  */
 public final class KiteChatPage extends ChatPage {
-  private final Locator messages;
   private final Locator incomingMessages;
   private final Locator outgoingMessages;
   private final Locator fileAttachment;
@@ -54,7 +54,6 @@ public final class KiteChatPage extends ChatPage {
     super(page);
     Locator chat = page.locator("#kite-dialog");
 
-    this.messages = page.locator("kite-msg");
     this.incomingMessages = page.locator("kite-msg:not([status])");
     this.outgoingMessages = page.locator("kite-msg[status]");
 
@@ -134,10 +133,6 @@ public final class KiteChatPage extends ChatPage {
     this.lastMessage(MessageType.OUT).isPhoto().waitMessageToBeUploaded(15_000);
   }
 
-  public int messagesCount() {
-    return this.messages.count();
-  }
-
   public void hasErrorMessage(String expectedErrorMessage) {
     Locator errorMessage = this.errorMessages.last().locator(".message");
 
@@ -145,14 +140,15 @@ public final class KiteChatPage extends ChatPage {
   }
 
   /**
-   * Edits the content of a specific chat message identified by the provided KiteChatMessage
-   * instance. Before invoking this method, ensure to call snapshot() on the target message instance
-   * to lock it to a specific message in the chat.
+   * Edits the content of a specific chat message identified by the provided ChatMessage instance.
+   * Before invoking this method, ensure to call snapshot() on the target message instance to lock
+   * it to a specific message in the chat. ChatMessage should be instance of {@link KiteChatMessage}
    *
-   * @param message The KiteChatMessage instance representing the message to be edited.
+   * @param message The ChatMessage instance representing the message to be edited.
    * @param newText The new text content to replace the existing message text.
    */
-  public void editMessage(KiteChatMessage message, String newText) {
+  public void editMessage(ChatMessage message, String newText) {
+    Assertions.assertTrue(message instanceof KiteChatMessage);
     this.doActionOnMessage(message, MenuItem.EDIT);
     assertThat(this.editMessage).isVisible();
     this.input.clear();
@@ -162,18 +158,19 @@ public final class KiteChatPage extends ChatPage {
   }
 
   /**
-   * Deletes a specific chat message identified by the provided KiteChatMessage instance. Prior to
-   * using this method, make sure to call snapshot() on the intended message instance to lock it to
-   * a particular message in the chat.
+   * Deletes a specific chat message identified by the provided ChatMessage instance. Prior to using
+   * this method, make sure to call snapshot() on the intended message instance to lock it to a
+   * particular message in the chat. ChatMessage should be instance of {@link KiteChatMessage}
    *
-   * @param message The KiteChatMessage instance representing the message to be deleted.
+   * @param message The ChatMessage instance representing the message to be deleted.
    */
-  public void deleteMessage(KiteChatMessage message) {
+  public void deleteMessage(ChatMessage message) {
+    Assertions.assertTrue(message instanceof KiteChatMessage);
     this.doActionOnMessage(message, MenuItem.DELETE);
     assertThat(message.locator()).hasCount(0);
   }
 
-  private void doActionOnMessage(KiteChatMessage message, MenuItem action) {
+  private void doActionOnMessage(ChatMessage message, MenuItem action) {
     message.locator().dispatchEvent("click"); // todo currently simple click doesn't work
     this.waitFor(200); // May not show context menu
     this.menuItems
