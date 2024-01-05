@@ -1,15 +1,12 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2024 */
 package ua.com.pragmasoft;
 
-import static ua.com.pragmasoft.chat.ChatPage.MessageType.IN;
-
 import com.microsoft.playwright.*;
 
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.com.pragmasoft.chat.telegram.TelegramChatPage;
 import ua.com.pragmasoft.chat.telegram.TelegramClientPage;
@@ -29,7 +26,7 @@ class TelegramToTelegramTests extends BaseTest {
             playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(HEADLESS));
 
         telegramContext = browser.newContext(
-            new Browser.NewContextOptions().setStorageStatePath(Path.of("auth.json")));
+            new Browser.NewContextOptions().setStorageStatePath(STORAGE_STATE_PATH));
         telegramContext.setDefaultTimeout(DEFAULT_TIMEOUT);
 
         hostChat = new TelegramClientPage(telegramContext.newPage())
@@ -38,19 +35,17 @@ class TelegramToTelegramTests extends BaseTest {
             .openChat(TELEGRAM_MEMBER_CHAT_TITLE);
 
 
-        sendTextAndWaitResponse(hostChat, "/host " + CHANNEL_NAME,
-            "Created channel " + CHANNEL_NAME);
+        sendTextAndVerifyResponse(hostChat, "/host " + TELEGRAM_CHANNEL_NAME,
+            "Created channel " + TELEGRAM_CHANNEL_NAME);
 
-        sendTextAndWaitResponse(memberChat, "/join " + CHANNEL_NAME,
-            "You joined channel " + CHANNEL_NAME);
+        sendTextAndVerifyResponse(memberChat, "/join " + TELEGRAM_CHANNEL_NAME,
+            "You joined channel " + TELEGRAM_CHANNEL_NAME);
     }
 
     @Test
     @DisplayName("Member sends a text message to the Host")
     void member_sends_text_message_to_host() {
-        String greet = "Hello!";
-        sendText(memberChat, greet);
-        assertIncomingText(hostChat, greet);
+        sendTextAndVerify(memberChat, hostChat, "Hello!");
     }
 
     @ParameterizedTest(name = "Member sends a file with {argumentsWithNames} to the Host")
@@ -58,8 +53,7 @@ class TelegramToTelegramTests extends BaseTest {
     @ValueSource(strings = {"csv", "docx", "json", "pdf", "txt", "zip"})
     void member_sends_files_to_host(String type) {
         Path path = Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type);
-        String fileName = sendFile(memberChat, path);
-        assertIncomingFile(hostChat, fileName);
+        sendFileAndVerify(memberChat, hostChat, path);
     }
 
     @ParameterizedTest(name = "Member sends a photo with {argumentsWithNames} to the Host")
@@ -67,16 +61,13 @@ class TelegramToTelegramTests extends BaseTest {
     @ValueSource(strings = {"jpg", "bmp", "webp", "gif", "png"}) // tiff is not supported
     void member_sends_photos_to_host(String type) {
         Path path = Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type);
-        sendPhoto(memberChat, path);
-        assertIncomingPhoto(hostChat);
+        sendPhotoAndVerify(memberChat, hostChat, path);
     }
 
     @Test
     @DisplayName("Host sends a text message to the Member")
     void host_sends_text_message_to_member() {
-        String greet = "Hello!";
-        sendText(hostChat, greet);
-        assertIncomingText(memberChat, greet);
+        sendTextAndVerify(hostChat, memberChat, "Hello!");
     }
 
     @ParameterizedTest(name = "Host sends a file with {argumentsWithNames} to the Member")
@@ -84,8 +75,7 @@ class TelegramToTelegramTests extends BaseTest {
     @ValueSource(strings = {"csv", "docx", "json", "pdf", "txt", "zip"})
     void host_sends_files_to_member(String type) {
         Path path = Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type);
-        String fileName = sendFile(hostChat, path);
-        assertIncomingFile(memberChat, fileName);
+        sendFileAndVerify(hostChat, memberChat, path);
     }
 
     @ParameterizedTest(name = "Host sends a photo with {argumentsWithNames} to the Member")
@@ -93,89 +83,33 @@ class TelegramToTelegramTests extends BaseTest {
     @ValueSource(strings = {"jpg", "bmp", "webp", "gif", "png"}) // tiff is not supported
     void host_sends_photos_to_member(String type) {
         Path path = Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type);
-        sendPhoto(hostChat, path);
-        assertIncomingPhoto(memberChat);
+        sendPhotoAndVerify(hostChat, memberChat, path);
     }
 
     @Test
     @DisplayName("Emulate chatting between Host and Member")
     void emulate_chatting() {
-        String memberGreet = "Hello!";
-        sendText(memberChat, memberGreet);
-        assertIncomingText(hostChat, memberGreet);
-
-        String hostGreet = "Hi!";
-        sendText(hostChat, hostGreet);
-        assertIncomingText(memberChat, hostGreet);
-
-        String hostQuestion = "How can I help you?";
-        sendText(hostChat, hostQuestion);
-        assertIncomingText(memberChat, hostQuestion);
-
-        String memberRequestText = "I don't understand what it means. Here is a screenshot";
-        sendText(memberChat, memberRequestText);
-        assertIncomingText(hostChat, memberRequestText);
-
-        sendPhoto(memberChat, Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + "png"));
-        assertIncomingPhoto(hostChat);
-
-        String hostAnswerText = "Here is a pdf instruction how to solve this";
-        sendText(hostChat, hostAnswerText);
-        assertIncomingText(memberChat, hostAnswerText);
-
-        String fileName = sendFile(hostChat, Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + "pdf"));
-        assertIncomingFile(memberChat, fileName);
-
-        String memberThanksText = "Thank you, It helped";
-        sendText(memberChat, memberThanksText);
-        assertIncomingText(hostChat, memberThanksText);
-
-        String hostWelcomeText = "You are welcome";
-        sendText(hostChat, hostWelcomeText);
-        assertIncomingText(memberChat, hostWelcomeText);
-    }
-
-    private static void sendText(TelegramChatPage chat, String text) {
-        chat.getPage().bringToFront();
-        chat.sendMessage(text);
-    }
-
-    private static String sendFile(TelegramChatPage chat, Path path) {
-        chat.getPage().bringToFront();
-        return chat.uploadFile(path);
-    }
-
-    private static void sendPhoto(TelegramChatPage chat, Path path) {
-        chat.getPage().bringToFront();
-        chat.uploadPhoto(path);
-    }
-
-    private static void sendTextAndWaitResponse(TelegramChatPage chat, String text,
-        String response) {
-        chat.getPage().bringToFront();
-        chat.sendMessage(text);
-        chat.lastMessage(IN).hasText(response);
-    }
-
-    private static void assertIncomingText(TelegramChatPage chat, String expected) {
-        chat.getPage().bringToFront();
-        chat.lastMessage(IN).hasText(expected);
-    }
-
-    private static void assertIncomingFile(TelegramChatPage chat, String expected) {
-        chat.getPage().bringToFront();
-        chat.lastMessage(IN).hasFile(expected);
-    }
-
-    private static void assertIncomingPhoto(TelegramChatPage chat) {
-        chat.getPage().bringToFront();
-        chat.lastMessage(IN).isPhoto();
+        sendTextAndVerify(memberChat, hostChat, "Hello!");
+        sendTextAndVerify(hostChat, memberChat, "Hi!");
+        sendTextAndVerify(hostChat, memberChat, "How can I help you?");
+        sendTextAndVerify(memberChat, hostChat,
+            "I don't understand what it means. Here is a screenshot");
+        sendPhotoAndVerify(memberChat, hostChat,
+            Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + "png"));
+        sendTextAndVerify(hostChat, memberChat,
+            "Here is a pdf instruction how to solve this problem");
+        sendFileAndVerify(hostChat, memberChat,
+            Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + "pdf"));
+        sendTextAndVerify(memberChat, hostChat, "Thank you, It helped");
+        sendTextAndVerify(hostChat, memberChat, "You are welcome");
     }
 
     @AfterAll
     static void closeBrowser() {
-        sendText(memberChat, "/leave");
-        sendText(hostChat, "/drop");
+        sendTextAndVerifyResponse(memberChat, "/leave",
+            "You left channel " + TELEGRAM_CHANNEL_NAME);
+        sendTextAndVerifyResponse(hostChat, "/drop",
+            "You dropped channel " + TELEGRAM_CHANNEL_NAME);
 
         telegramContext.close();
         browser.close();

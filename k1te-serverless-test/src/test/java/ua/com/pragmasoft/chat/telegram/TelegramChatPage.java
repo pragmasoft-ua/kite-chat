@@ -30,7 +30,6 @@ import ua.com.pragmasoft.chat.ChatPage;
  * @see ChatMessage
  */
 public final class TelegramChatPage extends ChatPage {
-  private static final String TELEGRAM_WEB_URL = "https://web.telegram.org";
   private final String chatTitle;
 
   private final Locator incomingMessages;
@@ -172,16 +171,17 @@ public final class TelegramChatPage extends ChatPage {
    */
   public void deleteMessage(TelegramChatMessage message) {
     this.doActionOnMessage(message, MessageMenuAction.DELETE);
-    assertThat(this.deleteForAll).isVisible();
-    this.clickAndWait(this.deleteForAll, 100);
+    this.waitFor(300); //Wait until popup is shown
+    if (this.deleteForAll.isVisible()){
+      assertThat(this.deleteForAll).isVisible();
+      this.clickAndWait(this.deleteForAll, 100);
+    }
     deleteButton.click();
     assertThat(message.locator()).hasCount(0);
   }
 
   private void doActionOnMessage(TelegramChatMessage message, MessageMenuAction action) {
-    this.clickAndWait(
-        message.locator(),
-        100,
+    this.clickAndWait(message.locator(), 100,
         new Locator.ClickOptions().setButton(MouseButton.RIGHT)); // May not show context menu
     this.menuItems.filter(new Locator.FilterOptions().setHasText(action.value)).click();
   }

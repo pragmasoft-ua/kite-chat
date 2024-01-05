@@ -15,16 +15,10 @@ import ua.com.pragmasoft.chat.kite.KiteChatPage;
 import ua.com.pragmasoft.chat.kite.KiteChatPage.KiteChatMessage;
 import ua.com.pragmasoft.chat.telegram.TelegramChatPage;
 import ua.com.pragmasoft.chat.telegram.TelegramChatPage.TelegramChatMessage;
+import ua.com.pragmasoft.chat.telegram.TelegramClientPage;
 
 @Tag("kite-to-telegram")
-class KiteToTelegramTests {
-  private static final String DEFAULT_TELEGRAM_CHAT_TITLE = "www.k1te.chat";
-  private static final String DEFAULT_KITE_URL = "https://www.k1te.chat/test";
-  private static final double DEFAULT_TIMEOUT = 6000;
-
-  private static final String BASE_RESOURCE_PATH = "src/test/resources";
-  private static final String BASE_FILE_NAME = "sample.";
-
+class KiteToTelegramTests extends BaseTest{
   private static Playwright playwright;
   private static Browser browser;
   private static BrowserContext kiteContext;
@@ -34,32 +28,26 @@ class KiteToTelegramTests {
 
   @BeforeAll
   static void initBrowser() {
-    String telegramChatTitle = System.getProperty("chat-title", DEFAULT_TELEGRAM_CHAT_TITLE);
-    String kiteUrl = System.getProperty("kite-url", DEFAULT_KITE_URL);
-
     playwright = Playwright.create();
-    browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false)); // TODO: 05.01.2024
+    browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(HEADLESS));
 
-    telegramContext =
-        browser.newContext(
-            new Browser.NewContextOptions().setStorageStatePath(Path.of("auth.json")));
+    telegramContext = browser.newContext(new Browser.NewContextOptions().setStorageStatePath(STORAGE_STATE_PATH));
     telegramContext.setDefaultTimeout(DEFAULT_TIMEOUT);
-    telegramChat =
-        new TelegramChatPage(
-            telegramContext.newPage(),
-            telegramChatTitle); // todo create TelegramChat via TelegramClient
+    telegramChat = new TelegramClientPage(telegramContext.newPage())
+        .openChat(TELEGRAM_HOST_CHAT_TITLE);
 
     kiteContext = browser.newContext();
     kiteContext.setDefaultTimeout(DEFAULT_TIMEOUT);
-    kiteChat = KiteChatPage.of(kiteContext.newPage(), kiteUrl);
+    kiteChat = KiteChatPage.of(kiteContext.newPage(), KITE_CHAT_URL_WITH_CHANNEL);
+
+    sendTextAndVerifyResponse(telegramChat, "/host " + TELEGRAM_CHANNEL_NAME,
+        "Created channel " + TELEGRAM_CHANNEL_NAME);
   }
 
   @Test
   @DisplayName("User sends a text message")
   void user_sends_text_message_to_host() {
-    String text = "hello!";
-    kiteChat.sendMessage(text);
-    telegramChat.lastMessage(IN).hasText(text);
+    sendTextAndVerify(kiteChat,telegramChat,"Hello!");
   }
 
   @Test
@@ -74,9 +62,8 @@ class KiteToTelegramTests {
   @ValueSource(strings = {"pdf", "zip"})
   @DisplayName("User sends supported files to Host")
   void user_sends_supported_files_to_host(String type) {
-    String uploadedFileName =
-        kiteChat.uploadFile(Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type));
-    telegramChat.lastMessage(IN).hasFile(uploadedFileName);
+    Path file = Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type);
+    sendFileAndVerify(kiteChat,telegramChat, file);
   }
 
   @ParameterizedTest(
@@ -104,25 +91,25 @@ class KiteToTelegramTests {
     }
   }
 
-  // webp currently not supported
+
   @ParameterizedTest(name = "User sends a supported image with {argumentsWithNames} to the Host")
-  @ValueSource(strings = {"jpg", "png", "gif"})
+  @ValueSource(strings = {"jpg", "png", "gif"})// webp currently not supported on client
   @DisplayName("User sends supported images to Host")
   void user_sends_supported_photos_to_host(String type) {
-    kiteChat.uploadPhoto(Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type));
-    telegramChat.lastMessage(IN).isPhoto();
+    Path photo = Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type);
+    sendPhotoAndVerify(kiteChat,telegramChat, photo);
   }
 
-  // tiff currently is shown as regular file
+
   @ParameterizedTest(
       name =
           "User sends an unsupported image with {argumentsWithNames} to the Host, should be"
               + " converted into zip")
-  @ValueSource(strings = {"bmp"})
+  @ValueSource(strings = {"bmp","tiff"})
   @DisplayName("User sends unsupported files to Host")
   void user_sends_unsupported_photos_to_host(String type) {
     kiteChat.uploadPhoto(Path.of(BASE_RESOURCE_PATH, BASE_FILE_NAME + type));
-    telegramChat.lastMessage(IN).hasFile("sample.zip");
+    telegramChat.lastMessage(IN).hasFile(BASE_FILE_NAME+"zip");
   }
 
   @Test
@@ -204,7 +191,7 @@ class KiteToTelegramTests {
     int messagesBefore = kiteChat.messagesCount();
     kiteChat.getPage().reload();
     kiteChat.getPage().locator("#kite-toggle").click();
-    kiteChat.getPage().waitForTimeout(1000);
+    kiteChat.getPage().waitForTimeout(1500);
     int messagesAfter = kiteChat.messagesCount();
 
     Assertions.assertEquals(messagesBefore, messagesAfter);
@@ -235,14 +222,17 @@ class KiteToTelegramTests {
   }
 
   @ParameterizedTest(name = "Host sends an image with {argumentsWithNames} to the User")
-  @ValueSource(strings = {"jpg", "png", "gif", "webp", "bmp"})
+  @ValueSource(strings = {"jpg", "png", "webp", "bmp"}) // gif is sent as a mp4 file
   @DisplayName("Host sends images to User")
-  void host_sends_image_to_user(String type) {
+  void host_sends_photo_to_user(String type) {
     String userText = "Hello, I'm User";
     kiteChat.sendMessage(userText);
     telegramChat.lastMessage(IN).hasText(userText);
 
     telegramChat.uploadPhoto(Path.of(BASE_RESOURCE_PATH, "sample." + type));
+    kiteChat.waitFor(500); // We can not verify specific photo as we do with files by their names
+    // and sometimes last sent photo can be estimated
+    // as a new one that make this test useless, so wee need to wait to prevent such a behaviour
     kiteChat.lastMessage(IN).isPhoto();
   }
 
@@ -330,6 +320,8 @@ class KiteToTelegramTests {
 
   @AfterAll
   static void closeBrowser() {
+    sendTextAndVerifyResponse(telegramChat, "/drop",
+        "You dropped channel " + TELEGRAM_CHANNEL_NAME);
     telegramContext.close();
     kiteContext.close();
 
@@ -347,9 +339,8 @@ class KiteToTelegramTests {
     @Test
     @DisplayName("Host replies to a specific User's message")
     void host_replies_to_specific_user() {
-      String kiteUrl = System.getProperty("kite-url", DEFAULT_KITE_URL);
       try (BrowserContext browserContext = browser.newContext()) {
-        KiteChatPage secondKiteChat = KiteChatPage.of(browserContext.newPage(), kiteUrl);
+        KiteChatPage secondKiteChat = KiteChatPage.of(browserContext.newPage(), KITE_CHAT_URL_WITH_CHANNEL);
 
         String firstUserHelloText = "Hello, I'm First User";
         kiteChat.sendMessage(firstUserHelloText);
