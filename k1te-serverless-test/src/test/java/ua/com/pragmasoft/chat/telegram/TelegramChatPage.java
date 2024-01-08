@@ -243,7 +243,7 @@ public final class TelegramChatPage extends ChatPage {
 
     @Override
     public TelegramChatMessage isPhoto() {
-      Locator photo = this.messageLocator.locator(".attachment >> img.media-photo");
+      Locator photo = this.messageLocator.locator(".attachment >> img.media-photo").last();
       assertThat(photo).isVisible(new IsVisibleOptions().setTimeout(10_000));
       return this;
     }

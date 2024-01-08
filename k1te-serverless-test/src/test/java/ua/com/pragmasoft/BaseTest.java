@@ -25,16 +25,19 @@ class BaseTest {
   protected static final double DEFAULT_TIMEOUT = 6000;
   protected static final String BASE_RESOURCE_PATH = "src/test/resources";
   protected static final String BASE_FILE_NAME = "sample.";
-  protected static final boolean HEADLESS = false;
-
+  protected static final boolean HEADLESS = true;
   private static boolean successFlag = false;
-  private static boolean initPhaseInvoked = false;
 
+
+  /**
+   * Creates two Telegram groups and adds the Bot to them.
+   *
+   * <p>If an exception is thrown, the AfterAll method will not delete chats.
+   * It's useful if you have a chat with the same name that is going to be created,
+   * and to avoid deleting it, the initialization fails and set successFlag to false.
+   */
   @BeforeAll
   static void createGroups() {
-    if (initPhaseInvoked)
-      return; //If groups already created from the previous test suite, skip their creation
-
     Playwright playwright = Playwright.create();
     Browser browser =
         playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(HEADLESS));
@@ -54,14 +57,19 @@ class BaseTest {
       telegramClientPage.openChatConfig(TELEGRAM_MEMBER_CHAT_TITLE).makeAdmin(TELEGRAM_BOT_NAME);
 
       successFlag = true;
-      initPhaseInvoked = true;
     }
   }
 
+  /**
+   * Deletes created groups from BeforeAll step.
+   *
+   * <p>This method is executed after all test methods and ensures that created groups
+   * are deleted, preventing interference with subsequent test executions.
+   *
+   * @throws IllegalStateException If the initialization phase has not finished successfully.
+   */
   @AfterAll
   static void cleanGroups() {
-    if (initPhaseInvoked)
-      return; //If groups already created from the previous test suite, skip their creation
     if (!successFlag)
       throw new IllegalStateException("Init phase has not finished successfully");
 
@@ -81,7 +89,17 @@ class BaseTest {
     }
   }
 
-  // TODO: 05.01.2024 doc
+  /**
+   * Sends a text message from one ChatPage to another, verifying its delivery.
+   *
+   * <p>This method sends a text message from the 'from' chat to the 'to' chat,
+   * ensuring that the message is delivered and seen in the 'to' chat box.
+   *
+   * @param from The source chat.
+   * @param to The destination chat.
+   * @param text The text message to send.
+   * @return ChatMessage instance that points at a sent message in 'from' chat.
+   */
   public static ChatMessage sendTextAndVerify(ChatPage from, ChatPage to, String text) {
     from.getPage().bringToFront();
     from.sendMessage(text);
@@ -91,6 +109,17 @@ class BaseTest {
     return message;
   }
 
+  /**
+   * Sends a file message from one ChatPage to another, verifying its delivery.
+   *
+   * <p>This method sends a file message from the 'from' chat to the 'to' chat,
+   * ensuring that the message is delivered and seen in the 'to' chat box.
+   *
+   * @param from The source chat.
+   * @param to The destination chat.
+   * @param path The path to the file to send.
+   * @return ChatMessage instance that points at a sent message in 'from' chat.
+   */
   public static ChatMessage sendFileAndVerify(ChatPage from, ChatPage to, Path path) {
     from.getPage().bringToFront();
     String uploadedFile = from.uploadFile(path);
@@ -100,6 +129,17 @@ class BaseTest {
     return message;
   }
 
+  /**
+   * Sends a photo message from one ChatPage to another, verifying its delivery.
+   *
+   * <p>This method sends a photo message from the 'from' chat to the 'to' chat,
+   * ensuring that the message is delivered and seen in the 'to' chat box.
+   *
+   * @param from The source chat.
+   * @param to The destination chat.
+   * @param path The path to the photo to send.
+   * @return ChatMessage instance that points at a sent message in 'from' chat.
+   */
   public static ChatMessage sendPhotoAndVerify(ChatPage from, ChatPage to, Path path) {
     from.getPage().bringToFront();
     from.uploadPhoto(path);
@@ -112,6 +152,16 @@ class BaseTest {
     return message;
   }
 
+  /**
+   * Sends a text message to the chat and waits and verifies the received response.
+   *
+   * <p>This method sends a text message to the chat and verifies the response received
+   * in the same chat.
+   *
+   * @param chat The target chat.
+   * @param text The text message to send.
+   * @param expected The expected response.
+   */
   public static void sendTextAndVerifyResponse(ChatPage chat, String text, String expected) {
     chat.getPage().bringToFront();
     chat.sendMessage(text);

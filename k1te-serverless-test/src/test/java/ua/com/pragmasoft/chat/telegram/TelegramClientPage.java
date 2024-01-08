@@ -104,7 +104,7 @@ public class TelegramClientPage extends BasePage {
     this.doActionOnCreateMenu(CreateMenuAction.NEW_GROUP);
 
     this.addPeopleInput.fill(botName);
-    this.waitFor(500);
+    this.waitFor(1000);
     Locator bot = this.findChatByTitle(this.membersList, botName);
     Assertions.assertEquals(1, bot.count(), () -> "There is no bot with name " + botName);
     bot.click();
