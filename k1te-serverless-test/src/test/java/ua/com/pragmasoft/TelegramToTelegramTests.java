@@ -1,40 +1,17 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2024 */
 package ua.com.pragmasoft;
 
-import com.microsoft.playwright.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import ua.com.pragmasoft.chat.telegram.TelegramChatPage;
-import ua.com.pragmasoft.chat.telegram.TelegramClientPage;
 
 @Tag("telegram-to-telegram")
 class TelegramToTelegramTests extends BaseTest {
-  private static Playwright playwright;
-  private static Browser browser;
-  private static BrowserContext telegramContext;
-  private static TelegramChatPage hostChat;
-  private static TelegramChatPage memberChat;
 
   @BeforeAll
-  static void initBrowser() {
-    playwright = Playwright.create();
-    browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(HEADLESS));
-
-    telegramContext =
-        browser.newContext(new Browser.NewContextOptions().setStorageStatePath(STORAGE_STATE_PATH));
-    telegramContext.setDefaultTimeout(DEFAULT_TIMEOUT);
-
-    hostChat = new TelegramClientPage(telegramContext.newPage()).openChat(TELEGRAM_HOST_CHAT_TITLE);
-    memberChat =
-        new TelegramClientPage(telegramContext.newPage()).openChat(TELEGRAM_MEMBER_CHAT_TITLE);
-
-    sendTextAndVerifyResponse(
-        hostChat, "/host " + TELEGRAM_CHANNEL_NAME, "Created channel " + TELEGRAM_CHANNEL_NAME);
-    sendTextAndVerifyResponse(
-        memberChat,
-        "/join " + TELEGRAM_CHANNEL_NAME,
-        "You joined channel " + TELEGRAM_CHANNEL_NAME);
+  static void initChannel() {
+    sendTextAndVerifyResponse(hostChat, HOST, HOST_RESPONSE);
+    sendTextAndVerifyResponse(memberChat, JOIN, JOIN_RESPONSE);
   }
 
   @Test
@@ -83,8 +60,7 @@ class TelegramToTelegramTests extends BaseTest {
     sendTextAndVerify(memberChat, hostChat, "Hello!");
     sendTextAndVerify(hostChat, memberChat, "Hi!");
     sendTextAndVerify(hostChat, memberChat, "How can I help you?");
-    sendTextAndVerify(
-        memberChat, hostChat, "I don't understand what it means. Here is a screenshot");
+    sendTextAndVerify(memberChat, hostChat, "I don't understand. Here is a screenshot");
     sendPhotoAndVerify(memberChat, hostChat, buildPath("png"));
     sendTextAndVerify(hostChat, memberChat, "Here is a pdf instruction how to solve this problem");
     sendFileAndVerify(hostChat, memberChat, buildPath("pdf"));
@@ -93,12 +69,8 @@ class TelegramToTelegramTests extends BaseTest {
   }
 
   @AfterAll
-  static void closeBrowser() {
-    sendTextAndVerifyResponse(memberChat, "/leave", "You left channel " + TELEGRAM_CHANNEL_NAME);
-    sendTextAndVerifyResponse(hostChat, "/drop", "You dropped channel " + TELEGRAM_CHANNEL_NAME);
-
-    telegramContext.close();
-    browser.close();
-    playwright.close();
+  static void dropChannel() {
+    sendTextAndVerifyResponse(memberChat, LEAVE, LEAVE_RESPONSE);
+    sendTextAndVerifyResponse(hostChat, DROP, DROP_RESPONSE);
   }
 }
