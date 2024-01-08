@@ -75,7 +75,7 @@ To run specific groups of tests, you can use Maven with the following command:
 You can customize test behavior by passing system properties. Here are some available properties:
 
 - **kite.url**: URL for Kite chat that is used for testing. Default is `https://www.k1te.chat/test`.
-- **channel**: Channel name of Telegram channel. Default is `k1te_test`.
+- **channel**: Channel name of Telegram channel. Default is `k1te_chat_test`.
 - **headless**: Run tests in headless mode. Default is `true`.
 
 ### Run Tests in Head Mode

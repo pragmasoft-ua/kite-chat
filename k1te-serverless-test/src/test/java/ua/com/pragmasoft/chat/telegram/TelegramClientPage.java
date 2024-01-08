@@ -141,7 +141,7 @@ public class TelegramClientPage extends BasePage {
   }
 
   private void doActionOnCreateMenu(CreateMenuAction action) {
-    this.clickAndWait(this.createButton, 200);
+    this.clickAndWait(this.createButton, 700); // May not be interactive
     Locator item =
         this.createChatMenuItems.filter(
             new Locator.FilterOptions().setHasText(Pattern.compile(action.value)));
@@ -149,7 +149,7 @@ public class TelegramClientPage extends BasePage {
   }
 
   private void doActionOnChat(Locator chat, ChatMenuAction action) {
-    this.clickAndWait(chat, 200, new Locator.ClickOptions().setButton(MouseButton.RIGHT));
+    this.clickAndWait(chat, 700, new Locator.ClickOptions().setButton(MouseButton.RIGHT));
     Locator item =
         this.chatMenuItems.filter(
             new Locator.FilterOptions().setHasText(Pattern.compile(action.value)));

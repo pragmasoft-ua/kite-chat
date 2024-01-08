@@ -179,7 +179,7 @@ public final class TelegramChatPage extends ChatPage {
     this.waitFor(300); // Wait until popup is shown
     if (this.deleteForAll.isVisible()) {
       assertThat(this.deleteForAll).isVisible();
-      this.clickAndWait(this.deleteForAll, 100);
+      this.clickAndWait(this.deleteForAll, 300);
     }
     deleteButton.click();
     assertThat(message.locator()).hasCount(0);
@@ -188,7 +188,7 @@ public final class TelegramChatPage extends ChatPage {
   private void doActionOnMessage(ChatMessage message, MessageMenuAction action) {
     this.clickAndWait(
         message.locator(),
-        100,
+        300,
         new Locator.ClickOptions().setButton(MouseButton.RIGHT)); // May not show context menu
     this.menuItems.filter(new Locator.FilterOptions().setHasText(action.value)).click();
   }
@@ -198,7 +198,7 @@ public final class TelegramChatPage extends ChatPage {
         page.waitForFileChooser(
             () -> {
               this.clickAndWait(
-                  this.fileAttachment, 100); // If not wait,file attachment may not be invoked
+                  this.fileAttachment, 300); // If not wait,file attachment may not be invoked
               this.fileAttachment
                   .locator(".btn-menu-item")
                   .filter(new Locator.FilterOptions().setHasText(attachment.type))

@@ -21,7 +21,7 @@ class TelegramTests extends BaseTest {
   @Test
   @DisplayName("User attempts to /host a channel with an existing name")
   void host_existing_channel() {
-    String channelName = "test-k1te-channel";
+    String channelName = TELEGRAM_CHANNEL_NAME + "_test";
     String expectedHostResponse = "Created channel " + channelName;
 
     sendTextAndVerifyResponse(memberChat, "/host " + channelName, expectedHostResponse);
@@ -32,7 +32,7 @@ class TelegramTests extends BaseTest {
   @Test
   @DisplayName("Host attempts to /host a second channel")
   void host_second_channel() {
-    String channelName = "test-k1te-channel";
+    String channelName = TELEGRAM_CHANNEL_NAME + "_test321";
     String hostCommand = "/host " + channelName;
 
     sendTextAndVerifyResponse(hostChat, HOST, HOST_RESPONSE);
@@ -104,14 +104,15 @@ class TelegramTests extends BaseTest {
 
   @AfterEach
   void dropChannels() {
+    memberChat.waitFor(200);
     memberChat.getPage().bringToFront();
-    memberChat.sendMessage("/leave");
-    memberChat.waitFor(200);
-    memberChat.sendMessage("/drop");
-    memberChat.waitFor(200);
+    memberChat.sendMessage(LEAVE);
+    memberChat.waitFor(500);
+    memberChat.sendMessage(DROP);
+    memberChat.waitFor(500);
 
     hostChat.getPage().bringToFront();
-    hostChat.sendMessage("/drop");
-    hostChat.waitFor(200);
+    hostChat.sendMessage(DROP);
+    hostChat.waitFor(500);
   }
 }

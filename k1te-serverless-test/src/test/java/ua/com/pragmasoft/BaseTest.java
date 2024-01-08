@@ -20,7 +20,8 @@ import ua.com.pragmasoft.chat.telegram.TelegramClientPage;
 @ExtendWith(BaseTest.class)
 class BaseTest extends BeforeAllCallbackExtension {
   private static final String TELEGRAM_BOT_NAME = System.getProperty("bot.name", "k1techatbot");
-  protected static final String TELEGRAM_CHANNEL_NAME = System.getProperty("channel", "k1te_test");
+  protected static final String TELEGRAM_CHANNEL_NAME =
+      System.getProperty("channel", "k1te_chat_test");
   protected static final String KITE_CHAT_URL_WITH_CHANNEL =
       System.getProperty("kite.url", "https://www.k1te.chat/test") + "?c=" + TELEGRAM_CHANNEL_NAME;
   protected static final boolean HEADLESS = System.getProperty("headless") == null;
