@@ -10,6 +10,7 @@ import com.microsoft.playwright.options.MouseButton;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Assertions;
+import org.opentest4j.AssertionFailedError;
 import ua.com.pragmasoft.chat.ChatMessage;
 import ua.com.pragmasoft.chat.ChatPage;
 
@@ -111,7 +112,7 @@ public final class TelegramChatPage extends ChatPage {
   public String uploadFile(Path pathToFile) {
     String fileName = this.attachFile(pathToFile, AttachmentType.DOC);
 
-    this.lastMessage(MessageType.OUT).hasFile(fileName).waitMessageToBeUploaded(15_000);
+    this.lastMessage(MessageType.OUT).hasFile(fileName).waitMessageToBeUploaded(10_000);
 
     return fileName;
   }
@@ -125,7 +126,14 @@ public final class TelegramChatPage extends ChatPage {
   public void uploadPhoto(Path pathToPhoto) {
     this.attachFile(pathToPhoto, AttachmentType.PHOTO);
 
-    this.lastMessage(MessageType.OUT).isPhoto().waitMessageToBeUploaded(15_000);
+    try {
+      this.lastMessage(MessageType.OUT).isPhoto().waitMessageToBeUploaded(10_000);
+    }catch (AssertionFailedError e){ //In some cases Telegram may not upload photo (endless loading).
+      this.page.reload();
+      this.waitFor(1000);
+      this.attachFile(pathToPhoto, AttachmentType.PHOTO);
+      this.lastMessage(MessageType.OUT).isPhoto().waitMessageToBeUploaded(5_000);
+    }
   }
 
   /**
