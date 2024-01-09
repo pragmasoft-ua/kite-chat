@@ -69,6 +69,11 @@ To run specific groups of tests, you can use Maven with the following command:
 ```bash
 ./mvnw -pl k1te-serverless-test test -Dgroups=<tag-name>
 ```
+When you initiate tests, two Telegram Groups will be created before all tests.
+The specified bot will be added to these groups and promoted to the admin.
+Once all tests are completed, the two groups created during the initialization step 
+will be automatically deleted. This logic is implemented to streamline the testing 
+process and eliminate the need for manual intervention.
 
 ## System Properties
 

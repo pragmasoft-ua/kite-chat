@@ -112,23 +112,46 @@ please take a look at sections below.
 
 ### Build-Stack
 To deploy **_kite-stack_**, you need to deploy **_build-stack_** first. **_build-stack_** creates CodeBuild projects with the following capabilities:
-- **build-and-deploy-project**: Builds the native executable lambda and deploys a new version for the `dev`
-  stage. It can also be used to build the native executable manually via **AWS CLI**.
-  This project automatically starts building when new changes are pushed to the **main** branch of the
-  specified Git repository. **It's also important to mention** that Lambdas' names are predefined, where 
-  for dev is `dev-request-dispatcher` and for prod is `prod-request-dispatcher`.
-- **deploy-on-tag-project** (optional): Updates the existing **Main** lambda function for the `prod` stage.
-  It is automatically triggered when a new **TAG** is pushed to the Git repository.
-  This project is omitted if the `prod` stage is not created.
-- **drift-check-project** (optional): Checks drift in the specified stack
-  (default is `kite` if `build-stack` is `kite-build` or `kite-local` if `build-stack` is `kite-local-build`).
-  This project uses EventBridge Scheduler with a CRON expression to run it on a regular
-  basis (Monday-Friday at 12 PM). It also uses SNS (email) to inform you of drift in the specified stack.
-  **Important: When you deploy **_build-stack_** and DriftCheck is created, you will have to confirm the
-  email that you need to specify in the .env file like this `EMAIL="example@gmail.com"` first**.
-  The DriftCheck project is not created if `buildLambdaViaAsset=true` due to the function.zip not
-  existing in the GitHub source used for drift check, resulting in an Error.
-  If drift is detected and the email is confirmed, you will receive an email similar to this: `Drift was detected in the Stack! You should re-deploy the stack manually`.
+- **build-and-deploy-project**: This project builds the native executable lambda and deploys a new
+  version for the `dev` stage. Afterward, it pushes an event to run the `e2e-test-project`, which
+  launches end-to-end tests. It can also be used to build the native executable manually via the
+  **AWS CLI**. This project automatically starts building when new changes are pushed to the **main**
+  branch of the specified Git repository. It's important to mention that Lambda names are
+  predefined, where for the `dev` stage, it is `dev-request-dispatcher`, and for `prod`, it
+  is `prod-request-dispatcher`.
+
+- **deploy-on-tag-project** (optional): This project updates the existing **Main** lambda function
+  for the `prod` stage. It is automatically triggered when a new **TAG** is pushed to the Git
+  repository. This project is omitted if the `prod` stage is not created.
+
+- **drift-check-project** (optional): This project checks drift in the specified stack (default
+  is `kite` if `build-stack` is `kite-build` or `kite-local` if `build-stack`
+  is `kite-local-build`). The project uses EventBridge Scheduler with a CRON expression to run it on
+  a regular basis (Monday-Friday at 12 PM). It also uses SNS (email) to inform you of drift in the
+  specified stack. **Important: When you deploy the **_build-stack_** and DriftCheck is created, you
+  will have to confirm the email that you need to specify in the .env file like
+  this `EMAIL="example@gmail.com"` first.** The DriftCheck project is not created
+  if `buildLambdaViaAsset=true` due to the function.zip not existing in the GitHub source used for
+  drift check, resulting in an Error. If drift is detected and the email is confirmed, you will
+  receive an email similar to
+  this: `Drift was detected in the Stack! You should re-deploy the stack manually`.
+
+- **e2e-test-project**: This CodeBuild project is responsible for executing end-to-end 
+  tests using Playwright. These tests interact with KiteChat Web and Telegram Web
+  to validate various scenarios. The project automatically starts via AWS Events
+  when a new version of the `dev` Lambda is deployed, triggering the tests. 
+  **Important: Before running any tests, it's crucial to authenticate with Telegram Web 
+  and generate the `auth.json` file. This file stores essential cookies and local
+  storage data necessary for conducting tests in the Telegram Web. 
+  Please refer to the `README.md` file in `k1te-serverless-test` for detailed instructions
+  on how to do this.** 
+  Once you have successfully authenticated in Telegram Web, and `auth.json` is 
+  generated and stored in the `k1te-serverless-test` directory, 
+  it will be utilized by `e2e-test.ts` and uploaded to S3 for usage. 
+  After the tests are completed, the test report will be stored in the 
+  `e2e-test-project-e2e-testing-report-group` test group, 
+  containing all the information about the test cases.
+
 
 #### GitHub Authorization
 In order to deploy build-stack you also need to authorize your gitHub account with AWS CLI to do so you will need to have 
