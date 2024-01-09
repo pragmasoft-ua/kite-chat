@@ -149,8 +149,8 @@ To deploy **_kite-stack_**, you need to deploy **_build-stack_** first. **_build
   generated and stored in the `k1te-serverless-test` directory, 
   it will be utilized by `e2e-test.ts` and uploaded to S3 for usage. 
   After the tests are completed, the test report will be stored in the 
-  `e2e-test-project-e2e-testing-report-group` test group, 
-  containing all the information about the test cases.
+  `e2e-test-project-e2e-test-report-group` test group, 
+  containing all the information about the test cases. You can find it via [AWS Console](https://us-west-2.console.aws.amazon.com/codesuite/codebuild/testReports/reportGroups).
 
 
 #### GitHub Authorization

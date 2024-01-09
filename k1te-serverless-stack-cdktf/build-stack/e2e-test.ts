@@ -24,7 +24,7 @@ export class EndToEndTest extends Construct {
   ) {
     super(scope, id);
     const { role, gitRepositoryUrl, s3SourceBucket } = props;
-    const projectName = `${id}-project`;
+    const projectName = `e2e-test-project`;
 
     const reportGroup = new CodebuildReportGroup(
       this,
@@ -41,6 +41,7 @@ export class EndToEndTest extends Construct {
 
     const allowTestReports = new Codebuild()
       .allow()
+      .toCreateReportGroup()
       .toCreateReport()
       .toUpdateReport()
       .toBatchPutTestCases()
