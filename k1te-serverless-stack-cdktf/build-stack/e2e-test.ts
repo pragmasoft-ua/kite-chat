@@ -7,6 +7,7 @@ import { Role } from "../kite-stack/iam";
 import { Codebuild } from "iam-floyd/lib/generated";
 import { CloudwatchEventRule } from "@cdktf/provider-aws/lib/cloudwatch-event-rule";
 import { CloudwatchEventTarget } from "@cdktf/provider-aws/lib/cloudwatch-event-target";
+import { CodebuildReportGroup } from "@cdktf/provider-aws/lib/codebuild-report-group";
 
 export type EndToEndTestProps = {
   role: Role;
@@ -23,14 +24,28 @@ export class EndToEndTest extends Construct {
   ) {
     super(scope, id);
     const { role, gitRepositoryUrl, s3SourceBucket } = props;
+    const projectName = `${id}-project`;
+
+    const reportGroup = new CodebuildReportGroup(
+      this,
+      "e2e-test-report-group",
+      {
+        name: `${projectName}-e2e-test-report-group`,
+        type: "TEST",
+        exportConfig: {
+          type: "NO_EXPORT",
+        },
+        deleteReports: true,
+      },
+    );
 
     const allowTestReports = new Codebuild()
       .allow()
-      .toCreateReportGroup()
       .toCreateReport()
       .toUpdateReport()
       .toBatchPutTestCases()
-      .toBatchPutCodeCoverages();
+      .toBatchPutCodeCoverages()
+      .onReportGroup(reportGroup.name);
 
     role.grant(`allow-test-reports`, allowTestReports);
 
@@ -41,7 +56,7 @@ export class EndToEndTest extends Construct {
     });
     this.telegramStatePath = telegramAuthState.fullPath;
 
-    const testProject = new Build(this, "e2e-test-project", {
+    const testProject = new Build(this, projectName, {
       role,
       gitRepositoryUrl,
       buildspec: `${BUILDSPEC_BASE_PATH}/e2e-test-buildspec.yml`,
