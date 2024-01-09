@@ -11,9 +11,9 @@ import {
   CodebuildWebhook,
   CodebuildWebhookFilterGroupFilter,
 } from "@cdktf/provider-aws/lib/codebuild-webhook";
+import { BUILD_DIR } from "./build-stack";
 
-export const BUILD_DIR = "build";
-export const OUTPUT_PATH = `${BUILD_DIR}/function.zip`;
+export const LAMBDA_BUILD_OUTPUT_PATH = `${BUILD_DIR}/function.zip`;
 export const CODEBUILD_SERVICE_PRINCIPAL = "codebuild.amazonaws.com";
 
 export type LambdaBuildProps = {
@@ -21,6 +21,7 @@ export type LambdaBuildProps = {
   gitRepositoryUrl: string;
   buildspec: string;
   image: string;
+  type?: "ARM_CONTAINER" | "LINUX_CONTAINER";
   s3BucketName?: string;
   environmentVariable?: CodebuildProjectEnvironmentEnvironmentVariable[];
   buildTimeout?: number;
@@ -38,6 +39,7 @@ export class Build extends Construct {
       gitRepositoryUrl,
       buildspec,
       image,
+      type = "ARM_CONTAINER",
       s3BucketName,
       environmentVariable,
       buildTimeout = 12,
@@ -84,7 +86,7 @@ export class Build extends Construct {
       sourceVersion: "main",
       environment: {
         computeType: "BUILD_GENERAL1_SMALL",
-        type: "ARM_CONTAINER",
+        type,
         image,
         privilegedMode: true,
         environmentVariable,

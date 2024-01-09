@@ -25,7 +25,7 @@ new KiteStack(app, "kite", {
 });
 
 const kiteLocalBuild = new BuildStack(app, "kite-local-build", {
-  gitRepositoryUrl: "https://github.com/Alex21022001/drift",
+  gitRepositoryUrl: "https://github.com/Alex21022001/e2e",
   s3BucketWithState: "my-test-arm-bucket",
   region: "us-west-2",
   buildLambdaViaAsset: true,

@@ -99,14 +99,17 @@ public class TelegramClientPage extends BasePage {
    */
   public void createGroupWithBot(String groupTitle, String botName) {
     Locator chat = this.findChatByTitle(this.chatList, groupTitle);
-    Assertions.assertEquals(
-        0, chat.count(), () -> "The chat with name " + groupTitle + " already exists");
+    if (chat.count() != 0)
+      throw new IllegalStateException("The chat with name " + groupTitle + " already exists");
+
     this.doActionOnCreateMenu(CreateMenuAction.NEW_GROUP);
 
     this.addPeopleInput.fill(botName);
     this.waitFor(1000);
     Locator bot = this.findChatByTitle(this.membersList, botName);
-    Assertions.assertEquals(1, bot.count(), () -> "There is no bot with name " + botName);
+    if (bot.count() != 1)
+      throw new IllegalStateException("There is no bot with name " + botName);
+
     bot.click();
     this.confirmMembersSelectedButton.click();
 
@@ -127,7 +130,8 @@ public class TelegramClientPage extends BasePage {
    */
   public void deleteChat(String title) {
     Locator chat = this.findChatByTitle(chatList, title);
-    Assertions.assertEquals(1, chat.count(), () -> "There is no chat with title " + title);
+    if (chat.count() != 1)
+      throw new IllegalStateException("There is no chat with title " + title);
 
     this.doActionOnChat(chat, ChatMenuAction.DELETE);
     this.deleteForAllMembersCheckBox.click();

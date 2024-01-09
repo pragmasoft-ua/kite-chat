@@ -10,6 +10,7 @@ phases:
       - yum -y install terraform
       - cd k1te-serverless-stack-cdktf
       - npm ci
+      - aws s3 cp s3://$AUTH_PATH k1te-serverless-test/auth.json
   build:
     commands:
       - echo "CDKTF is synthesizing source code"

@@ -1,11 +1,18 @@
 import { Construct } from "constructs";
-import { Build, CODEBUILD_SERVICE_PRINCIPAL, OUTPUT_PATH } from "./build";
+import {
+  Build,
+  CODEBUILD_SERVICE_PRINCIPAL,
+  LAMBDA_BUILD_OUTPUT_PATH,
+} from "./build";
 import { Role } from "../kite-stack/iam";
 import { Lambda as LambdaPolicy } from "iam-floyd/lib/generated/lambda";
 import { S3Bucket } from "@cdktf/provider-aws/lib/s3-bucket";
 import { S3 } from "iam-floyd/lib/generated";
 import { DriftCheck } from "./drift-check";
 import assert = require("assert");
+import { EndToEndTest } from "./e2e-test";
+
+export const BUILDSPEC_BASE_PATH = "k1te-serverless-stack-cdktf/build-stack";
 
 export type CodebuildProps = {
   gitRepositoryUrl: string;
@@ -61,14 +68,21 @@ export class CiCdCodebuild extends Construct {
       gitRepositoryUrl,
       s3BucketName: s3SourceBucket.bucket,
       image: "quay.io/quarkus/ubi-quarkus-graalvmce-builder-image:jdk-21",
-      buildspec:
-        "k1te-serverless-stack-cdktf/build-stack/build-and-deploy-buildspec.yml",
+      buildspec: `${BUILDSPEC_BASE_PATH}/build-and-deploy-buildspec.yml`,
       description:
         "It's used to create native executable for ARM64 platform and update Lambda code when code is changed in GitHub main branch",
       environmentVariable: [
         {
           name: "FUNCTION",
           value: devLambdaName,
+        },
+        {
+          name: "EVENT", // Event for running end-to-end tests
+          value: JSON.stringify({
+            DetailType: "test",
+            Source: "codebuild",
+            Detail: "{}",
+          }),
         },
       ],
     }).attachWebHook([
@@ -86,6 +100,12 @@ export class CiCdCodebuild extends Construct {
       },
     ]);
 
+    const endToEndTest = new EndToEndTest(this, "e2e-test", {
+      role,
+      gitRepositoryUrl,
+      s3SourceBucket,
+    });
+
     if (prodLambdaName) {
       const allowToUpdateLambdaPolicy = new LambdaPolicy()
         .allow()
@@ -101,8 +121,7 @@ export class CiCdCodebuild extends Construct {
         role,
         gitRepositoryUrl,
         image: "aws/codebuild/amazonlinux2-aarch64-standard:3.0",
-        buildspec:
-          "k1te-serverless-stack-cdktf/build-stack/deploy-on-tag-buildspec.yml",
+        buildspec: `${BUILDSPEC_BASE_PATH}/deploy-on-tag-buildspec.yml`,
         description:
           "It's invoked when new tag is published to GitHub repository then it updates prod function",
         environmentVariable: [
@@ -116,7 +135,7 @@ export class CiCdCodebuild extends Construct {
           },
           {
             name: "S3_KEY",
-            value: OUTPUT_PATH,
+            value: LAMBDA_BUILD_OUTPUT_PATH,
           },
         ],
         buildTimeout: 5,
@@ -145,6 +164,7 @@ export class CiCdCodebuild extends Construct {
         s3BucketWithState,
         stackName,
         emailToSendAlarmTo,
+        telegramStatePath: endToEndTest.telegramStatePath,
       });
     }
   }

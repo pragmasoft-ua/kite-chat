@@ -134,7 +134,11 @@ export class KiteStack extends TerraformStack {
     Aspects.of(this).add(TAGGING_ASPECT);
   }
 
-  createStage(name: string, telegramToken: string, props: KiteStackProps) {
+  createStage(
+    name: "dev" | "prod",
+    telegramToken: string,
+    props: KiteStackProps,
+  ) {
     const {
       s3SourceBucketName,
       mainLambdaS3Key,

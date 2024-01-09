@@ -9,6 +9,7 @@ import { CodebuildProjectEnvironmentEnvironmentVariable } from "@cdktf/provider-
 import { Build } from "./build";
 import { Role } from "../kite-stack/iam";
 import { SchedulerSchedule } from "@cdktf/provider-aws/lib/scheduler-schedule";
+import { BUILDSPEC_BASE_PATH } from "./ci-cd-codebuild";
 
 const environmentVariableNames = [
   "CLOUDFLARE_API_TOKEN",
@@ -23,6 +24,7 @@ export type DriftCheckProps = {
   stackName: string;
   s3BucketWithState: string;
   emailToSendAlarmTo: string;
+  telegramStatePath: string;
   driftCheckCronEx?: string;
   timezone?: string;
 };
@@ -37,6 +39,7 @@ export class DriftCheck extends Construct {
       stackName,
       s3BucketWithState,
       emailToSendAlarmTo,
+      telegramStatePath,
       driftCheckCronEx = "0 12 ? * 2-6 *", // Invoke DriftCheck at 12 PM on Monday-Friday
       timezone = "Europe/Kiev",
     } = props;
@@ -75,13 +78,16 @@ export class DriftCheck extends Construct {
         name: "STACK",
         value: stackName,
       },
+      {
+        name: "AUTH_PATH",
+        value: telegramStatePath,
+      },
     );
 
     const driftCheckProject = new Build(this, "drift-check-project", {
       role,
       gitRepositoryUrl,
-      buildspec:
-        "k1te-serverless-stack-cdktf/build-stack/drift-check-buildspec.yml",
+      buildspec: `${BUILDSPEC_BASE_PATH}/drift-check-buildspec.yml`,
       image: "aws/codebuild/amazonlinux2-aarch64-standard:3.0",
       environmentVariable,
       description:

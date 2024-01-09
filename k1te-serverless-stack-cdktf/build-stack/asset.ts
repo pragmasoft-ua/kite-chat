@@ -4,8 +4,10 @@ import { Construct } from "constructs";
 import path = require("node:path");
 import { DataArchiveFile } from "@cdktf/provider-archive/lib/data-archive-file";
 import { S3Object } from "@cdktf/provider-aws/lib/s3-object";
+import { BUILD_DIR } from "./build-stack";
 
 export class ArchiveS3Source extends Construct {
+  private readonly s3Object: S3Object;
   constructor(
     scope: Construct,
     id: string,
@@ -20,18 +22,22 @@ export class ArchiveS3Source extends Construct {
       sourceFile: path.resolve(__dirname, sourceFile),
     });
 
-    new S3Object(this, `s3-object-${id}`, {
+    this.s3Object = new S3Object(this, `s3-object-${id}`, {
       bucket: s3BucketName,
-      key: `build/${id}.${archiveType}`,
+      key: `${BUILD_DIR}/${id}.${archiveType}`,
       source: archive.outputPath,
       lifecycle: {
         ignoreChanges: ["etag", "source"],
       },
     });
   }
+  get key() {
+    return this.s3Object.key;
+  }
 }
 
 export class AssetS3Source extends Construct {
+  private readonly s3Object: S3Object;
   constructor(
     scope: Construct,
     id: string,
@@ -51,14 +57,24 @@ export class AssetS3Source extends Construct {
       path: path.resolve(__dirname, relativeProjectPath, target),
     });
 
-    new S3Object(this, `s3-object-${id}`, {
+    this.s3Object = new S3Object(this, `s3-object-${id}`, {
       bucket: s3BucketName,
-      key: `build/${id}.zip`,
+      key: `${BUILD_DIR}/${id}${assetSource.path.substring(
+        assetSource.path.lastIndexOf("."),
+      )}`,
       source: assetSource.path,
       lifecycle: {
         ignoreChanges: ["etag", "source"],
       },
     });
+  }
+
+  get key() {
+    return this.s3Object.key;
+  }
+
+  get fullPath() {
+    return `${this.s3Object.bucket}/${this.key}`;
   }
 }
 

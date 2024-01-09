@@ -4,9 +4,14 @@ import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
 import { S3Bucket } from "@cdktf/provider-aws/lib/s3-bucket";
 import { CiCdCodebuild } from "./ci-cd-codebuild";
 import { ArchiveS3Source, AssetS3Source } from "./asset";
-import { OUTPUT_PATH } from "./build";
+import { LAMBDA_BUILD_OUTPUT_PATH } from "./build";
 import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
-import { MAIN_LAMBDA_NAME } from "../kite-stack/stage";
+import {
+  DEV_MAIN_LAMBDA_NAME,
+  PROD_MAIN_LAMBDA_NAME,
+} from "../kite-stack/stage";
+
+export const BUILD_DIR = "build";
 
 export type BuildSpecProps = {
   /**
@@ -75,18 +80,21 @@ export class BuildStack extends TerraformStack {
       s3SourceBucket: s3Bucket,
       stackName: id.replace("-build", ""),
       s3BucketWithState: !buildLambdaViaAsset ? s3BucketWithState : undefined,
-      devLambdaName: `dev-${MAIN_LAMBDA_NAME}`,
-      prodLambdaName: prodStage ? `prod-${MAIN_LAMBDA_NAME}` : undefined,
+      devLambdaName: DEV_MAIN_LAMBDA_NAME,
+      prodLambdaName: prodStage ? PROD_MAIN_LAMBDA_NAME : undefined,
     });
 
     if (buildLambdaViaAsset) {
-      new AssetS3Source(this, "function", {
+      const assetS3Source = new AssetS3Source(this, "function", {
         s3BucketName: s3Bucket.bucket,
         relativeProjectPath: "../../k1te-serverless",
       });
+      this.mainLambdaS3Key = assetS3Source.key;
+    } else {
+      this.mainLambdaS3Key = LAMBDA_BUILD_OUTPUT_PATH;
     }
 
-    new ArchiveS3Source(this, "lifecycle", {
+    const archiveS3Source = new ArchiveS3Source(this, "lifecycle", {
       s3BucketName: s3Bucket.bucket,
       sourceFile: "../lifecycle-handler/index.mjs",
       output: "../lifecycle-handler/lifecycle.zip",
@@ -99,12 +107,12 @@ export class BuildStack extends TerraformStack {
     });
 
     new TerraformOutput(this, "function-s3-key", {
-      value: OUTPUT_PATH,
+      value: this.mainLambdaS3Key,
       description: "Name of the S3 Key to MainHandler function",
     });
 
     new TerraformOutput(this, "lifecycle-s3-key", {
-      value: "build/lifecycle.zip",
+      value: archiveS3Source.key,
       description: "Name of the S3 Key to Lifecycle function",
     });
 
@@ -112,7 +120,6 @@ export class BuildStack extends TerraformStack {
     this.region = region;
     this.prodStage = prodStage;
     this.s3SourceBucketName = s3Bucket.bucket;
-    this.mainLambdaS3Key = OUTPUT_PATH;
-    this.lifecycleLambdaS3Key = "build/lifecycle.zip";
+    this.lifecycleLambdaS3Key = archiveS3Source.key;
   }
 }

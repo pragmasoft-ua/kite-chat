@@ -10,6 +10,8 @@ import { TerraformOutput } from "cdktf";
 import { TELEGRAM_ROUTE } from "./kite-stack";
 
 export const MAIN_LAMBDA_NAME = "request-dispatcher";
+export const DEV_MAIN_LAMBDA_NAME = `dev-${MAIN_LAMBDA_NAME}`;
+export const PROD_MAIN_LAMBDA_NAME = `prod-${MAIN_LAMBDA_NAME}`;
 
 export type StageProps = {
   role: Role;
@@ -42,7 +44,11 @@ export class Stage extends Construct {
   private readonly schema: DynamoDbSchema;
   private readonly objectStore: ObjectStore;
 
-  constructor(scope: Construct, id: string, props: Readonly<StageProps>) {
+  constructor(
+    scope: Construct,
+    id: "dev" | "prod",
+    props: Readonly<StageProps>,
+  ) {
     super(scope, id);
     const {
       role,

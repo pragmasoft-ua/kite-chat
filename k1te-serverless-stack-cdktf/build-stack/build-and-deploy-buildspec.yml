@@ -18,6 +18,8 @@ phases:
     commands:
       - echo Updating Lambda Function $FUNCTION
       - aws lambda update-function-code --function-name $FUNCTION --zip-file fileb://k1te-serverless/target/function.zip
+      - aws lambda wait function-updated-v2 --function-name $FUNCTION
+      - aws events put-events --entries $EVENT
 artifacts:
   files:
     - k1te-serverless/target/function.zip
