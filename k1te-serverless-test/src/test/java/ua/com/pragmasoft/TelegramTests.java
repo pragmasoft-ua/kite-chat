@@ -1,7 +1,10 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023-2024 */
 package ua.com.pragmasoft;
 
+import com.microsoft.playwright.Page;
 import org.junit.jupiter.api.*;
+import ua.com.pragmasoft.chat.ChatPage;
+import ua.com.pragmasoft.chat.telegram.TelegramChatPage;
 
 @Tag("telegram")
 class TelegramTests extends BaseTest {
@@ -104,15 +107,24 @@ class TelegramTests extends BaseTest {
 
   @AfterEach
   void dropChannels() {
-    memberChat.waitFor(200);
-    memberChat.getPage().bringToFront();
-    memberChat.sendMessage(LEAVE);
-    memberChat.waitFor(500);
-    memberChat.sendMessage(DROP);
-    memberChat.waitFor(500);
+    this.sendTextAndWaitForResponseAppear(memberChat, LEAVE);
+    this.sendTextAndWaitForResponseAppear(memberChat, DROP);
 
-    hostChat.getPage().bringToFront();
-    hostChat.sendMessage(DROP);
-    hostChat.waitFor(500);
+    this.sendTextAndWaitForResponseAppear(hostChat, DROP);
+  }
+
+  private Long lastIncomingMessageId(TelegramChatPage chat) {
+    return Long.parseLong(
+        chat.lastMessage(ChatPage.MessageType.IN).locator().getAttribute("data-mid"));
+  }
+
+  private void sendTextAndWaitForResponseAppear(TelegramChatPage chat, String text) {
+    chat.getPage().bringToFront();
+    long previousResponseId = this.lastIncomingMessageId(chat);
+    chat.sendMessage(text);
+    chat.getPage()
+        .waitForCondition(
+            () -> previousResponseId < this.lastIncomingMessageId(chat),
+            new Page.WaitForConditionOptions().setTimeout(6000));
   }
 }

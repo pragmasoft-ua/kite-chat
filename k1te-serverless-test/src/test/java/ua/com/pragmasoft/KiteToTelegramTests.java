@@ -156,7 +156,7 @@ class KiteToTelegramTests extends BaseTest {
   @ValueSource(strings = {"pdf", "zip", "docx", "txt", "csv", "json"})
   @DisplayName("Host sends files to User")
   void host_sends_file_to_user(String type) {
-    sendTextAndVerify(kiteChat, hostChat, "Hello, I'm User");
+    sendTextAndVerify(kiteChat, hostChat, "Hello, I'm User, " + type);
     sendFileAndVerify(hostChat, kiteChat, buildPath(type));
   }
 
@@ -164,7 +164,7 @@ class KiteToTelegramTests extends BaseTest {
   @ValueSource(strings = {"jpg", "png", "webp", "bmp"}) // gif is sent as a mp4 file
   @DisplayName("Host sends images to User")
   void host_sends_photo_to_user(String type) {
-    sendTextAndVerify(kiteChat, hostChat, "Hello, I'm User");
+    sendTextAndVerify(kiteChat, hostChat, "Hello, I'm User, " + type);
     sendPhotoAndVerify(hostChat, kiteChat, buildPath(type));
   }
 

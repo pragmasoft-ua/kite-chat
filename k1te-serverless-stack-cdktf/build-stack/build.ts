@@ -11,8 +11,8 @@ import {
   CodebuildWebhook,
   CodebuildWebhookFilterGroupFilter,
 } from "@cdktf/provider-aws/lib/codebuild-webhook";
-import { BUILD_DIR } from "./build-stack";
 
+export const BUILD_DIR = "build";
 export const LAMBDA_BUILD_OUTPUT_PATH = `${BUILD_DIR}/function.zip`;
 export const CODEBUILD_SERVICE_PRINCIPAL = "codebuild.amazonaws.com";
 

@@ -9,7 +9,6 @@ import com.microsoft.playwright.assertions.LocatorAssertions;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.MouseButton;
 import java.util.regex.Pattern;
-import org.junit.jupiter.api.Assertions;
 import ua.com.pragmasoft.BasePage;
 
 /**
@@ -62,7 +61,7 @@ public class TelegramClientPage extends BasePage {
     this.confirmGroupCreationButton =
         newGroupContainer.locator(".sidebar-content").getByRole(AriaRole.BUTTON);
 
-    this.page.navigate(TELEGRAM_WEB_URL);
+    this.page.navigate(TELEGRAM_WEB_URL, new Page.NavigateOptions().setTimeout(15_000));
     this.waitFor(2000); // Waits until components become functional
   }
 
@@ -107,8 +106,7 @@ public class TelegramClientPage extends BasePage {
     this.addPeopleInput.fill(botName);
     this.waitFor(1000);
     Locator bot = this.findChatByTitle(this.membersList, botName);
-    if (bot.count() != 1)
-      throw new IllegalStateException("There is no bot with name " + botName);
+    if (bot.count() != 1) throw new IllegalStateException("There is no bot with name " + botName);
 
     bot.click();
     this.confirmMembersSelectedButton.click();
@@ -130,8 +128,7 @@ public class TelegramClientPage extends BasePage {
    */
   public void deleteChat(String title) {
     Locator chat = this.findChatByTitle(chatList, title);
-    if (chat.count() != 1)
-      throw new IllegalStateException("There is no chat with title " + title);
+    if (chat.count() != 1) throw new IllegalStateException("There is no chat with title " + title);
 
     this.doActionOnChat(chat, ChatMenuAction.DELETE);
     this.deleteForAllMembersCheckBox.click();

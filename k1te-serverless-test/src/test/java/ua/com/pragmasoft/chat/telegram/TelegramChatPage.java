@@ -128,7 +128,8 @@ public final class TelegramChatPage extends ChatPage {
 
     try {
       this.lastMessage(MessageType.OUT).isPhoto().waitMessageToBeUploaded(10_000);
-    }catch (AssertionFailedError e){ //In some cases Telegram may not upload photo (endless loading).
+    } catch (AssertionFailedError e) {
+      // In some cases Telegram may not upload photo (endless loading).
       this.page.reload();
       this.waitFor(1000);
       this.attachFile(pathToPhoto, AttachmentType.PHOTO);

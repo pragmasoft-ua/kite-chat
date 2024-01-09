@@ -11,8 +11,6 @@ import {
   PROD_MAIN_LAMBDA_NAME,
 } from "../kite-stack/stage";
 
-export const BUILD_DIR = "build";
-
 export type BuildSpecProps = {
   /**
    * Url to your GitHub repository that will be used to attach
@@ -85,13 +83,10 @@ export class BuildStack extends TerraformStack {
     });
 
     if (buildLambdaViaAsset) {
-      const assetS3Source = new AssetS3Source(this, "function", {
+      new AssetS3Source(this, "function", {
         s3BucketName: s3Bucket.bucket,
         relativeProjectPath: "../../k1te-serverless",
       });
-      this.mainLambdaS3Key = assetS3Source.key;
-    } else {
-      this.mainLambdaS3Key = LAMBDA_BUILD_OUTPUT_PATH;
     }
 
     const archiveS3Source = new ArchiveS3Source(this, "lifecycle", {
@@ -107,7 +102,7 @@ export class BuildStack extends TerraformStack {
     });
 
     new TerraformOutput(this, "function-s3-key", {
-      value: this.mainLambdaS3Key,
+      value: LAMBDA_BUILD_OUTPUT_PATH,
       description: "Name of the S3 Key to MainHandler function",
     });
 
@@ -121,5 +116,6 @@ export class BuildStack extends TerraformStack {
     this.prodStage = prodStage;
     this.s3SourceBucketName = s3Bucket.bucket;
     this.lifecycleLambdaS3Key = archiveS3Source.key;
+    this.mainLambdaS3Key = LAMBDA_BUILD_OUTPUT_PATH;
   }
 }

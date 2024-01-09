@@ -4,7 +4,7 @@ import { Construct } from "constructs";
 import path = require("node:path");
 import { DataArchiveFile } from "@cdktf/provider-archive/lib/data-archive-file";
 import { S3Object } from "@cdktf/provider-aws/lib/s3-object";
-import { BUILD_DIR } from "./build-stack";
+import { BUILD_DIR } from "./build";
 
 export class ArchiveS3Source extends Construct {
   private readonly s3Object: S3Object;
