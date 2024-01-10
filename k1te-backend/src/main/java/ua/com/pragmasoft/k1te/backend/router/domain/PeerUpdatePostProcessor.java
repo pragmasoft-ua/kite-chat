@@ -1,4 +1,4 @@
-/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023-2024 */
 package ua.com.pragmasoft.k1te.backend.router.domain;
 
 import org.slf4j.Logger;

@@ -71,7 +71,7 @@
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.version>3.4.2</quarkus.platform.version>
     <surefire-plugin.version>3.1.2</surefire-plugin.version>
-    <spotless.version>2.40.0</spotless.version>
+    <spotless.version>2.41.1</spotless.version>
     <skipITs>true</skipITs>
   </properties>
 
@@ -98,13 +98,17 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <dependency>
-        <groupId>org.zalando</groupId>
-        <artifactId>jackson-datatype-problem</artifactId>
-        <version>0.27.1</version>
-      </dependency>
     </dependencies>
   </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.soabase.record-builder</groupId>
+      <artifactId>record-builder-processor</artifactId>
+      <version>39</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
 
   <build>
     <plugins>
@@ -141,6 +145,7 @@
             <!-- no need to specify files, inferred automatically, but you can if you want -->
             <!-- apply a specific flavor of google-java-format and reflow long strings -->
             <googleJavaFormat>
+              <version>1.19.2</version>
               <reflowLongStrings>true</reflowLongStrings>
               <formatJavadoc>true</formatJavadoc>
             </googleJavaFormat>
@@ -156,6 +161,18 @@
               <!-- or <file>${project.basedir}/license-header</file> -->
             </licenseHeader>
           </java>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${compiler-plugin.version}</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+          <showWarnings>true</showWarnings>
+          <compilerArgs>
+            <arg>-verbose</arg>
+            <arg>-Xlint:all,-options,-path</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
       <plugin>

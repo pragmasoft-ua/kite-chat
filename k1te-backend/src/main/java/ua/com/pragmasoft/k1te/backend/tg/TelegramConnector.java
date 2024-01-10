@@ -1,4 +1,4 @@
-/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023-2024 */
 package ua.com.pragmasoft.k1te.backend.tg;
 
 import com.pengrad.telegrambot.TelegramBot;
@@ -320,8 +320,8 @@ public class TelegramConnector implements Connector, Closeable {
 
         response =
             switch (subCommand.type) {
-              case HOST -> onHostCommand(
-                  channelName, message.chat().title(), memberId, originConnection);
+              case HOST ->
+                  onHostCommand(channelName, message.chat().title(), memberId, originConnection);
               case JOIN -> {
                 if (subCommand.args.length > 1) { // /join channelName userId
                   String userId = subCommand.args[1];
@@ -329,8 +329,8 @@ public class TelegramConnector implements Connector, Closeable {
                 }
                 yield onStartCommand(channelName, memberId, originConnection, memberName);
               }
-              default -> throw new ValidationException(
-                  "Unsupported subCommand type " + subCommand.type);
+              default ->
+                  throw new ValidationException("Unsupported subCommand type " + subCommand.type);
             };
       } else {
         String channelName = cmd.args;

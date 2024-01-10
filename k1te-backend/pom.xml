@@ -13,7 +13,6 @@
 
   <artifactId>k1te-backend</artifactId>
   <dependencies>
-
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
@@ -40,15 +39,14 @@
     </dependency>
 
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
+      <groupId>dev.openfeature</groupId>
+      <artifactId>sdk</artifactId>
+      <version>1.7.0</version>
     </dependency>
 
     <dependency>
-      <groupId>io.soabase.record-builder</groupId>
-      <artifactId>record-builder-processor</artifactId>
-      <version>37</version>
-      <scope>provided</scope>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
     </dependency>
 
     <dependency>
@@ -97,24 +95,21 @@
       <artifactId>url-connection-client</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>5.8.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>5.8.0</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>${compiler-plugin.version}</version>
-        <configuration>
-          <release>${maven.compiler.release}</release>
-          <showWarnings>true</showWarnings>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>io.soabase.record-builder</groupId>
-              <artifactId>record-builder-processor</artifactId>
-              <version>37</version>
-            </path>
-          </annotationProcessorPaths>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
