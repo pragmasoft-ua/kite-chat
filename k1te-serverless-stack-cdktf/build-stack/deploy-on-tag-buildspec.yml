@@ -1,0 +1,10 @@
+version: 0.2
+
+phases:
+  build:
+    on-failure: ABORT
+    commands:
+      - echo new GitHub Tag is published
+      - echo Updating Prod Lambda to the latest published version
+      - aws lambda update-function-code --function-name $FUNCTION --s3-bucket $S3_BUCKET --s3-key $S3_KEY
+      - echo Lambda has been successfully updated

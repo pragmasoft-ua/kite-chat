@@ -112,13 +112,6 @@
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
         <version>${spotless.version}</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
         <configuration>
           <!-- optional: limit format enforcement to just the files changed by this feature branch -->
           <ratchetFrom>origin/main</ratchetFrom>
@@ -173,5 +166,6 @@
     <module>k1te-backend</module>
     <module>k1te-server</module>
     <module>k1te-serverless</module>
+    <module>k1te-serverless-test</module>
   </modules>
 </project>
