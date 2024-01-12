@@ -199,10 +199,12 @@ public final class MemberService {
       this.eventPublisher.publishEvent(new MemberConnected(memberId, origin));
       return Optional.empty();
     }
-    member = new Member(memberId, memberName, Set.of(origin));
-    this.eventPublisher.publishEvent(new MemberCreated(member));
     String channelName = memberId.channelName();
     Channel channel = this.channels.get(channelName);
+    if (null == channel)
+      throw new NotFoundException("Channel with name " + channelName + " does not exist");
+    member = new Member(memberId, memberName, Set.of(origin));
+    this.eventPublisher.publishEvent(new MemberCreated(member));
     Objects.requireNonNull(channel, "Channel " + channelName);
     var notifyChannel =
         Notification.info(
