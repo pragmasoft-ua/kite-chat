@@ -1,10 +1,7 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023-2024 */
 package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.*;
@@ -23,6 +20,7 @@ public class DynamoDbChannels implements Channels {
 
   private static final Logger log = LoggerFactory.getLogger(DynamoDbChannels.class);
   private static final boolean AI_FEATURE_FLAG = false;
+  private static final Integer BATCH_SIZE_LIMIT = 25;
 
   private final HashMap<String, DynamoDbMember> stash = new HashMap<>(8);
 
@@ -135,29 +133,62 @@ public class DynamoDbChannels implements Channels {
     if (!member.isHost()) throw new ValidationException("Only host member can drop its channel");
 
     String channelName = member.getChannelName();
-    String connectorId = Connector.connectorId(memberConnection);
-    String rawConnection = Connector.rawConnection(memberConnection);
 
     Key channelKey = Key.builder().partitionValue(channelName).build();
     Key reverseChannelKey =
         Key.builder().partitionValue(REVERSE_CHANNEL_KEY_PREFIX + member.getId()).build();
-    Key connectionKey = Key.builder().partitionValue(connectorId).sortValue(rawConnection).build();
 
-    TransactWriteItemsEnhancedRequest.Builder builder = TransactWriteItemsEnhancedRequest.builder();
-    this.membersTable
-        .query(query -> query.queryConditional(QueryConditional.keyEqualTo(channelKey)))
-        .items()
-        .forEach(
-            dynamoDbMember ->
-                builder.addDeleteItem(
-                    this.membersTable, dynamoDbMember)); // Deletes all members in channel
+    List<DynamoDbMember> members =
+        this.membersTable
+            .query(
+                QueryEnhancedRequest.builder()
+                    .queryConditional(QueryConditional.keyEqualTo(channelKey))
+                    .build())
+            .items()
+            .stream()
+            .toList();
 
-    this.enhancedDynamo.transactWriteItems(
-        builder
-            .addDeleteItem(this.channelsTable, channelKey)
-            .addDeleteItem(this.channelsTable, reverseChannelKey)
-            .addDeleteItem(this.connectionsTable, connectionKey)
+    List<WriteBatch> writeBatchRequests = new ArrayList<>();
+
+    writeBatchRequests.add(
+        WriteBatch.builder(DynamoDbChannel.class) // Delete channel
+            .addDeleteItem(channelKey)
+            .mappedTableResource(this.channelsTable)
             .build());
+    writeBatchRequests.add(
+        WriteBatch.builder(DynamoDbChannel.class) // Delete reversed channel
+            .addDeleteItem(reverseChannelKey)
+            .mappedTableResource(this.channelsTable)
+            .build());
+
+    members.forEach(
+        dbMember -> { // Delete members batch request
+          Key memberKey =
+              Key.builder()
+                  .partitionValue(dbMember.getChannelName())
+                  .sortValue(dbMember.getId())
+                  .build();
+          writeBatchRequests.add(
+              WriteBatch.builder(DynamoDbMember.class)
+                  .addDeleteItem(memberKey)
+                  .mappedTableResource(this.membersTable)
+                  .build());
+        });
+
+    members.stream() // Delete members' connections batch request
+        .map(DynamoDbMember::getConnections)
+        .flatMap(map -> map.values().stream())
+        .map(
+            connection -> {
+              String[] arr = connection.getConnectionUri().split(":");
+              return WriteBatch.builder(DynamoDBConnection.class)
+                  .addDeleteItem(Key.builder().partitionValue(arr[0]).sortValue(arr[1]).build())
+                  .mappedTableResource(this.connectionsTable)
+                  .build();
+            })
+        .forEach(writeBatchRequests::add);
+
+    this.splitIntoBatchRequests(writeBatchRequests).forEach(this.enhancedDynamo::batchWriteItem);
 
     return member;
   }
@@ -358,6 +389,17 @@ public class DynamoDbChannels implements Channels {
       this.stash.clear();
     }
     log.debug("{} flush", this.getClass().getSimpleName());
+  }
+
+  private List<BatchWriteItemEnhancedRequest> splitIntoBatchRequests(
+      List<WriteBatch> writeBatches) {
+    List<BatchWriteItemEnhancedRequest> requests = new ArrayList<>();
+    for (int i = 0; i < writeBatches.size(); i += BATCH_SIZE_LIMIT) {
+      int end = Math.min(i + BATCH_SIZE_LIMIT, writeBatches.size());
+      List<WriteBatch> sublist = new ArrayList<>(writeBatches.subList(i, end));
+      requests.add(BatchWriteItemEnhancedRequest.builder().writeBatches(sublist).build());
+    }
+    return requests;
   }
 
   private String constructCachedMemberId(String channelName, String memberId) {
