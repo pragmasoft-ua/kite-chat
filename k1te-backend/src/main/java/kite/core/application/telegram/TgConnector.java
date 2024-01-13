@@ -360,6 +360,9 @@ public class TgConnector implements RoutingProvider, Closeable {
 
   // TODO It's unsafe to accidentally delete all channel data !!!
   // Need to consider better options
+  // Actually now this doesn't work, because bot user is not a channel owner anymore,
+  // but owner can now drop channel from any chat where bot participates
+  @Deprecated
   private static Command botStatusChanged(ChatMemberUpdated myChatMember) {
     var bot = myChatMember.newChatMember();
     if (AWAY.contains(bot.status())) {

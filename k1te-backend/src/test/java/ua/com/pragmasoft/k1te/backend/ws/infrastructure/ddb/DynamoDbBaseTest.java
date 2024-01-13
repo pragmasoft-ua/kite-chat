@@ -16,7 +16,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
-@Tag("dynamodb")
+@Tag("DynamoDbLocalTest")
 @Testcontainers
 class DynamoDbBaseTest {
 
