@@ -148,47 +148,37 @@ public class DynamoDbChannels implements Channels {
             .stream()
             .toList();
 
-    List<WriteBatch> writeBatchRequests = new ArrayList<>();
+    List<Key> channelsKeys = List.of(channelKey, reverseChannelKey);
 
-    writeBatchRequests.add(
-        WriteBatch.builder(DynamoDbChannel.class) // Delete channel
-            .addDeleteItem(channelKey)
-            .mappedTableResource(this.channelsTable)
-            .build());
-    writeBatchRequests.add(
-        WriteBatch.builder(DynamoDbChannel.class) // Delete reversed channel
-            .addDeleteItem(reverseChannelKey)
-            .mappedTableResource(this.channelsTable)
-            .build());
+    List<Key> membersKeys =
+        members.stream()
+            .map(
+                dbMember ->
+                    Key.builder()
+                        .partitionValue(dbMember.getChannelName())
+                        .sortValue(dbMember.getId())
+                        .build())
+            .toList();
 
-    members.forEach(
-        dbMember -> { // Delete members batch request
-          Key memberKey =
-              Key.builder()
-                  .partitionValue(dbMember.getChannelName())
-                  .sortValue(dbMember.getId())
-                  .build();
-          writeBatchRequests.add(
-              WriteBatch.builder(DynamoDbMember.class)
-                  .addDeleteItem(memberKey)
-                  .mappedTableResource(this.membersTable)
-                  .build());
-        });
+    List<Key> connectionsKeys =
+        members.stream()
+            .map(DynamoDbMember::getConnections)
+            .flatMap(map -> map.values().stream())
+            .map(
+                connection -> {
+                  String[] arr = connection.getConnectionUri().split(":");
+                  return Key.builder().partitionValue(arr[0]).sortValue(arr[1]).build();
+                })
+            .toList();
 
-    members.stream() // Delete members' connections batch request
-        .map(DynamoDbMember::getConnections)
-        .flatMap(map -> map.values().stream())
-        .map(
-            connection -> {
-              String[] arr = connection.getConnectionUri().split(":");
-              return WriteBatch.builder(DynamoDBConnection.class)
-                  .addDeleteItem(Key.builder().partitionValue(arr[0]).sortValue(arr[1]).build())
-                  .mappedTableResource(this.connectionsTable)
-                  .build();
-            })
-        .forEach(writeBatchRequests::add);
+    List<BatchWriteItemEnhancedRequest> requests =
+        new WriteBatchDivider()
+            .deleteDivide(channelsKeys, this.channelsTable)
+            .deleteDivide(membersKeys, this.membersTable)
+            .deleteDivide(connectionsKeys, this.connectionsTable)
+            .requests();
 
-    this.splitIntoBatchRequests(writeBatchRequests).forEach(this.enhancedDynamo::batchWriteItem);
+    requests.forEach(enhancedDynamo::batchWriteItem);
 
     return member;
   }
