@@ -2,6 +2,7 @@
 package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.enhanced.dynamodb.*;
@@ -39,12 +40,13 @@ public class DynamoDbChannels implements Channels {
   private final String channelsTableName;
   private final String membersTableName;
   private final String connectionsTableName;
-  private final DynamoDbEnhancedClient enhancedDynamo;
-  private final DynamoDbTable<DynamoDbChannel> channelsTable;
-  private final DynamoDbTable<DynamoDbMember> membersTable;
-  private final DynamoDbTable<DynamoDBConnection> connectionsTable;
+  private final DynamoDbEnhancedAsyncClient enhancedDynamo;
+  private final DynamoDbAsyncTable<DynamoDbChannel> channelsTable;
+  private final DynamoDbAsyncTable<DynamoDbMember> membersTable;
+  private final DynamoDbAsyncTable<DynamoDBConnection> connectionsTable;
 
-  public DynamoDbChannels(DynamoDbEnhancedClient enhancedDynamo, String serverlessEnvironmentName) {
+  public DynamoDbChannels(
+      DynamoDbEnhancedAsyncClient enhancedDynamo, String serverlessEnvironmentName) {
     this.membersTableName =
         null != serverlessEnvironmentName ? serverlessEnvironmentName + '.' + MEMBERS : MEMBERS;
     this.channelsTableName =
@@ -103,12 +105,14 @@ public class DynamoDbChannels implements Channels {
             .build();
 
     try {
-      this.enhancedDynamo.transactWriteItems(
-          tx ->
-              tx.addPutItem(this.channelsTable, putChannel)
-                  .addPutItem(this.channelsTable, putReverseChannel)
-                  .addPutItem(this.membersTable, hostMember)
-                  .addPutItem(this.connectionsTable, dbConnection));
+      this.enhancedDynamo
+          .transactWriteItems(
+              tx ->
+                  tx.addPutItem(this.channelsTable, putChannel)
+                      .addPutItem(this.channelsTable, putReverseChannel)
+                      .addPutItem(this.membersTable, hostMember)
+                      .addPutItem(this.connectionsTable, dbConnection))
+          .join();
       return hostMember;
     } catch (TransactionCanceledException e) {
       var reasons = e.cancellationReasons();
@@ -138,15 +142,15 @@ public class DynamoDbChannels implements Channels {
     Key reverseChannelKey =
         Key.builder().partitionValue(REVERSE_CHANNEL_KEY_PREFIX + member.getId()).build();
 
-    List<DynamoDbMember> members =
-        this.membersTable
-            .query(
-                QueryEnhancedRequest.builder()
-                    .queryConditional(QueryConditional.keyEqualTo(channelKey))
-                    .build())
-            .items()
-            .stream()
-            .toList();
+    List<DynamoDbMember> members = new ArrayList<>();
+    this.membersTable
+        .query(
+            QueryEnhancedRequest.builder()
+                .queryConditional(QueryConditional.keyEqualTo(channelKey))
+                .build())
+        .items()
+        .subscribe(members::add)
+        .join();
 
     List<Key> channelsKeys = List.of(channelKey, reverseChannelKey);
 
@@ -178,7 +182,10 @@ public class DynamoDbChannels implements Channels {
             .deleteDivide(connectionsKeys, this.connectionsTable)
             .requests();
 
-    requests.forEach(enhancedDynamo::batchWriteItem);
+    List<CompletableFuture<BatchWriteResult>> futures =
+        requests.stream().map(enhancedDynamo::batchWriteItem).toList();
+
+    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
     return member;
   }
@@ -192,13 +199,13 @@ public class DynamoDbChannels implements Channels {
     Objects.requireNonNull(userName, "user name");
 
     Key channelKey = Key.builder().partitionValue(channelName).build();
-    DynamoDbChannel channel = this.channelsTable.getItem(channelKey);
+    DynamoDbChannel channel = this.channelsTable.getItem(channelKey).join();
     if (null == channel) {
       throw new NotFoundException("Channel not found");
     }
 
     Key memberKey = Key.builder().partitionValue(channelName).sortValue(memberId).build();
-    DynamoDbMember maybeMember = this.membersTable.getItem(memberKey);
+    DynamoDbMember maybeMember = this.membersTable.getItem(memberKey).join();
     if (maybeMember != null) {
       //      throw new ValidationException("You are already in this Channel");
       return maybeMember; // In order not to fail the app due to some not done work on Client side.
@@ -223,7 +230,9 @@ public class DynamoDbChannels implements Channels {
             .mappedTableResource(this.connectionsTable)
             .build();
     try {
-      this.enhancedDynamo.batchWriteItem(builder -> builder.writeBatches(putMember, putConnection));
+      this.enhancedDynamo
+          .batchWriteItem(builder -> builder.writeBatches(putMember, putConnection))
+          .join();
       return member;
     } catch (Exception e) {
       throw new ConflictException(e.getMessage(), e);
@@ -235,14 +244,14 @@ public class DynamoDbChannels implements Channels {
     ChannelName.validate(channelName);
 
     Key channelKey = Key.builder().partitionValue(channelName).build();
-    DynamoDbChannel channel = this.channelsTable.getItem(channelKey);
+    DynamoDbChannel channel = this.channelsTable.getItem(channelKey).join();
     if (channel == null)
       throw new NotFoundException("There is no Channel with name " + channelName);
 
     if (memberId == null || memberId.isEmpty()) return null;
 
     Key memberKey = Key.builder().partitionValue(channelName).sortValue(memberId).build();
-    DynamoDbMember maybeMember = this.membersTable.getItem(memberKey);
+    DynamoDbMember maybeMember = this.membersTable.getItem(memberKey).join();
     if (maybeMember == null)
       throw new NotFoundException(
           "There is no Member with id %s in Channel %s".formatted(memberId, channelName));
@@ -261,8 +270,9 @@ public class DynamoDbChannels implements Channels {
             .mappedTableResource(this.connectionsTable)
             .build();
 
-    this.enhancedDynamo.batchWriteItem(
-        builder -> builder.writeBatches(memberRequest, connectionRequest));
+    this.enhancedDynamo
+        .batchWriteItem(builder -> builder.writeBatches(memberRequest, connectionRequest))
+        .join();
     return maybeMember;
   }
 
@@ -273,7 +283,7 @@ public class DynamoDbChannels implements Channels {
     String rawConnection = Connector.rawConnection(connectionUri);
     Key connectionKey = Key.builder().partitionValue(connectorId).sortValue(rawConnection).build();
 
-    this.connectionsTable.deleteItem(connectionKey);
+    this.connectionsTable.deleteItem(connectionKey).join();
     member.deleteConnection(connectionUri); // Member is updated via flush()
     return member;
   }
@@ -303,8 +313,9 @@ public class DynamoDbChannels implements Channels {
             .mappedTableResource(this.connectionsTable)
             .build();
     try {
-      this.enhancedDynamo.batchWriteItem(
-          builder -> builder.writeBatches(deleteMember, deleteConnection));
+      this.enhancedDynamo
+          .batchWriteItem(builder -> builder.writeBatches(deleteMember, deleteConnection))
+          .join();
       return member;
     } catch (Exception e) { // TransactionCanceledException
       throw new KiteException(e.getMessage(), e);
@@ -317,7 +328,7 @@ public class DynamoDbChannels implements Channels {
     if (cachedMember != null) return cachedMember;
 
     Key memberKey = Key.builder().partitionValue(channel).sortValue(id).build();
-    DynamoDbMember member = this.membersTable.getItem(memberKey);
+    DynamoDbMember member = this.membersTable.getItem(memberKey).join();
     if (null == member) {
       throw new NotFoundException("Not found member");
     }
@@ -334,7 +345,7 @@ public class DynamoDbChannels implements Channels {
     String rawConnection = Connector.rawConnection(memberConnection);
 
     Key connectionKey = Key.builder().partitionValue(connectorId).sortValue(rawConnection).build();
-    DynamoDBConnection dbConnection = this.connectionsTable.getItem(connectionKey);
+    DynamoDBConnection dbConnection = this.connectionsTable.getItem(connectionKey).join();
     if (dbConnection == null) throw new NotFoundException("Searched connection Not Found");
 
     String channelName = dbConnection.getChannelName();
@@ -356,7 +367,7 @@ public class DynamoDbChannels implements Channels {
     member.updateConnection(newConnection);
     DynamoDBConnection dbConnection = new DynamoDBConnection(newConnection, channelName, memberId);
 
-    this.connectionsTable.putItem(dbConnection);
+    this.connectionsTable.putItem(dbConnection).join();
     // Member is updated via flush()
     return member;
   }
@@ -375,21 +386,10 @@ public class DynamoDbChannels implements Channels {
                           .addPutItem(member)
                           .build())
               .toList();
-      this.enhancedDynamo.batchWriteItem(builder -> builder.writeBatches(writeBatches));
+      this.enhancedDynamo.batchWriteItem(builder -> builder.writeBatches(writeBatches)).join();
       this.stash.clear();
     }
     log.debug("{} flush", this.getClass().getSimpleName());
-  }
-
-  private List<BatchWriteItemEnhancedRequest> splitIntoBatchRequests(
-      List<WriteBatch> writeBatches) {
-    List<BatchWriteItemEnhancedRequest> requests = new ArrayList<>();
-    for (int i = 0; i < writeBatches.size(); i += BATCH_SIZE_LIMIT) {
-      int end = Math.min(i + BATCH_SIZE_LIMIT, writeBatches.size());
-      List<WriteBatch> sublist = new ArrayList<>(writeBatches.subList(i, end));
-      requests.add(BatchWriteItemEnhancedRequest.builder().writeBatches(sublist).build());
-    }
-    return requests;
   }
 
   private String constructCachedMemberId(String channelName, String memberId) {

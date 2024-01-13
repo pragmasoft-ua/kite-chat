@@ -3,7 +3,7 @@ package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
 import java.util.ArrayList;
 import java.util.List;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchWriteItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch;
@@ -28,7 +28,7 @@ public class WriteBatchDivider {
 
   @SuppressWarnings("unchecked")
   public <T> WriteBatchDivider deleteDivide(
-      List<Key> keys, DynamoDbTable<T> mappedTable, T... items) {
+      List<Key> keys, DynamoDbAsyncTable<T> mappedTable, T... items) {
     Class<T> type = (Class<T>) items.getClass().componentType();
     int tookItems;
     for (int i = 0; i < keys.size(); i += tookItems) {
