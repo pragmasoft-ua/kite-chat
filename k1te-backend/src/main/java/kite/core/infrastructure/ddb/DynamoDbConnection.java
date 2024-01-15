@@ -3,11 +3,10 @@ package kite.core.infrastructure.ddb;
 
 import kite.core.domain.Connection;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
-@DynamoDbBean
+// @DynamoDbBean
 class DynamoDbConnection implements Keyed {
 
   private String name;
