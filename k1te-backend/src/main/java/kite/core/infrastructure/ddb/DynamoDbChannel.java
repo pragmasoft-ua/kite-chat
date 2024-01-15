@@ -7,11 +7,12 @@ import kite.core.domain.ChannelBuilder;
 import kite.core.domain.Member.Id;
 import kite.core.domain.Route;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
-// @DynamoDbBean
-class DynamoDbChannel implements Keyed {
+@DynamoDbBean
+public class DynamoDbChannel implements Keyed {
 
   private String name;
   private String hostId;
@@ -19,11 +20,11 @@ class DynamoDbChannel implements Keyed {
   private String chatBot;
   private String peerMember;
 
-  DynamoDbChannel() {
+  public DynamoDbChannel() {
     super();
   }
 
-  DynamoDbChannel(Channel channel) {
+  public DynamoDbChannel(Channel channel) {
     super();
     this.name = channel.name();
     this.hostId = channel.hostId();

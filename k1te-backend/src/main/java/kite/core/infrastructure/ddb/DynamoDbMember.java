@@ -3,19 +3,20 @@ package kite.core.infrastructure.ddb;
 
 import kite.core.domain.Member;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
-// @DynamoDbBean
-class DynamoDbMember implements Keyed {
+@DynamoDbBean
+public class DynamoDbMember implements Keyed {
 
   private String name;
 
-  DynamoDbMember() {
+  public DynamoDbMember() {
     super();
   }
 
-  DynamoDbMember(Member member) {
+  public DynamoDbMember(Member member) {
     super();
   }
 
