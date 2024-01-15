@@ -57,9 +57,6 @@ class DynamoDbChannels implements Channels {
 
   void delete(String channelName) {
     Channel channel = this.get(channelName);
-    Key channelKey = Key.builder().partitionValue(channelName).build();
-    Key reversedChannelKey =
-        Key.builder().partitionValue(REVERSE_CHANNEL_KEY_PREFIX + channel.hostId()).build();
     // TODO: 13.01.2024 Query Channel's members, connections, use WriteBatchDivider to split
     // requests
     // delete members

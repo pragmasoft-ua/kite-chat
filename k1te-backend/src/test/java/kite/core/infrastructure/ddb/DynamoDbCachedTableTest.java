@@ -6,19 +6,20 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @ExtendWith(MockitoExtension.class)
 class DynamoDbCachedTableTest {
 
-  @Mock DynamoDbTable<KeyedEntity> table;
+  @Mock DynamoDbAsyncTable<KeyedEntity> table;
 
   @Test
   @DisplayName("Returns same item from the cache")
@@ -26,7 +27,7 @@ class DynamoDbCachedTableTest {
     KeyedEntity item = new KeyedEntity();
     item.setName("item");
     Key key = item.key();
-    when(table.getItem(key)).thenReturn(item);
+    when(table.getItem(key)).thenReturn(CompletableFuture.completedFuture(item));
     var cached = new DynamoDbCachedTable<>(table);
     var first = cached.getItem(key);
     var second = cached.getItem(key);

@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
@@ -21,14 +21,14 @@ final class DynamoDbCachedTable<I extends Keyed> {
   private final Map<Key, I> itemsCache;
   private final Set<Key> dirtyItems;
   private final Set<Key> deletedItems;
-  private final DynamoDbTable<I> table;
+  private final DynamoDbAsyncTable<I> table;
   private final Class<I> reifiedItemClass;
 
   /**
    * @param table
    */
   @SuppressWarnings("unchecked")
-  DynamoDbCachedTable(DynamoDbTable<I> table, I... items) {
+  DynamoDbCachedTable(DynamoDbAsyncTable<I> table, I... items) {
     // https://maciejwalkowiak.com/blog/java-reified-generics/
     this.reifiedItemClass = (Class<I>) items.getClass().componentType();
     this.table = table;
@@ -88,7 +88,7 @@ final class DynamoDbCachedTable<I extends Keyed> {
 
   private I readThrough(Key k) {
     try {
-      I result = this.table.getItem(k);
+      I result = this.table.getItem(k).join();
       if (null == result) {
         throw new NotFoundException("Not found " + this.reifiedItemClass.getSimpleName());
       }
