@@ -161,6 +161,9 @@ public final class MemberService {
             Notification.info(
                 "Messages for channel %s will be sent here from now on".formatted(channelName)));
       }
+      throw new ConflictException(
+          "You already have a channel with name %s that is bound to this chat"
+              .formatted(channelName));
     }
     channel =
         ChannelBuilder.builder()
