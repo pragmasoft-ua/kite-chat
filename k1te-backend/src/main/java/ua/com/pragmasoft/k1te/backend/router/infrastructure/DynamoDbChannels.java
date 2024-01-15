@@ -166,12 +166,10 @@ public class DynamoDbChannels implements Channels {
 
     List<Key> connectionsKeys =
         members.stream()
-            .filter(
-                dynamoDbMember ->
-                    dynamoDbMember.getConnections() != null
-                        && !dynamoDbMember.getConnections().isEmpty())
             .map(DynamoDbMember::getConnections)
+            .filter(connections -> !connections.isEmpty())
             .flatMap(map -> map.values().stream())
+            .filter(connection -> connection.getConnectionUri() != null)
             .map(
                 connection -> {
                   String[] arr = connection.getConnectionUri().split(":");

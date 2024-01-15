@@ -21,6 +21,7 @@ export type LambdaBuildProps = {
   gitRepositoryUrl: string;
   buildspec: string;
   image: string;
+  computeType?: "BUILD_GENERAL1_SMALL" | "BUILD_GENERAL1_LARGE";
   type?: "ARM_CONTAINER" | "LINUX_CONTAINER";
   s3BucketName?: string;
   environmentVariable?: CodebuildProjectEnvironmentEnvironmentVariable[];
@@ -39,6 +40,7 @@ export class Build extends Construct {
       gitRepositoryUrl,
       buildspec,
       image,
+      computeType = "BUILD_GENERAL1_SMALL",
       type = "ARM_CONTAINER",
       s3BucketName,
       environmentVariable,
@@ -85,7 +87,7 @@ export class Build extends Construct {
       },
       sourceVersion: "main",
       environment: {
-        computeType: "BUILD_GENERAL1_SMALL",
+        computeType,
         type,
         image,
         privilegedMode: true,
