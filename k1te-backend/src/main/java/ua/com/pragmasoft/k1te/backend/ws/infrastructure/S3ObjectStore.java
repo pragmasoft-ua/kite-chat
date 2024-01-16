@@ -6,8 +6,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -26,9 +26,9 @@ public final class S3ObjectStore implements ObjectStore {
 
   private final String bucketName;
 
-  private final S3Client s3Client;
+  private final S3AsyncClient s3Client;
 
-  public S3ObjectStore(String bucketName, S3Client s3Client, S3Presigner presigner) {
+  public S3ObjectStore(String bucketName, S3AsyncClient s3Client, S3Presigner presigner) {
     this.bucketName = bucketName;
     this.s3Client = s3Client;
     this.presigner = presigner;
@@ -51,15 +51,19 @@ public final class S3ObjectStore implements ObjectStore {
         this.objectName(
             channelName, memberId, transientPayload.fileName(), transientPayload.created());
     try (var readFrom = transientPayload.uri().toURL().openStream()) {
-      this.s3Client.putObject(
-          PutObjectRequest.builder()
-              .bucket(this.bucketName)
-              .key(objectName)
-              .contentType(transientPayload.fileType())
-              .expires(transientPayload.created().plus(365, ChronoUnit.DAYS))
-              .cacheControl("max-age: 31536000, immutable")
-              .build(),
-          RequestBody.fromInputStream(readFrom, transientPayload.fileSize()));
+      var body = AsyncRequestBody.forBlockingInputStream(transientPayload.fileSize());
+      var response =
+          this.s3Client.putObject(
+              PutObjectRequest.builder()
+                  .bucket(this.bucketName)
+                  .key(objectName)
+                  .contentType(transientPayload.fileType())
+                  .expires(transientPayload.created().plus(365, ChronoUnit.DAYS))
+                  .cacheControl("max-age: 31536000, immutable")
+                  .build(),
+              body);
+      body.writeInputStream(readFrom);
+      response.join();
       return new BinaryMessage(
           this.presignedGetUri(objectName),
           transientPayload.fileName(),

@@ -9,9 +9,7 @@ import kite.core.domain.event.ChannelEvent.ChannelDropped;
 import kite.core.domain.event.ChannelEvent.ChannelUpdated;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Expression;
+import software.amazon.awssdk.enhanced.dynamodb.*;
 
 class DynamoDbChannels implements Channels {
 
@@ -25,14 +23,15 @@ class DynamoDbChannels implements Channels {
           .putExpressionName("#attr", "name") // name is a dynamodb keyword
           .build();
 
-  private final DynamoDbEnhancedClient enhancedDynamo;
-  private final DynamoDbTable<DynamoDbChannel> channelsTable;
-  private final DynamoDbTable<DynamoDbConnection> connectionsTable;
+  private final DynamoDbEnhancedAsyncClient enhancedDynamo;
+  private final DynamoDbAsyncTable<DynamoDbChannel> channelsTable;
+  private final DynamoDbAsyncTable<DynamoDbConnection> connectionsTable;
 
   public DynamoDbChannels(
-      DynamoDbEnhancedClient enhancedDynamo,
-      DynamoDbTable<DynamoDbChannel> channelsTable,
-      DynamoDbTable<DynamoDbConnection> connectionsTable) {
+      DynamoDbEnhancedAsyncClient enhancedDynamo,
+      DynamoDbAsyncTable<DynamoDbChannel> channelsTable,
+      DynamoDbAsyncTable<DynamoDbConnection> connectionsTable,
+      DynamoDbAsyncTable<DynamoDbMember> membersTable) {
     this.enhancedDynamo = enhancedDynamo;
     this.channelsTable = channelsTable;
     this.connectionsTable = connectionsTable;
@@ -40,13 +39,14 @@ class DynamoDbChannels implements Channels {
 
   @Override
   public Channel get(String channelName) {
-    var item = this.channelsTable.getItem(DynamoDbChannel.key(channelName));
+    var item = this.channelsTable.getItem(DynamoDbChannel.key(channelName)).join();
     return Optional.ofNullable(item).map(DynamoDbChannel::toChannel).orElse(null);
   }
 
   @Override
   public String getChannelName(String hostId) {
-    var item = this.channelsTable.getItem(DynamoDbChannel.key(REVERSE_CHANNEL_KEY_PREFIX + hostId));
+    var item =
+        this.channelsTable.getItem(DynamoDbChannel.key(REVERSE_CHANNEL_KEY_PREFIX + hostId)).join();
     return Optional.ofNullable(item).map(DynamoDbChannel::getHostId).orElse(null);
   }
 
@@ -56,6 +56,9 @@ class DynamoDbChannels implements Channels {
   }
 
   void delete(String channelName) {
+    Channel channel = this.get(channelName);
+    // TODO: 13.01.2024 Query Channel's members, connections, use WriteBatchDivider to split
+    // requests
     // delete members
     // delete connections
     // delete history

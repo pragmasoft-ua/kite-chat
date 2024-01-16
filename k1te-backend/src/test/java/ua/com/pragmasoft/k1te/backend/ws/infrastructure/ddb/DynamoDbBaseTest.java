@@ -11,9 +11,9 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
 @Tag("DynamoDbLocalTest")
@@ -25,8 +25,8 @@ class DynamoDbBaseTest {
   protected static final String MEMBERS_TABLE = TEST_ENV + ".Members";
   protected static final String CONNECTIONS_TABLE = TEST_ENV + ".Connections";
 
-  protected static DynamoDbClient dbClient;
-  protected static DynamoDbEnhancedClient dbEnhancedClient;
+  protected static DynamoDbAsyncClient dbClient;
+  protected static DynamoDbEnhancedAsyncClient dbEnhancedClient;
   private static boolean isInitialized = false;
 
   @Container
@@ -40,11 +40,11 @@ class DynamoDbBaseTest {
     if (isInitialized) return;
     String endpoint = "http://" + dynamodb.getHost() + ":" + dynamodb.getFirstMappedPort();
     dbClient =
-        DynamoDbClient.builder()
+        DynamoDbAsyncClient.builder()
             .endpointOverride(URI.create(endpoint))
             .region(Region.US_WEST_2)
             .build();
-    dbEnhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(dbClient).build();
+    dbEnhancedClient = DynamoDbEnhancedAsyncClient.builder().dynamoDbClient(dbClient).build();
 
     isInitialized = true;
   }
@@ -58,9 +58,9 @@ class DynamoDbBaseTest {
 
   @AfterEach
   void deleteTables() {
-    dbClient.deleteTable(DeleteTableRequest.builder().tableName(CHANNELS_TABLE).build());
-    dbClient.deleteTable(DeleteTableRequest.builder().tableName(MEMBERS_TABLE).build());
-    dbClient.deleteTable(DeleteTableRequest.builder().tableName(CONNECTIONS_TABLE).build());
+    dbClient.deleteTable(DeleteTableRequest.builder().tableName(CHANNELS_TABLE).build()).join();
+    dbClient.deleteTable(DeleteTableRequest.builder().tableName(MEMBERS_TABLE).build()).join();
+    dbClient.deleteTable(DeleteTableRequest.builder().tableName(CONNECTIONS_TABLE).build()).join();
   }
 
   public String randomId() {
@@ -77,64 +77,76 @@ class DynamoDbBaseTest {
   }
 
   public Integer itemsCount(String tableName) {
-    return dbClient.scan(ScanRequest.builder().tableName(tableName).build()).count();
+    return dbClient.scan(ScanRequest.builder().tableName(tableName).build()).join().count();
   }
 
   private void createChannelsTable() {
-    dbClient.createTable(
-        CreateTableRequest.builder()
-            .tableName(CHANNELS_TABLE)
-            .attributeDefinitions(
-                AttributeDefinition.builder()
-                    .attributeName("name")
-                    .attributeType(ScalarAttributeType.S)
-                    .build())
-            .keySchema(
-                KeySchemaElement.builder().attributeName("name").keyType(KeyType.HASH).build())
-            .billingMode(BillingMode.PAY_PER_REQUEST)
-            .build());
+    dbClient
+        .createTable(
+            CreateTableRequest.builder()
+                .tableName(CHANNELS_TABLE)
+                .attributeDefinitions(
+                    AttributeDefinition.builder()
+                        .attributeName("name")
+                        .attributeType(ScalarAttributeType.S)
+                        .build())
+                .keySchema(
+                    KeySchemaElement.builder().attributeName("name").keyType(KeyType.HASH).build())
+                .billingMode(BillingMode.PAY_PER_REQUEST)
+                .build())
+        .join();
   }
 
   private void createMembersTable() {
-    dbClient.createTable(
-        CreateTableRequest.builder()
-            .tableName(MEMBERS_TABLE)
-            .attributeDefinitions(
-                AttributeDefinition.builder()
-                    .attributeName("channelName")
-                    .attributeType(ScalarAttributeType.S)
-                    .build(),
-                AttributeDefinition.builder()
-                    .attributeName("id")
-                    .attributeType(ScalarAttributeType.S)
-                    .build())
-            .keySchema(
-                KeySchemaElement.builder()
-                    .attributeName("channelName")
-                    .keyType(KeyType.HASH)
-                    .build(),
-                KeySchemaElement.builder().attributeName("id").keyType(KeyType.RANGE).build())
-            .billingMode(BillingMode.PAY_PER_REQUEST)
-            .build());
+    dbClient
+        .createTable(
+            CreateTableRequest.builder()
+                .tableName(MEMBERS_TABLE)
+                .attributeDefinitions(
+                    AttributeDefinition.builder()
+                        .attributeName("channelName")
+                        .attributeType(ScalarAttributeType.S)
+                        .build(),
+                    AttributeDefinition.builder()
+                        .attributeName("id")
+                        .attributeType(ScalarAttributeType.S)
+                        .build())
+                .keySchema(
+                    KeySchemaElement.builder()
+                        .attributeName("channelName")
+                        .keyType(KeyType.HASH)
+                        .build(),
+                    KeySchemaElement.builder().attributeName("id").keyType(KeyType.RANGE).build())
+                .billingMode(BillingMode.PAY_PER_REQUEST)
+                .build())
+        .join();
   }
 
   private void createConnectionsTable() {
-    dbClient.createTable(
-        CreateTableRequest.builder()
-            .tableName(CONNECTIONS_TABLE)
-            .attributeDefinitions(
-                AttributeDefinition.builder()
-                    .attributeName("connector")
-                    .attributeType(ScalarAttributeType.S)
-                    .build(),
-                AttributeDefinition.builder()
-                    .attributeName("rawId")
-                    .attributeType(ScalarAttributeType.S)
-                    .build())
-            .keySchema(
-                KeySchemaElement.builder().attributeName("connector").keyType(KeyType.HASH).build(),
-                KeySchemaElement.builder().attributeName("rawId").keyType(KeyType.RANGE).build())
-            .billingMode(BillingMode.PAY_PER_REQUEST)
-            .build());
+    dbClient
+        .createTable(
+            CreateTableRequest.builder()
+                .tableName(CONNECTIONS_TABLE)
+                .attributeDefinitions(
+                    AttributeDefinition.builder()
+                        .attributeName("connector")
+                        .attributeType(ScalarAttributeType.S)
+                        .build(),
+                    AttributeDefinition.builder()
+                        .attributeName("rawId")
+                        .attributeType(ScalarAttributeType.S)
+                        .build())
+                .keySchema(
+                    KeySchemaElement.builder()
+                        .attributeName("connector")
+                        .keyType(KeyType.HASH)
+                        .build(),
+                    KeySchemaElement.builder()
+                        .attributeName("rawId")
+                        .keyType(KeyType.RANGE)
+                        .build())
+                .billingMode(BillingMode.PAY_PER_REQUEST)
+                .build())
+        .join();
   }
 }

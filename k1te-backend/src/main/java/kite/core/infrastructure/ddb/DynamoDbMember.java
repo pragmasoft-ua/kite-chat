@@ -8,15 +8,15 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnor
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
 @DynamoDbBean
-class DynamoDbMember implements Keyed {
+public class DynamoDbMember implements Keyed {
 
   private String name;
 
-  DynamoDbMember() {
+  public DynamoDbMember() {
     super();
   }
 
-  DynamoDbMember(Member member) {
+  public DynamoDbMember(Member member) {
     super();
   }
 

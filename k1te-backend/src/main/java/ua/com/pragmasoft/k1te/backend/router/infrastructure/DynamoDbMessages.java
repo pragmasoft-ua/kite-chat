@@ -3,11 +3,8 @@ package ua.com.pragmasoft.k1te.backend.router.infrastructure;
 
 import java.time.Instant;
 import java.util.*;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.enhanced.dynamodb.*;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import ua.com.pragmasoft.k1te.backend.router.domain.*;
@@ -27,14 +24,14 @@ public class DynamoDbMessages implements Messages {
   private final Channels channels;
 
   private final String messagesTableName;
-  private final DynamoDbEnhancedClient enhancedDynamo;
-  private final DynamoDbClient dynamoDbClient;
-  private final DynamoDbTable<DynamoDbHistoryMessage> messageTable;
+  private final DynamoDbEnhancedAsyncClient enhancedDynamo;
+  private final DynamoDbAsyncClient dynamoDbClient;
+  private final DynamoDbAsyncTable<DynamoDbHistoryMessage> messageTable;
 
   public DynamoDbMessages(
       Channels channels,
-      DynamoDbEnhancedClient enhancedDynamo,
-      DynamoDbClient dynamoDbClient,
+      DynamoDbEnhancedAsyncClient enhancedDynamo,
+      DynamoDbAsyncClient dynamoDbClient,
       String serverlessEnvironmentName) {
     this.channels = channels;
     this.dynamoDbClient = dynamoDbClient;
@@ -58,7 +55,7 @@ public class DynamoDbMessages implements Messages {
 
     DynamoDbHistoryMessage dbMessage = new DynamoDbHistoryMessage(id, messageId, content, time);
     try {
-      this.messageTable.putItem(dbMessage);
+      this.messageTable.putItem(dbMessage).join();
       return dbMessage;
     } catch (Exception e) {
       throw new KiteException(e.getMessage(), e);
@@ -70,7 +67,7 @@ public class DynamoDbMessages implements Messages {
     String id = DynamoDbHistoryMessage.buildId(member.getChannelName(), member.getId());
     Key messageKey = Key.builder().partitionValue(id).sortValue(messageId).build();
 
-    DynamoDbHistoryMessage message = this.messageTable.getItem(messageKey);
+    DynamoDbHistoryMessage message = this.messageTable.getItem(messageKey).join();
     if (message == null) throw new NotFoundException("History Message Not Found");
 
     return message;
@@ -139,6 +136,7 @@ public class DynamoDbMessages implements Messages {
                 .scanIndexForward(false)
                 .limit(limit)
                 .build())
+        .join()
         .items()
         .stream()
         .map(this::buildMessage)

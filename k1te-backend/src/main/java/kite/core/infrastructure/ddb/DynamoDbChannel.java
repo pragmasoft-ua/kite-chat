@@ -12,7 +12,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnor
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
 @DynamoDbBean
-class DynamoDbChannel implements Keyed {
+public class DynamoDbChannel implements Keyed {
 
   private String name;
   private String hostId;
@@ -20,11 +20,11 @@ class DynamoDbChannel implements Keyed {
   private String chatBot;
   private String peerMember;
 
-  DynamoDbChannel() {
+  public DynamoDbChannel() {
     super();
   }
 
-  DynamoDbChannel(Channel channel) {
+  public DynamoDbChannel(Channel channel) {
     super();
     this.name = channel.name();
     this.hostId = channel.hostId();

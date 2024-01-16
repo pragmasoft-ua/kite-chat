@@ -4,7 +4,7 @@ phases:
   build:
     on-failure: ABORT
     commands:
-      - ./mvnw -pl k1te-serverless -am install -Dnative -Dquarkus.native.native-image-xmx=1700m -DskipTests
+      - ./mvnw -pl k1te-serverless -am install -Dnative -DskipTests
 artifacts:
   files:
     - k1te-serverless/target/function.zip

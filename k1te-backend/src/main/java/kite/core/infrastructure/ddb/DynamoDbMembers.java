@@ -9,21 +9,21 @@ import kite.core.domain.Members;
 import kite.core.domain.Route;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 
 class DynamoDbMembers implements Members, Connections {
 
   private static final Logger log = LoggerFactory.getLogger(DynamoDbMembers.class);
 
-  private final DynamoDbEnhancedClient enhancedDynamo;
-  private final DynamoDbTable<DynamoDbMember> membersTable;
-  private final DynamoDbTable<DynamoDbConnection> connectionsTable;
+  private final DynamoDbEnhancedAsyncClient enhancedDynamo;
+  private final DynamoDbAsyncTable<DynamoDbMember> membersTable;
+  private final DynamoDbAsyncTable<DynamoDbConnection> connectionsTable;
 
   public DynamoDbMembers(
-      DynamoDbEnhancedClient enhancedDynamo,
-      DynamoDbTable<DynamoDbMember> membersTable,
-      DynamoDbTable<DynamoDbConnection> connectionsTable) {
+      DynamoDbEnhancedAsyncClient enhancedDynamo,
+      DynamoDbAsyncTable<DynamoDbMember> membersTable,
+      DynamoDbAsyncTable<DynamoDbConnection> connectionsTable) {
     this.enhancedDynamo = enhancedDynamo;
     this.membersTable = membersTable;
     this.connectionsTable = connectionsTable;

@@ -67,6 +67,7 @@ export class CiCdCodebuild extends Construct {
       role,
       gitRepositoryUrl,
       s3BucketName: s3SourceBucket.bucket,
+      computeType: "BUILD_GENERAL1_LARGE",
       image: "quay.io/quarkus/ubi-quarkus-graalvmce-builder-image:jdk-21",
       buildspec: `${BUILDSPEC_BASE_PATH}/build-and-deploy-buildspec.yml`,
       description:
