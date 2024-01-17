@@ -88,7 +88,7 @@ public class RoutingService {
   public Optional<Payload> fromChannel(ChannelConnection c, RouteMessage request) {
     Channel channel = this.channels.get(c.channelName());
     if (null == channel) {
-      throw new NotFoundException("Channel not found");
+      throw new NotFoundException("Channel not found: " + c.channelName());
     }
     Id memberId =
         request
