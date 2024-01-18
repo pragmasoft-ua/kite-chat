@@ -1,0 +1,28 @@
+{
+  "update_id": 377522045,
+  "message": {
+    "message_id": 763,
+    "from": {
+      "id": 583362898,
+      "is_bot": false,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": 583362898,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "type": "private"
+    },
+    "date": 1705567647,
+    "document": {
+      "file_name": "function.zip",
+      "mime_type": "application/zip",
+      "file_id": "BQACAgIAAxkBAAIDE2Wo5Z6YmYarahl6FwLEgnWE4bWOAALAPwAClNlJSSECdSQMebqnNAQ",
+      "file_unique_id": "AgADwD8AApTZSUk",
+      "file_size": 29724836
+    },
+    "caption": "Some text here!"
+  }
+}

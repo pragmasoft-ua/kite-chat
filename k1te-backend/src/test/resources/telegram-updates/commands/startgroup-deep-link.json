@@ -1,0 +1,28 @@
+{
+  "update_id": 377522037,
+  "message": {
+    "message_id": 781,
+    "from": {
+      "id": 583362898,
+      "is_bot": false,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": 583362898,
+      "title": "test",
+      "type": "group",
+      "all_members_are_administrators": true
+    },
+    "date": 1705499331,
+    "text": "/start@Kite_chat_bot join__pragmasoft__8ZlAlWeVaf",
+    "entities": [
+      {
+        "offset": 0,
+        "length": 20,
+        "type": "bot_command"
+      }
+    ]
+  }
+}

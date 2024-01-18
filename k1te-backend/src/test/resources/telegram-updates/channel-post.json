@@ -1,0 +1,20 @@
+{
+  "update_id": 377521998,
+  "channel_post": {
+    "message_id": 2,
+    "sender_chat": {
+      "id": -1002068145439,
+      "title": "test-c",
+      "username": "k1techat",
+      "type": "channel"
+    },
+    "chat": {
+      "id": -1002068145439,
+      "title": "test-c",
+      "username": "k1techat",
+      "type": "channel"
+    },
+    "date": 1705499044,
+    "text": "new channel Post"
+  }
+}

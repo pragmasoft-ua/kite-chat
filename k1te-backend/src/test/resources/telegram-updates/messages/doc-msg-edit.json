@@ -1,0 +1,28 @@
+{
+  "update_id": 377522041,
+  "edited_message": {
+    "message_id": 763,
+    "from": {
+      "id": 583362898,
+      "is_bot": false,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": 583362898,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "type": "private"
+    },
+    "date": 1705567219,
+    "edit_date": 1705567344,
+    "document": {
+      "file_name": "file.pdf",
+      "mime_type": "application/pdf",
+      "file_id": "BQACAgIAAxkBAAIDD2Wo5HBxpekpacpJMyFBo7AQ9NVjAAKnPwAClNlJSXr8YTdQLVh7NAQ",
+      "file_unique_id": "AgADpz8AApTZSUk",
+      "file_size": 9114637
+    }
+  }
+}

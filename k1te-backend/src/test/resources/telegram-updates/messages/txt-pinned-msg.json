@@ -1,0 +1,39 @@
+{
+  "update_id": 377521992,
+  "message": {
+    "message_id": 765,
+    "from": {
+      "id": 583362898,
+      "is_bot": false,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": 583362898,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "type": "private"
+    },
+    "date": 1705498793,
+    "pinned_message": {
+      "message_id": 761,
+      "from": {
+        "id": 583362898,
+        "is_bot": false,
+        "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+        "username": "Shmerterling",
+        "language_code": "en"
+      },
+      "chat": {
+        "id": 583362898,
+        "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+        "username": "Shmerterling",
+        "type": "private"
+      },
+      "date": 1705498510,
+      "edit_date": 1705498726,
+      "text": "Hello!"
+    }
+  }
+}

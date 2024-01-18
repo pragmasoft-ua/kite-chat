@@ -1,0 +1,52 @@
+{
+  "update_id": 377522048,
+  "message": {
+    "message_id": 793,
+    "from": {
+      "id": 583362898,
+      "is_bot": false,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": 583362898,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "type": "private"
+    },
+    "date": 1705568302,
+    "reply_to_message": {
+      "message_id": 790,
+      "from": {
+        "id": 6755751567,
+        "is_bot": true,
+        "first_name": "kite-bot-new",
+        "username": "Kite_chat_bot"
+      },
+      "chat": {
+        "id": 583362898,
+        "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+        "username": "Shmerterling",
+        "type": "private"
+      },
+      "date": 1705568111,
+      "document": {
+        "file_name": "function.zip",
+        "mime_type": "application/zip",
+        "file_id": "BQACAgIAAxkDAAIDFmWo5298hqIebXbbKYca3I87AAEb6QACwD8AApTZSUkhAnUkDHm6pzQE",
+        "file_unique_id": "AgADwD8AApTZSUk",
+        "file_size": 29724836
+      },
+      "caption": "#1Z23lWeC memberName\nHello!",
+      "caption_entities": [
+        {
+          "offset": 0,
+          "length": 9,
+          "type": "hashtag"
+        }
+      ]
+    },
+    "text": "Hi, I'm Host!"
+  }
+}

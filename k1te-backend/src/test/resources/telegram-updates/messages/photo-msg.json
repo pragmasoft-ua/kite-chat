@@ -1,0 +1,49 @@
+{"update_id":377521989,
+  "message": {
+    "message_id": 763,
+    "from": {
+      "id": 583362898,
+      "is_bot": false,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": 583362898,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "type": "private"
+    },
+    "date": 1705567177,
+    "photo": [
+      {
+        "file_id": "AgACAgIAAxkBAAIC_GWn1_QGtw8AAdVJlQPsBT9zfnokBgACftgxG8MOOUnDUrChVHByAQEAAwIAA3MAAzQE",
+        "file_unique_id": "AQADftgxG8MOOUl4",
+        "file_size": 1217,
+        "width": 90,
+        "height": 60
+      },
+      {
+        "file_id": "AgACAgIAAxkBAAIC_GWn1_QGtw8AAdVJlQPsBT9zfnokBgACftgxG8MOOUnDUrChVHByAQEAAwIAA20AAzQE",
+        "file_unique_id": "AQADftgxG8MOOUly",
+        "file_size": 13792,
+        "width": 320,
+        "height": 214
+      },
+      {
+        "file_id": "AgACAgIAAxkBAAIC_GWn1_QGtw8AAdVJlQPsBT9zfnokBgACftgxG8MOOUnDUrChVHByAQEAAwIAA3gAAzQE",
+        "file_unique_id": "AQADftgxG8MOOUl9",
+        "file_size": 65412,
+        "width": 800,
+        "height": 534
+      },
+      {
+        "file_id": "AgACAgIAAxkBAAIC_GWn1_QGtw8AAdVJlQPsBT9zfnokBgACftgxG8MOOUnDUrChVHByAQEAAwIAA3kAAzQE",
+        "file_unique_id": "AQADftgxG8MOOUl-",
+        "file_size": 86299,
+        "width": 1024,
+        "height": 683
+      }
+    ]
+  }
+}

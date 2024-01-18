@@ -1,0 +1,68 @@
+{
+  "update_id": 377522042,
+  "message": {
+    "message_id": 784,
+    "from": {
+      "id": 583362898,
+      "is_bot": false,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": 583362898,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "type": "private"
+    },
+    "date": 1705567177,
+    "pinned_message": {
+      "message_id": 782,
+      "from": {
+        "id": 583362898,
+        "is_bot": false,
+        "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+        "username": "Shmerterling",
+        "language_code": "en"
+      },
+      "chat": {
+        "id": 583362898,
+        "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+        "username": "Shmerterling",
+        "type": "private"
+      },
+      "date": 1705567177,
+      "edit_date": 1705567251,
+      "photo": [
+        {
+          "file_id": "AgACAgIAAxkBAAIDDmWo5BO_pCwLwycJgoC1WKIZnmksAAIezjEblNlJSUxTPUlgFLiFAQADAgADcwADNAQ",
+          "file_unique_id": "AQADHs4xG5TZSUl4",
+          "file_size": 1268,
+          "width": 90,
+          "height": 60
+        },
+        {
+          "file_id": "AgACAgIAAxkBAAIDDmWo5BO_pCwLwycJgoC1WKIZnmksAAIezjEblNlJSUxTPUlgFLiFAQADAgADbQADNAQ",
+          "file_unique_id": "AQADHs4xG5TZSUly",
+          "file_size": 15669,
+          "width": 320,
+          "height": 214
+        },
+        {
+          "file_id": "AgACAgIAAxkBAAIDDmWo5BO_pCwLwycJgoC1WKIZnmksAAIezjEblNlJSUxTPUlgFLiFAQADAgADeAADNAQ",
+          "file_unique_id": "AQADHs4xG5TZSUl9",
+          "file_size": 72548,
+          "width": 800,
+          "height": 534
+        },
+        {
+          "file_id": "AgACAgIAAxkBAAIDDmWo5BO_pCwLwycJgoC1WKIZnmksAAIezjEblNlJSUxTPUlgFLiFAQADAgADeQADNAQ",
+          "file_unique_id": "AQADHs4xG5TZSUl-",
+          "file_size": 98686,
+          "width": 1024,
+          "height": 683
+        }
+      ]
+    }
+  }
+}

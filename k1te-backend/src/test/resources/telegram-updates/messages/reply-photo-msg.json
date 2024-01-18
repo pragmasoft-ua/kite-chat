@@ -1,0 +1,75 @@
+{
+  "update_id": 377522049,
+  "message": {
+    "message_id": 794,
+    "from": {
+      "id": 583362898,
+      "is_bot": false,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": 583362898,
+      "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "username": "Shmerterling",
+      "type": "private"
+    },
+    "date": 1705568349,
+    "reply_to_message": {
+      "message_id": 791,
+      "from": {
+        "id": 6755751567,
+        "is_bot": true,
+        "first_name": "kite-bot-new",
+        "username": "Kite_chat_bot"
+      },
+      "chat": {
+        "id": 583362898,
+        "first_name": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+        "username": "Shmerterling",
+        "type": "private"
+      },
+      "date": 1705568164,
+      "photo": [
+        {
+          "file_id": "AgACAgIAAxkDAAIDF2Wo56S5NqYEszahUPtdLiO178z9AAIczjEblNlJSWFFCxVex7mpAQADAgADcwADNAQ",
+          "file_unique_id": "AQADHM4xG5TZSUl4",
+          "file_size": 1217,
+          "width": 90,
+          "height": 60
+        },
+        {
+          "file_id": "AgACAgIAAxkDAAIDF2Wo56S5NqYEszahUPtdLiO178z9AAIczjEblNlJSWFFCxVex7mpAQADAgADbQADNAQ",
+          "file_unique_id": "AQADHM4xG5TZSUly",
+          "file_size": 13792,
+          "width": 320,
+          "height": 214
+        },
+        {
+          "file_id": "AgACAgIAAxkDAAIDF2Wo56S5NqYEszahUPtdLiO178z9AAIczjEblNlJSWFFCxVex7mpAQADAgADeAADNAQ",
+          "file_unique_id": "AQADHM4xG5TZSUl9",
+          "file_size": 65412,
+          "width": 800,
+          "height": 534
+        },
+        {
+          "file_id": "AgACAgIAAxkDAAIDF2Wo56S5NqYEszahUPtdLiO178z9AAIczjEblNlJSWFFCxVex7mpAQADAgADeQADNAQ",
+          "file_unique_id": "AQADHM4xG5TZSUl-",
+          "file_size": 86299,
+          "width": 1024,
+          "height": 683
+        }
+      ],
+      "caption": "#8AlAlWeKell memberName\nHello!",
+      "caption_entities": [
+        {
+          "offset": 0,
+          "length": 12,
+          "type": "hashtag"
+        }
+      ]
+    },
+    "text": "Hi, I'm Host!"
+  }
+}
