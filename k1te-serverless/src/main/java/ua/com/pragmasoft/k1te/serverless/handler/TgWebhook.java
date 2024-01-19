@@ -32,9 +32,9 @@ public class TgWebhook implements RequestHandler<APIGatewayV2HTTPEvent, APIGatew
   @Override
   public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent input, Context context) {
     String responseBody = null;
-    String token = input.getHeaders().get("X-Telegram-Bot-Api-Secret-Token");
+    String token = input.getHeaders().get("x-telegram-bot-api-secret-token");
     if (token == null || !token.equals(securityToken)) {
-      Log.error("Security token is invalid: " + securityToken);
+      Log.error("Security token is invalid: " + token);
       responseBody = "OK";
     } else {
       final var requestBody = input.getBody();
