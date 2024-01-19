@@ -34,7 +34,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class MemberServiceTest extends KiteCoreBaseServiceTest {
+class MemberServiceTest extends BaseServiceTest {
 
   private static final Info INFO = defaultInfoCommand();
   private static final HostChannel HOST = defaultHostCommand();

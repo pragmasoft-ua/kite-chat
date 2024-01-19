@@ -32,7 +32,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class RoutingServiceTest extends KiteCoreBaseServiceTest {
+class RoutingServiceTest extends BaseServiceTest {
 
   private static final SendTextRecord TEXT_PAYLOAD = textMessagePayload();
 

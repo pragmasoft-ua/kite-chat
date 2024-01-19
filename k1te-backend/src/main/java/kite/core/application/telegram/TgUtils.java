@@ -109,7 +109,7 @@ final class TgUtils {
     return false;
   }
 
-  static String hashtag(MessageEntity[] entities, String from) {
+  private static String hashtag(MessageEntity[] entities, String from) {
     for (MessageEntity entity : entities) {
       if (entity.type() == Type.hashtag) {
         int offset = entity.offset() + 1;

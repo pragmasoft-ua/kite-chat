@@ -7,7 +7,7 @@ import java.util.Set;
 import kite.core.domain.Connection.ChannelConnection;
 import kite.core.domain.Connection.MemberConnection;
 
-class KiteCoreBaseServiceTest {
+class BaseServiceTest {
   protected static final String CHANNEL_NAME = "k1te_test";
   protected static final Route CHANNEL_ORIGIN = Route.of("tg:channelId");
   protected static final String HOST_ID = "hostId";

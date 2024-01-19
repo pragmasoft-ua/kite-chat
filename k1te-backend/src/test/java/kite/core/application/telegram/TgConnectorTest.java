@@ -1,6 +1,8 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2024 */
 package kite.core.application.telegram;
 
+import static kite.core.domain.payload.SendText.Mode.*;
+import static kite.core.domain.payload.SendText.Mode.NEW;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,22 +21,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
-import java.time.Instant;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 import kite.core.domain.MemberService;
-import kite.core.domain.Route;
 import kite.core.domain.RoutingProvider;
 import kite.core.domain.RoutingService;
 import kite.core.domain.command.Command.ExecuteCommand;
 import kite.core.domain.command.Command.RouteMessage;
 import kite.core.domain.exception.NotFoundException;
 import kite.core.domain.exception.RoutingException;
-import kite.core.domain.payload.Notification;
+import kite.core.domain.payload.MessagePayload;
 import kite.core.domain.payload.SendText.Mode;
-import kite.core.domain.payload.SendTextRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,13 +44,10 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class TgConnectorTest {
+class TgConnectorTest extends TelegramBaseTest {
 
+  private static final String OK = "OK";
   private static final Locale EN_LOCALE = Locale.forLanguageTag("en");
-  private static final String FROM_ID = "9nbhoy";
-  private static final Route CHAT_ID = Route.of("tg:" + FROM_ID);
-  private static final Long ORIG_CHAT_ID = 583362898L;
-
   private static final String UPDATES_PATH = "telegram-updates";
   private static final String COMMANDS_PATH = "commands";
   private static final String MESSAGES_PATH = "messages";
@@ -59,7 +55,7 @@ class TgConnectorTest {
   @Mock private TelegramBot telegramBot;
   @Mock private MemberService memberService;
   @Mock private RoutingService routingService;
-  @Spy private URI base = URI.create("https://kite.chat.com");
+  @Spy private URI base = BASE_URI;
   @InjectMocks private TgConnector tgConnector;
   @Captor private ArgumentCaptor<ExecuteCommand> commandCaptor;
   @Captor private ArgumentCaptor<RouteMessage> routeMessageCaptor;
@@ -123,7 +119,7 @@ class TgConnectorTest {
 
     String response = this.tgConnector.onUpdate(update);
 
-    assertEquals("OK", response);
+    assertEquals(OK, response);
   }
 
   public static Stream<Arguments> commandSource() {
@@ -149,7 +145,7 @@ class TgConnectorTest {
 
     String response = this.tgConnector.onUpdate(getUpdate(COMMANDS_PATH + "/" + path));
 
-    assertEquals("OK", response);
+    assertEquals(OK, response);
     verify(memberService, times(1)).executeCommand(commandCaptor.capture());
     assertThat(commandCaptor.getValue())
         .hasFieldOrPropertyWithValue("memberId", FROM_ID)
@@ -161,8 +157,7 @@ class TgConnectorTest {
 
   public static Stream<Arguments> textMessageSource() {
     return Stream.of(
-        Arguments.of("txt-msg", "hello!", Mode.NEW),
-        Arguments.of("txt-msg-edit", "Hello!", Mode.EDITED));
+        Arguments.of("txt-msg", "hello!", NEW), Arguments.of("txt-msg-edit", "Hello!", EDITED));
   }
 
   @ParameterizedTest(
@@ -177,7 +172,7 @@ class TgConnectorTest {
 
     String response = this.tgConnector.onUpdate(getUpdate(MESSAGES_PATH + "/" + path));
 
-    assertEquals("OK", response);
+    assertEquals(OK, response);
     verify(routingService, times(1)).fromRoute(routeMessageCaptor.capture());
     assertThat(routeMessageCaptor.getValue())
         .hasFieldOrPropertyWithValue("memberId", FROM_ID)
@@ -186,37 +181,19 @@ class TgConnectorTest {
         .extracting("payload", type(TgSendText.class))
         .hasFieldOrPropertyWithValue("text", text)
         .hasFieldOrPropertyWithValue("mode", mode)
+        .hasFieldOrPropertyWithValue("messageId", MESSAGE_ID)
         .hasFieldOrPropertyWithValue("origChatId", ORIG_CHAT_ID)
-        .hasFieldOrPropertyWithValue("origMessageId", 761);
+        .hasFieldOrPropertyWithValue("origMessageId", ORIGIN_MESSAGE_ID);
   }
 
   public static Stream<Arguments> binaryMessageSource() {
     return Stream.of(
-        Arguments.of("doc-msg", "function.zip", "application/zip", 29724836L, Mode.NEW, null),
-        Arguments.of("doc-msg-edit", "file.pdf", "application/pdf", 9114637L, Mode.EDITED, null),
-        Arguments.of(
-            "doc-with-caption",
-            "function.zip",
-            "application/zip",
-            29724836L,
-            Mode.NEW,
-            "Some text here!"),
-        Arguments.of(
-            "photo-msg", "Алексей-2024-01-18T08:39:37Z.jpg", "image/jpeg", 86299L, Mode.NEW, null),
-        Arguments.of(
-            "photo-msg-edit",
-            "Алексей-2024-01-18T08:39:37Z.jpg",
-            "image/jpeg",
-            98686L,
-            Mode.EDITED,
-            null),
-        Arguments.of(
-            "photo-with-caption",
-            "Алексей-2024-01-18T08:39:37Z.jpg",
-            "image/jpeg",
-            86299L,
-            Mode.NEW,
-            "Some text here!"));
+        Arguments.of("doc-msg", DOCUMENT_NAME, DOCUMENT_TYPE, DOCUMENT_SIZE, NEW, null),
+        Arguments.of("doc-msg-edit", "file.pdf", "application/pdf", 9114637L, EDITED, null),
+        Arguments.of("doc-caption", DOCUMENT_NAME, DOCUMENT_TYPE, DOCUMENT_SIZE, NEW, TEXT),
+        Arguments.of("photo-msg", IMAGE_NAME, IMAGE_TYPE, IMAGE_SIZE, NEW, null),
+        Arguments.of("photo-msg-edit", IMAGE_NAME, IMAGE_TYPE, 98686L, EDITED, null),
+        Arguments.of("photo-caption", IMAGE_NAME, IMAGE_TYPE, IMAGE_SIZE, NEW, TEXT));
   }
 
   @ParameterizedTest
@@ -230,7 +207,7 @@ class TgConnectorTest {
 
     String response = this.tgConnector.onUpdate(getUpdate(MESSAGES_PATH + "/" + path));
 
-    assertEquals("OK", response);
+    assertEquals(OK, response);
     verify(routingService, times(1)).fromRoute(routeMessageCaptor.capture());
     assertThat(routeMessageCaptor.getValue())
         .hasFieldOrPropertyWithValue("memberId", FROM_ID)
@@ -243,7 +220,7 @@ class TgConnectorTest {
         .hasFieldOrPropertyWithValue("mode", mode)
         .hasFieldOrPropertyWithValue("text", caption)
         .hasFieldOrPropertyWithValue("origChatId", ORIG_CHAT_ID)
-        .hasFieldOrPropertyWithValue("origMessageId", 763);
+        .hasFieldOrPropertyWithValue("origMessageId", ORIGIN_MESSAGE_ID);
   }
 
   @Test
@@ -251,7 +228,7 @@ class TgConnectorTest {
   void should_return_empty_command_on_channel_post_update() {
     String response = this.tgConnector.onUpdate(getUpdate("channel-post"));
 
-    assertEquals("OK", response);
+    assertEquals(OK, response);
     verify(routingService, never()).fromRoute(any());
     verify(memberService, never()).executeCommand(any());
   }
@@ -261,7 +238,7 @@ class TgConnectorTest {
   void should_return_empty_command_on_edit_channel_post_update() {
     String response = this.tgConnector.onUpdate(getUpdate("channel-post-edit"));
 
-    assertEquals("OK", response);
+    assertEquals(OK, response);
     verify(routingService, never()).fromRoute(any());
     verify(memberService, never()).executeCommand(any());
   }
@@ -273,7 +250,7 @@ class TgConnectorTest {
 
     String response = this.tgConnector.onUpdate(getUpdate("bot-kicked-from-channel"));
 
-    assertThat(response).isEqualTo("OK");
+    assertThat(response).isEqualTo(OK);
     verify(memberService, times(1)).executeCommand(commandCaptor.capture());
     assertThat(commandCaptor.getValue()).hasFieldOrPropertyWithValue("command", "/drop");
     // TODO: 18.01.2024 check origin and memberId but currently memberId is botId
@@ -292,7 +269,7 @@ class TgConnectorTest {
   void should_delete_pinned_message_on_pinned_message_update(String path) {
     String response = this.tgConnector.onUpdate(getUpdate(MESSAGES_PATH + "/" + path));
 
-    assertThat(response).isEqualTo("OK");
+    assertThat(response).isEqualTo(OK);
     verify(telegramBot, times(1)).execute(any(DeleteMessage.class));
   }
 
@@ -312,7 +289,7 @@ class TgConnectorTest {
 
     String response = this.tgConnector.onUpdate(getUpdate(MESSAGES_PATH + "/" + path));
 
-    assertThat(response).isEqualTo("OK");
+    assertThat(response).isEqualTo(OK);
     verify(routingService, times(1)).fromRoute(routeMessageCaptor.capture());
     assertThat(routeMessageCaptor.getValue())
         .hasFieldOrPropertyWithValue("toMember", Optional.of(toMemberId));
@@ -321,14 +298,13 @@ class TgConnectorTest {
   @Test
   @DisplayName("Should return Webhook response onUpdate() if service returns Payload")
   void should_return_webhook_response_on_update_if_service_returns_payload() {
-    String text = "You created channel with name k1te_test";
-    doReturn(Optional.of(Notification.info(text)))
+    doReturn(Optional.of(NOTIFICATION))
         .when(memberService)
         .executeCommand(any(ExecuteCommand.class));
 
     String response = this.tgConnector.onUpdate(getUpdate(COMMANDS_PATH + "/" + "host"));
 
-    assertThat(response).contains(ORIG_CHAT_ID.toString()).contains(text);
+    assertThat(response).contains(ORIG_CHAT_ID.toString()).contains(NOTIFICATION.text());
   }
 
   @Test
@@ -347,14 +323,13 @@ class TgConnectorTest {
   @Test
   @DisplayName("Should throw RoutingException on send() if response status is not OK")
   void should_throw_routing_exception_on_send_method_if_request_not_sent() {
-    Notification notification = Notification.info("OK");
     String description = "Some error";
     doReturn(tgResponse).when(telegramBot).execute(any());
     doReturn(false).when(tgResponse).isOk();
     doReturn(description).when(tgResponse).description();
 
     RoutingException routingException =
-        assertThrows(RoutingException.class, () -> this.tgConnector.send(CHAT_ID, notification));
+        assertThrows(RoutingException.class, () -> this.tgConnector.send(CHAT_ID, NOTIFICATION));
 
     assertThat(routingException).hasMessageContaining(description);
     verify(telegramBot, times(1)).execute(any());
@@ -366,38 +341,45 @@ class TgConnectorTest {
     doReturn(tgResponse).when(telegramBot).execute(any());
     doReturn(true).when(tgResponse).isOk();
 
-    var response = this.tgConnector.send(CHAT_ID, Notification.info("OK"));
+    var response = this.tgConnector.send(CHAT_ID, NOTIFICATION);
 
     assertThat(response).isEmpty();
     verify(telegramBot, times(1)).execute(any());
   }
 
-  @Test
+  public static Stream<Arguments> messagePayloadSource() {
+    return Stream.of(
+        Arguments.of(TG_SEND_TEXT),
+        Arguments.of(TG_SEND_BINARY),
+        Arguments.of(NEW_SEND_DOCUMENT),
+        Arguments.of(EDIT_SEND_TEXT),
+        Arguments.of(NEW_SEND_PHOTO));
+  }
+
+  @ParameterizedTest
   @DisplayName("Should return TgAckRecord response on send() if request is MessagePayload")
-  void should_return_tgAck_response_on_send_if_request_in_message_payload() {
+  @MethodSource("messagePayloadSource")
+  void should_return_tgAck_response_on_send_if_request_in_message_payload(
+      MessagePayload messagePayload) {
     SendResponse tgResponse = mock(SendResponse.class);
     Message message = mock(Message.class);
-    String incomingId = "messageId";
-    Integer messageId = 781;
-    int time = 1705567177;
 
     doReturn(tgResponse).when(telegramBot).execute(any());
     doReturn(true).when(tgResponse).isOk();
     doReturn(message).when(tgResponse).message();
-    doReturn(messageId).when(message).messageId();
-    doReturn(time).when(message).date();
+    doReturn(ORIGIN_MESSAGE_ID).when(message).messageId();
+    doReturn(TIME).when(message).date();
 
-    var textMessage = new SendTextRecord("Hello!", incomingId, Mode.NEW, Instant.now());
-    var response = this.tgConnector.send(CHAT_ID, textMessage);
+    var response = this.tgConnector.send(CHAT_ID, messagePayload);
 
     assertThat(response)
         .isPresent()
         .get()
         .asInstanceOf(type(TgAckRecord.class))
-        .hasFieldOrPropertyWithValue("overrideMessageId", "lp")
-        .hasFieldOrPropertyWithValue("messageId", incomingId)
-        .hasFieldOrPropertyWithValue("tgMessageId", messageId)
-        .hasFieldOrPropertyWithValue("timestamp", Instant.ofEpochSecond(time));
+        .hasFieldOrPropertyWithValue("overrideMessageId", MESSAGE_ID)
+        .hasFieldOrPropertyWithValue("messageId", MESSAGE_ID)
+        .hasFieldOrPropertyWithValue("tgMessageId", ORIGIN_MESSAGE_ID)
+        .hasFieldOrPropertyWithValue("timestamp", TIMESTAMP);
   }
 
   private static Update getUpdate(String name) {
