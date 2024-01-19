@@ -8,6 +8,7 @@ import { Architecture, Handler, Lambda, Runtime } from "./lambda";
 import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
 import { TerraformOutput } from "cdktf";
 import { TELEGRAM_ROUTE } from "./kite-stack";
+import assert = require("assert");
 
 export const MAIN_LAMBDA_NAME = "request-dispatcher";
 export const DEV_MAIN_LAMBDA_NAME = `dev-${MAIN_LAMBDA_NAME}`;
@@ -83,11 +84,21 @@ export class Stage extends Construct {
     this.wsApiStage = wsApi.addStage(stageProps);
     this.restApiStage = restApi.addStage(stageProps);
 
-    this.createMainLambda(mainLambdaName, isProd, mainLambdaProps);
-    this.createLifecycleLambda(lifecycleLambdaProps);
+    const secretToken = process.env.TELEGRAM_SECRET_TOKEN;
+    assert(
+      secretToken,
+      "TELEGRAM_SECRET_TOKEN should be specified in .env to use for TelegramWebHook",
+    );
+    this.createMainLambda(mainLambdaName, secretToken, isProd, mainLambdaProps);
+    this.createLifecycleLambda(secretToken, lifecycleLambdaProps);
   }
 
-  createMainLambda(name: string, isProd: boolean, props: MainLambdaProps) {
+  createMainLambda(
+    name: string,
+    token: string,
+    isProd: boolean,
+    props: MainLambdaProps,
+  ) {
     const { s3Bucket, s3Key, runtime, handler, architecture, memorySize } =
       props;
 
@@ -104,6 +115,7 @@ export class Stage extends Construct {
         TELEGRAM_WEBHOOK_ENDPOINT: `${this.restApiStage.invokeUrl}${TELEGRAM_ROUTE}`,
         BUCKET_NAME: this.objectStore.bucket.bucket,
         DISABLE_SIGNAL_HANDLERS: "true",
+        TELEGRAM_SECRET_TOKEN: token,
         QUARKUS_LOG_CATEGORY__UA_COM_PRAGMASOFT__LEVEL: isProd
           ? "INFO"
           : "DEBUG",
@@ -117,7 +129,7 @@ export class Stage extends Construct {
     this.wsApiStage.allowInvocation(lambdaFunction);
   }
 
-  createLifecycleLambda(props: LifecycleLambdaProps) {
+  createLifecycleLambda(token: string, props: LifecycleLambdaProps) {
     const { s3Bucket, s3Key } = props;
 
     const lifecycleHandler = new Lambda(
@@ -132,6 +144,12 @@ export class Stage extends Construct {
         environment: {
           TELEGRAM_BOT_TOKEN: this.telegramToken,
           TELEGRAM_WEBHOOK_ENDPOINT: `${this.restApiStage.invokeUrl}${TELEGRAM_ROUTE}`,
+          TELEGRAM_SECRET_TOKEN: token,
+          TELEGRAM_ALLOWED_UPDATES: JSON.stringify([
+            "message",
+            "edited_message",
+            "chat_member",
+          ]),
         },
         memorySize: 128,
         architecture: "arm64",

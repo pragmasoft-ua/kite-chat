@@ -1,4 +1,4 @@
-/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023-2024 */
 package ua.com.pragmasoft.k1te.server.tg.application;
 
 import com.pengrad.telegrambot.TelegramBot;
@@ -41,7 +41,8 @@ public class TelegramConfiguration {
       Channels channels,
       Messages messages,
       @ConfigProperty(name = "telegram.webhook.endpoint") final URI base,
-      @ConfigProperty(name = "ws.api.execution.endpoint") final URI wsApi) {
-    return new TelegramConnector(botClient, router, channels, messages, base, wsApi);
+      @ConfigProperty(name = "ws.api.execution.endpoint") final URI wsApi,
+      @ConfigProperty(name = "telegram.secret.token") String secretToken) {
+    return new TelegramConnector(botClient, router, channels, messages, base, wsApi, secretToken);
   }
 }
