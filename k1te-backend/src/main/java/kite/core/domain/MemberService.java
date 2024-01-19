@@ -127,7 +127,7 @@ public final class MemberService {
     String memberId = c.memberId();
     String[] args = c.args().split("__", 3);
     var locale = c.locale();
-    if (args.length > 0) {
+    if (args.length > 0 && !args[0].isEmpty()) {
       String subcommand = args[0].toLowerCase(locale);
       return switch (subcommand) {
         case "host" -> hostChannel(new HostChannel(origin, args[1], memberId, locale));
@@ -161,6 +161,9 @@ public final class MemberService {
             Notification.info(
                 "Messages for channel %s will be sent here from now on".formatted(channelName)));
       }
+      throw new ConflictException(
+          "You already have a channel with name %s that is bound to this chat"
+              .formatted(channelName));
     }
     channel =
         ChannelBuilder.builder()
@@ -195,6 +198,7 @@ public final class MemberService {
     Id memberId = command.memberId();
     String memberName = command.memberName();
     Member member = this.members.get(memberId);
+    // TODO: 16.01.2024 if member exists and has the same route
     if (null != member) {
       this.eventPublisher.publishEvent(new MemberConnected(memberId, origin));
       return Optional.empty();
@@ -205,10 +209,8 @@ public final class MemberService {
       throw new NotFoundException("Channel with name " + channelName + " does not exist");
     member = new Member(memberId, memberName, Set.of(origin));
     this.eventPublisher.publishEvent(new MemberCreated(member));
-    Objects.requireNonNull(channel, "Channel " + channelName);
     var notifyChannel =
-        Notification.info(
-            "%s joined channel %s".formatted(memberName, channelName).formatted(channelName));
+        Notification.info("%s joined channel %s".formatted(memberName, channelName));
     this.routingService.sendToRoute(channel.defaultRoute(), notifyChannel);
     return Optional.of(Notification.info("You joined channel " + channelName));
   }

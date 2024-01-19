@@ -16,6 +16,7 @@ import com.pengrad.telegrambot.response.SendResponse;
 import java.io.Closeable;
 import java.net.URI;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Optional;
@@ -147,12 +148,8 @@ public class TgConnector implements RoutingProvider, Closeable {
     Command command = null;
     if (null != update.message()) {
       command = message(update.message(), Mode.NEW);
-    } else if (null != update.channelPost()) {
-      command = message(update.channelPost(), Mode.NEW);
     } else if (null != update.editedMessage()) {
       command = message(update.editedMessage(), Mode.EDITED);
-    } else if (null != update.editedChannelPost()) {
-      command = message(update.editedChannelPost(), Mode.EDITED);
     } else if (null != update.myChatMember()) {
       command = botStatusChanged(update.myChatMember());
     }
@@ -309,7 +306,9 @@ public class TgConnector implements RoutingProvider, Closeable {
     var timestamp = Instant.ofEpochSecond(message.date());
     var photo = TgUtils.largestPhoto(message.photo());
     var caption = message.caption();
-    var fileName = Optional.ofNullable(caption).orElse(ContentTypes.PHOTO_FILE_NAME);
+    var fileName =
+        "%s-%tFT%<tTZ.jpg"
+            .formatted(TgUtils.userName(message.from()), timestamp.atOffset(ZoneOffset.UTC));
 
     return TgSendBinaryBuilder.builder()
         .bot(this.bot)

@@ -17,12 +17,10 @@ import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SendPhoto;
 import com.pengrad.telegrambot.response.BaseResponse;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import kite.core.domain.Route;
 import kite.core.domain.payload.DeleteMessage;
+import kite.core.domain.payload.Error;
 import kite.core.domain.payload.Notification;
 import kite.core.domain.payload.Payload;
 import kite.core.domain.payload.SendBinary;
@@ -111,16 +109,27 @@ final class TgUtils {
     return false;
   }
 
+  private static String hashtag(MessageEntity[] entities, String from) {
+    for (MessageEntity entity : entities) {
+      if (entity.type() == Type.hashtag) {
+        int offset = entity.offset() + 1;
+        int total = entity.length() + entity.offset();
+        return from.substring(offset, total);
+      }
+    }
+    return null;
+  }
+
   static Optional<String> memberIdFromHashTag(final Message replyTo) {
-    return Optional.ofNullable(replyTo.entities())
-        .flatMap(
-            entities ->
-                Arrays.stream(entities).filter(entity -> entity.type() == Type.hashtag).findFirst())
-        .map(
-            hashTag ->
-                replyTo
-                    .text()
-                    .substring(hashTag.offset() + 1, hashTag.offset() + hashTag.length()));
+    String result = null;
+    if (null != replyTo) {
+      if (null != replyTo.entities()) {
+        result = hashtag(replyTo.entities(), replyTo.text());
+      } else if (null != replyTo.captionEntities()) {
+        result = hashtag(replyTo.captionEntities(), replyTo.caption());
+      }
+    }
+    return Optional.ofNullable(result);
   }
 
   static String userName(User user) {

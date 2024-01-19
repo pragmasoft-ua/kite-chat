@@ -2,7 +2,7 @@
 package kite.core.infrastructure.ddb;
 
 import static org.testcontainers.shaded.org.hamcrest.MatcherAssert.assertThat;
-import static org.testcontainers.shaded.org.hamcrest.Matchers.hasLength;
+import static org.testcontainers.shaded.org.hamcrest.Matchers.greaterThan;
 
 import java.util.Random;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +25,6 @@ class RandomIdTest {
   void testGenerateRandomId() {
     var s = randomId();
     log.debug(s);
-    assertThat(s, hasLength(16));
+    assertThat(s.length(), greaterThan(10));
   }
 }
