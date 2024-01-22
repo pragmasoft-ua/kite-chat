@@ -1,4 +1,4 @@
-/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023-2024 */
 package ua.com.pragmasoft.k1te.server.tg.application;
 
 import com.pengrad.telegrambot.BotUtils;
@@ -16,6 +16,8 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.time.temporal.ChronoUnit;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.resteasy.reactive.RestHeader;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
 
 @ApplicationScoped
@@ -23,10 +25,14 @@ import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
 public class TelegramWebhook {
 
   public static final String WEBHOOK_PATH = "/api/telegram";
+  private final String secretToken;
   private final TelegramConnector connector;
 
   @Inject
-  public TelegramWebhook(final TelegramConnector connector) {
+  public TelegramWebhook(
+      @ConfigProperty(name = "telegram.secret.token") String secretToken,
+      final TelegramConnector connector) {
+    this.secretToken = secretToken;
     this.connector = connector;
   }
 
@@ -52,7 +58,12 @@ public class TelegramWebhook {
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   @RateLimit(value = 600, window = 1, windowUnit = ChronoUnit.MINUTES)
-  public String webhook(String requestBody) {
+  public String webhook(
+      String requestBody, @RestHeader("X-Telegram-Bot-Api-Secret-Token") String token) {
+    if (!secretToken.equals(token)) {
+      Log.error("Security token is invalid: " + token);
+      return "OK";
+    }
     Log.debug(">> " + requestBody);
     Update update = BotUtils.parseUpdate(requestBody);
     var responseBody = this.connector.onUpdate(update);

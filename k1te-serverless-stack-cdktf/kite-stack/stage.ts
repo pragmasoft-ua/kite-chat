@@ -18,6 +18,7 @@ export type StageProps = {
   wsApi: WebsocketApi;
   restApi: RestApi;
   telegramToken: string;
+  telegramSecretToken: string;
   mainLambdaProps: MainLambdaProps;
   lifecycleLambdaProps: LifecycleLambdaProps;
 };
@@ -39,6 +40,7 @@ type LifecycleLambdaProps = {
 export class Stage extends Construct {
   private readonly role: Role;
   private readonly telegramToken: string;
+  private readonly telegramSecretToken: string;
   private readonly restApiStage: RestApiStage;
   private readonly wsApiStage: WebsocketApiStage;
   private readonly schema: DynamoDbSchema;
@@ -53,6 +55,7 @@ export class Stage extends Construct {
     const {
       role,
       telegramToken,
+      telegramSecretToken,
       wsApi,
       restApi,
       mainLambdaProps,
@@ -60,6 +63,7 @@ export class Stage extends Construct {
     } = props;
     this.role = role;
     this.telegramToken = telegramToken;
+    this.telegramSecretToken = telegramSecretToken;
 
     const isProd = id === "prod";
     const mainLambdaName = `${id}-${MAIN_LAMBDA_NAME}`;
@@ -101,6 +105,7 @@ export class Stage extends Construct {
         SERVERLESS_ENVIRONMENT: this.node.id,
         WS_API_EXECUTION_ENDPOINT: this.wsApiStage.invokeUrl,
         TELEGRAM_BOT_TOKEN: this.telegramToken,
+        TELEGRAM_SECRET_TOKEN: this.telegramSecretToken,
         TELEGRAM_WEBHOOK_ENDPOINT: `${this.restApiStage.invokeUrl}${TELEGRAM_ROUTE}`,
         BUCKET_NAME: this.objectStore.bucket.bucket,
         DISABLE_SIGNAL_HANDLERS: "true",
@@ -131,7 +136,13 @@ export class Stage extends Construct {
         s3Key,
         environment: {
           TELEGRAM_BOT_TOKEN: this.telegramToken,
+          TELEGRAM_SECRET_TOKEN: this.telegramSecretToken,
           TELEGRAM_WEBHOOK_ENDPOINT: `${this.restApiStage.invokeUrl}${TELEGRAM_ROUTE}`,
+          TELEGRAM_ALLOWED_UPDATES: JSON.stringify([
+            "message",
+            "edited_message",
+            "chat_member",
+          ]),
         },
         memorySize: 128,
         architecture: "arm64",

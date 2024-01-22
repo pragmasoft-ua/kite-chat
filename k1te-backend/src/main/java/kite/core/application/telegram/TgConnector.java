@@ -39,6 +39,8 @@ import org.slf4j.LoggerFactory;
 
 public class TgConnector implements RoutingProvider, Closeable {
 
+  private static final String[] ALLOWED_UPDATES =
+      new String[] {"message", "edited_message", "chat_member"};
   private static final Logger log = LoggerFactory.getLogger(TgConnector.class);
   public static final Id TG = Id.of("tg");
 
@@ -46,13 +48,19 @@ public class TgConnector implements RoutingProvider, Closeable {
   private final URI base;
   private final MemberService memberService;
   private final RoutingService routingService;
+  private final String secretToken;
 
   public TgConnector(
-      TelegramBot bot, URI base, MemberService memberService, RoutingService routingService) {
+      TelegramBot bot,
+      URI base,
+      MemberService memberService,
+      RoutingService routingService,
+      String secretToken) {
     this.bot = bot;
     this.base = base;
     this.memberService = memberService;
     this.routingService = routingService;
+    this.secretToken = secretToken;
   }
 
   @Override
@@ -60,9 +68,17 @@ public class TgConnector implements RoutingProvider, Closeable {
     return TG;
   }
 
+  /**
+   * Set Telegram Webhook to the specified URL with allowed Update types. Use this link to see <a
+   * href="https://core.telegram.org/bots/api#using-a-local-bot-api-server">all possible Updates</a>
+   */
   public URI registerWebhook() {
     log.info("Register telegram webhook {}", this.base);
-    var request = new SetWebhook().url(this.base.toASCIIString());
+    var request =
+        new SetWebhook()
+            .url(this.base.toASCIIString())
+            .allowedUpdates(ALLOWED_UPDATES)
+            .secretToken(secretToken);
     var response = this.bot.execute(request);
     log.debug(response.toString());
     if (!response.isOk()) {

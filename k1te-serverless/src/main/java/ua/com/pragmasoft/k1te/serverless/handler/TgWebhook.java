@@ -1,4 +1,4 @@
-/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023 */
+/* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2023-2024 */
 package ua.com.pragmasoft.k1te.serverless.handler;
 
 import com.amazonaws.services.lambda.runtime.Context;
@@ -31,6 +31,7 @@ public class TgWebhook implements RequestHandler<APIGatewayV2HTTPEvent, APIGatew
     Update update = BotUtils.parseUpdate(requestBody);
     var responseBody = this.connector.onUpdate(update);
     Log.debug("<< " + responseBody);
+
     return APIGatewayV2HTTPResponse.builder()
         .withStatusCode(HttpStatusCode.OK)
         .withHeaders(Map.of("Content-Type", "application/json"))

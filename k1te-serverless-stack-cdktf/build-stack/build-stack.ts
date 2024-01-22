@@ -48,6 +48,7 @@ export class BuildStack extends TerraformStack {
   public readonly s3SourceBucketName: string;
   public readonly mainLambdaS3Key: string;
   public readonly lifecycleLambdaS3Key: string;
+  public readonly authorizerLambdaS3Key: string;
 
   constructor(scope: Construct, id: string, props: Readonly<BuildSpecProps>) {
     super(scope, id);
@@ -89,10 +90,16 @@ export class BuildStack extends TerraformStack {
       });
     }
 
-    const archiveS3Source = new ArchiveS3Source(this, "lifecycle", {
+    const lifecycleHandlerSource = new ArchiveS3Source(this, "lifecycle", {
       s3BucketName: s3Bucket.bucket,
       sourceFile: "../lifecycle-handler/index.mjs",
       output: "../lifecycle-handler/lifecycle.zip",
+    });
+
+    const authorizerHandlerSource = new ArchiveS3Source(this, "authorizer", {
+      s3BucketName: s3Bucket.bucket,
+      sourceFile: "../authorizer-handler/index.mjs",
+      output: "../authorizer-handler/authorizer.zip",
     });
 
     new TerraformOutput(this, "s3-source-bucket", {
@@ -107,15 +114,21 @@ export class BuildStack extends TerraformStack {
     });
 
     new TerraformOutput(this, "lifecycle-s3-key", {
-      value: archiveS3Source.key,
+      value: lifecycleHandlerSource.key,
       description: "Name of the S3 Key to Lifecycle function",
+    });
+
+    new TerraformOutput(this, "authorizer-s3-key", {
+      value: authorizerHandlerSource.key,
+      description: "Name of the S3 Key to Authorizer function",
     });
 
     this.s3BucketWithState = s3BucketWithState;
     this.region = region;
     this.prodStage = prodStage;
     this.s3SourceBucketName = s3Bucket.bucket;
-    this.lifecycleLambdaS3Key = archiveS3Source.key;
+    this.lifecycleLambdaS3Key = lifecycleHandlerSource.key;
+    this.authorizerLambdaS3Key = authorizerHandlerSource.key;
     this.mainLambdaS3Key = LAMBDA_BUILD_OUTPUT_PATH;
   }
 }

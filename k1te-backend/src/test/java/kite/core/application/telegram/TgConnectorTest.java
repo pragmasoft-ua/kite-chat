@@ -224,26 +224,6 @@ class TgConnectorTest extends TelegramBaseTest {
   }
 
   @Test
-  @DisplayName("Should return empty command on ChannelPost Update")
-  void should_return_empty_command_on_channel_post_update() {
-    String response = this.tgConnector.onUpdate(getUpdate("channel-post"));
-
-    assertEquals(OK, response);
-    verify(routingService, never()).fromRoute(any());
-    verify(memberService, never()).executeCommand(any());
-  }
-
-  @Test
-  @DisplayName("Should return empty command on EditChannelPost Update")
-  void should_return_empty_command_on_edit_channel_post_update() {
-    String response = this.tgConnector.onUpdate(getUpdate("channel-post-edit"));
-
-    assertEquals(OK, response);
-    verify(routingService, never()).fromRoute(any());
-    verify(memberService, never()).executeCommand(any());
-  }
-
-  @Test
   @DisplayName("Should return drop ExecuteCommand on BotKicked Update")
   void should_return_drop_execute_command_on_bot_kicked_update() {
     doReturn(Optional.empty()).when(memberService).executeCommand(any(ExecuteCommand.class));

@@ -41,7 +41,8 @@ public class TelegramConfiguration {
       Channels channels,
       Messages messages,
       @ConfigProperty(name = "telegram.webhook.endpoint") final URI base,
-      @ConfigProperty(name = "ws.api.execution.endpoint") final URI wsApi) {
-    return new TelegramConnector(botClient, router, channels, messages, base, wsApi);
+      @ConfigProperty(name = "ws.api.execution.endpoint") final URI wsApi,
+      @ConfigProperty(name = "telegram.secret.token") String secretToken) {
+    return new TelegramConnector(botClient, router, channels, messages, base, wsApi, secretToken);
   }
 }

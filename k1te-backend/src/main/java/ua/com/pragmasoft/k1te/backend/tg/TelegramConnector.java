@@ -35,7 +35,8 @@ import ua.com.pragmasoft.k1te.backend.ws.PayloadDecoder;
 public class TelegramConnector implements Connector, Closeable {
 
   private static final Logger log = LoggerFactory.getLogger(TelegramConnector.class);
-
+  private static final String[] ALLOWED_UPDATES =
+      new String[] {"message", "edited_message", "chat_member"};
   private static final PayloadDecoder DECODER = new PayloadDecoder();
   private static final boolean PIN_FEATURE_FLAG = true;
 
@@ -90,6 +91,7 @@ public class TelegramConnector implements Connector, Closeable {
   private final Messages messages;
   private final URI base;
   private final URI wsApi;
+  private final String secretToken;
 
   public TelegramConnector(
       final TelegramBot bot,
@@ -97,13 +99,15 @@ public class TelegramConnector implements Connector, Closeable {
       final Channels channels,
       final Messages messages,
       final URI base,
-      URI wsApi) {
+      URI wsApi,
+      String secretToken) {
     this.bot = bot;
     this.router = router;
     this.router.registerConnector(this);
     this.channels = channels;
     this.messages = messages;
     this.base = base;
+    this.secretToken = secretToken;
     if (wsApi.getScheme().equals("wss")) {
       this.wsApi = wsApi;
     } else {
@@ -118,7 +122,11 @@ public class TelegramConnector implements Connector, Closeable {
 
   public URI setWebhook() {
     log.debug("Register telegram webhook {}", this.base);
-    var request = new SetWebhook().url(this.base.toASCIIString());
+    var request =
+        new SetWebhook()
+            .url(this.base.toASCIIString())
+            .allowedUpdates(ALLOWED_UPDATES)
+            .secretToken(secretToken);
     var response = this.bot.execute(request);
     if (log.isDebugEnabled()) {
       log.debug(response.toString());
