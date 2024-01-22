@@ -8,7 +8,6 @@ import { Architecture, Handler, Lambda, Runtime } from "./lambda";
 import { LambdaInvocation } from "@cdktf/provider-aws/lib/lambda-invocation";
 import { TerraformOutput } from "cdktf";
 import { TELEGRAM_ROUTE } from "./kite-stack";
-import assert = require("assert");
 
 export const MAIN_LAMBDA_NAME = "request-dispatcher";
 export const DEV_MAIN_LAMBDA_NAME = `dev-${MAIN_LAMBDA_NAME}`;
@@ -19,6 +18,7 @@ export type StageProps = {
   wsApi: WebsocketApi;
   restApi: RestApi;
   telegramToken: string;
+  telegramSecretToken: string;
   mainLambdaProps: MainLambdaProps;
   lifecycleLambdaProps: LifecycleLambdaProps;
 };
@@ -40,6 +40,7 @@ type LifecycleLambdaProps = {
 export class Stage extends Construct {
   private readonly role: Role;
   private readonly telegramToken: string;
+  private readonly telegramSecretToken: string;
   private readonly restApiStage: RestApiStage;
   private readonly wsApiStage: WebsocketApiStage;
   private readonly schema: DynamoDbSchema;
@@ -54,6 +55,7 @@ export class Stage extends Construct {
     const {
       role,
       telegramToken,
+      telegramSecretToken,
       wsApi,
       restApi,
       mainLambdaProps,
@@ -61,6 +63,7 @@ export class Stage extends Construct {
     } = props;
     this.role = role;
     this.telegramToken = telegramToken;
+    this.telegramSecretToken = telegramSecretToken;
 
     const isProd = id === "prod";
     const mainLambdaName = `${id}-${MAIN_LAMBDA_NAME}`;
@@ -84,21 +87,11 @@ export class Stage extends Construct {
     this.wsApiStage = wsApi.addStage(stageProps);
     this.restApiStage = restApi.addStage(stageProps);
 
-    const secretToken = process.env.TELEGRAM_SECRET_TOKEN;
-    assert(
-      secretToken,
-      "TELEGRAM_SECRET_TOKEN should be specified in .env to use for TelegramWebHook",
-    );
-    this.createMainLambda(mainLambdaName, secretToken, isProd, mainLambdaProps);
-    this.createLifecycleLambda(secretToken, lifecycleLambdaProps);
+    this.createMainLambda(mainLambdaName, isProd, mainLambdaProps);
+    this.createLifecycleLambda(lifecycleLambdaProps);
   }
 
-  createMainLambda(
-    name: string,
-    token: string,
-    isProd: boolean,
-    props: MainLambdaProps,
-  ) {
+  createMainLambda(name: string, isProd: boolean, props: MainLambdaProps) {
     const { s3Bucket, s3Key, runtime, handler, architecture, memorySize } =
       props;
 
@@ -112,10 +105,10 @@ export class Stage extends Construct {
         SERVERLESS_ENVIRONMENT: this.node.id,
         WS_API_EXECUTION_ENDPOINT: this.wsApiStage.invokeUrl,
         TELEGRAM_BOT_TOKEN: this.telegramToken,
+        TELEGRAM_SECRET_TOKEN: this.telegramSecretToken,
         TELEGRAM_WEBHOOK_ENDPOINT: `${this.restApiStage.invokeUrl}${TELEGRAM_ROUTE}`,
         BUCKET_NAME: this.objectStore.bucket.bucket,
         DISABLE_SIGNAL_HANDLERS: "true",
-        TELEGRAM_SECRET_TOKEN: token,
         QUARKUS_LOG_CATEGORY__UA_COM_PRAGMASOFT__LEVEL: isProd
           ? "INFO"
           : "DEBUG",
@@ -129,7 +122,7 @@ export class Stage extends Construct {
     this.wsApiStage.allowInvocation(lambdaFunction);
   }
 
-  createLifecycleLambda(token: string, props: LifecycleLambdaProps) {
+  createLifecycleLambda(props: LifecycleLambdaProps) {
     const { s3Bucket, s3Key } = props;
 
     const lifecycleHandler = new Lambda(
@@ -143,8 +136,8 @@ export class Stage extends Construct {
         s3Key,
         environment: {
           TELEGRAM_BOT_TOKEN: this.telegramToken,
+          TELEGRAM_SECRET_TOKEN: this.telegramSecretToken,
           TELEGRAM_WEBHOOK_ENDPOINT: `${this.restApiStage.invokeUrl}${TELEGRAM_ROUTE}`,
-          TELEGRAM_SECRET_TOKEN: token,
           TELEGRAM_ALLOWED_UPDATES: JSON.stringify([
             "message",
             "edited_message",

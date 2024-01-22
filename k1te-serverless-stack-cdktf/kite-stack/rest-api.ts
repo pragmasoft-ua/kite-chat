@@ -12,6 +12,7 @@ import { API_GATEWAY_SERVICE_PRINCIPAL } from "./apigateway-principal";
 import { ServicePrincipal } from "./grantable";
 import { TlsCertificate } from "./tls-certificate";
 import { Lambda } from "./lambda";
+import { Apigatewayv2Authorizer } from "@cdktf/provider-aws/lib/apigatewayv2-authorizer";
 
 export class RestApiStage extends Construct {
   readonly stage: Apigatewayv2Stage;
@@ -92,7 +93,7 @@ export class RestApiStage extends Construct {
   }
 
   allowInvocation(handler: Lambda) {
-    handler.allowInvocationForService(this.api);
+    this.api.allowInvocation(handler);
   }
 
   get invokeUrl() {
@@ -111,6 +112,7 @@ export class RestApi extends Construct implements ServicePrincipal {
     super(scope, id);
     const {
       handlerArn,
+      authorizerHandler,
       method = "GET",
       route,
       domainName,
@@ -135,10 +137,24 @@ export class RestApi extends Construct implements ServicePrincipal {
       },
     );
 
+    const authorizer = new Apigatewayv2Authorizer(this, "tg-authorizer", {
+      name: "tg-authorizer",
+      apiId: api.id,
+      authorizerPayloadFormatVersion: "2.0",
+      authorizerType: "REQUEST",
+      authorizerResultTtlInSeconds: 3600,
+      authorizerUri: authorizerHandler.fn.invokeArn,
+      enableSimpleResponses: true,
+      identitySources: ["$request.header.x-telegram-bot-api-secret-token"],
+    });
+    this.allowInvocation(authorizerHandler);
+
     new Apigatewayv2Route(this, "route", {
       apiId: api.id,
       routeKey,
       target: "integrations/" + integration.id,
+      authorizationType: "CUSTOM",
+      authorizerId: authorizer.id,
     });
 
     if (domainName && certificate) {
@@ -156,6 +172,10 @@ export class RestApi extends Construct implements ServicePrincipal {
 
   addStage(props: Readonly<RestApiStageConfig>) {
     return new RestApiStage(this, `${props.stage}-stage`, props);
+  }
+
+  allowInvocation(handler: Lambda) {
+    handler.allowInvocationForService(this);
   }
 
   get name() {
@@ -181,6 +201,7 @@ export class RestApi extends Construct implements ServicePrincipal {
 
 export type RestApiProps = {
   handlerArn: string;
+  authorizerHandler: Lambda;
   method?: string;
   route: string;
   domainName?: string;

@@ -11,7 +11,6 @@ import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import java.util.Map;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import software.amazon.awssdk.http.HttpStatusCode;
 import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
 
@@ -20,29 +19,19 @@ import ua.com.pragmasoft.k1te.backend.tg.TelegramConnector;
 public class TgWebhook implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
 
   private final TelegramConnector connector;
-  private final String securityToken;
 
-  public TgWebhook(
-      final TelegramConnector connector,
-      @ConfigProperty(name = "telegram.secret.token") String secretToken) {
+  public TgWebhook(final TelegramConnector connector) {
     this.connector = connector;
-    this.securityToken = secretToken;
   }
 
   @Override
   public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent input, Context context) {
-    String responseBody = null;
-    String token = input.getHeaders().get("x-telegram-bot-api-secret-token");
-    if (token == null || !token.equals(securityToken)) {
-      Log.error("Security token is invalid: " + token);
-      responseBody = "OK";
-    } else {
-      final var requestBody = input.getBody();
-      Log.debug(">> " + requestBody);
-      Update update = BotUtils.parseUpdate(requestBody);
-      responseBody = this.connector.onUpdate(update);
-      Log.debug("<< " + responseBody);
-    }
+    final var requestBody = input.getBody();
+    Log.debug(">> " + requestBody);
+    Update update = BotUtils.parseUpdate(requestBody);
+    var responseBody = this.connector.onUpdate(update);
+    Log.debug("<< " + responseBody);
+
     return APIGatewayV2HTTPResponse.builder()
         .withStatusCode(HttpStatusCode.OK)
         .withHeaders(Map.of("Content-Type", "application/json"))

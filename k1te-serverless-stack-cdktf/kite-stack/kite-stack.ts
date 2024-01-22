@@ -5,6 +5,7 @@ import { Role } from "./iam";
 import {
   Architecture,
   Handler,
+  Lambda,
   LAMBDA_SERVICE_PRINCIPAL,
   Runtime,
 } from "./lambda";
@@ -13,7 +14,6 @@ import { ALLOW_TAGS, TagsAddingAspect } from "./tags";
 import { WebsocketApi } from "./websocket-api";
 import { ArchiveProvider } from "@cdktf/provider-archive/lib/provider";
 import { Stage } from "./stage";
-import { DataAwsRegion } from "@cdktf/provider-aws/lib/data-aws-region";
 import { DataAwsCallerIdentity } from "@cdktf/provider-aws/lib/data-aws-caller-identity";
 import assert = require("assert");
 import { DomainName } from "./domain-name";
@@ -44,6 +44,10 @@ export type KiteStackProps = {
    * */
   lifecycleLambdaS3Key: string;
   /**
+   * The S3 key to authorizerLambda
+   * */
+  authorizerLambdaS3Key: string;
+  /**
    * Whether to create prod stage or not
    * */
   prodStage?: boolean;
@@ -73,6 +77,7 @@ export class KiteStack extends TerraformStack {
   private readonly restApi: RestApi;
   private readonly wsApi: WebsocketApi;
   private readonly role: Role;
+  private readonly telegramSecretToken: string;
 
   constructor(scope: Construct, id: string, props: KiteStackProps) {
     super(scope, id);
@@ -87,17 +92,22 @@ export class KiteStack extends TerraformStack {
     new AwsProvider(this, "AWS");
     new ArchiveProvider(this, "archive-provider");
 
-    const awsRegion = new DataAwsRegion(this, "current-region");
     const callerIdentity = new DataAwsCallerIdentity(this, "current-caller");
     const handlerArn =
-      `arn:aws:lambda:${awsRegion.name}:${callerIdentity.accountId}:function:` +
+      `arn:aws:lambda:${region}:${callerIdentity.accountId}:function:` +
       "$${stageVariables.function}";
+    this.telegramSecretToken = process.env.TELEGRAM_SECRET_TOKEN!;
+    assert(
+      this.telegramSecretToken,
+      "You need to specify TELEGRAM_SECRET_TOKEN for telegram-authorizer",
+    );
 
     this.role = new Role(this, "lambda-execution-role", {
       forService: LAMBDA_SERVICE_PRINCIPAL,
     });
 
     const domain = new DomainName(this, "domain-name", domainName);
+    const authorizerHandler = this.createAuthorizerLambda(props);
 
     this.wsApi = new WebsocketApi(this, "ws-api", {
       handlerArn,
@@ -106,6 +116,7 @@ export class KiteStack extends TerraformStack {
     });
     this.restApi = new RestApi(this, "http-api", {
       handlerArn,
+      authorizerHandler,
       method: "POST",
       route: TELEGRAM_ROUTE,
       domainName: `api.${domainName}`,
@@ -121,9 +132,9 @@ export class KiteStack extends TerraformStack {
       this.restApi.getTargetDomainName(),
     );
 
-    const telegramDevBotToken = process.env.TELEGRAM_BOT_TOKEN;
-    assert(telegramDevBotToken, "You need to specify TELEGRAM_BOT_TOKEN");
-    this.createStage("dev", telegramDevBotToken, props);
+    const telegramDevToken = process.env.TELEGRAM_BOT_TOKEN;
+    assert(telegramDevToken, "You need to specify TELEGRAM_BOT_TOKEN");
+    this.createStage("dev", telegramDevToken, props);
 
     if (prodStage) {
       const telegramProdToken = process.env.TELEGRAM_PROD_BOT_TOKEN;
@@ -149,11 +160,12 @@ export class KiteStack extends TerraformStack {
       memorySize = 256,
     } = props;
 
-    new Stage(this, name, {
+    return new Stage(this, name, {
       role: this.role,
       restApi: this.restApi,
       wsApi: this.wsApi,
       telegramToken,
+      telegramSecretToken: this.telegramSecretToken,
       mainLambdaProps: {
         runtime,
         handler,
@@ -165,6 +177,24 @@ export class KiteStack extends TerraformStack {
       lifecycleLambdaProps: {
         s3Bucket: s3SourceBucketName,
         s3Key: lifecycleLambdaS3Key,
+      },
+    });
+  }
+
+  createAuthorizerLambda({
+    s3SourceBucketName,
+    authorizerLambdaS3Key,
+  }: KiteStackProps) {
+    return new Lambda(this, "tg-authorizer", {
+      role: this.role,
+      s3Bucket: s3SourceBucketName,
+      s3Key: authorizerLambdaS3Key,
+      memorySize: 128,
+      handler: "index.handler",
+      runtime: "nodejs18.x",
+      architecture: "arm64",
+      environment: {
+        TELEGRAM_SECRET_TOKEN: this.telegramSecretToken,
       },
     });
   }

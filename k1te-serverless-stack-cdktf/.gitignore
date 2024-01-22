@@ -12,3 +12,4 @@ tsconfig.tsbuildinfo
 docker
 .env
 lifecycle-handler/lifecycle.zip
+authorizer-handler/authorizer.zip
