@@ -31,7 +31,7 @@ public class SsmConfigSource implements ConfigSource {
     Set<String> dependentParameters = configuration.getDependentParameters();
     availableParameters.addAll(dependentParameters);
 
-    if (!availableParameters.isEmpty() || !dependentParameters.isEmpty()) {
+    if (!availableParameters.isEmpty()) {
       GetParametersRequest getParametersRequest =
           new GetParametersRequest().withNames(availableParameters).withWithDecryption(true);
       List<Parameter> parameters = ssmClient.getParameters(getParametersRequest).getParameters();
@@ -43,8 +43,7 @@ public class SsmConfigSource implements ConfigSource {
               name = name.replace(configuration.getEnv() + configuration.getEnvDelimiter(), "");
             }
 
-            String key = configuration.getConfigName() + "." + name;
-            paramsMap.put(key, parameter.getValue());
+            paramsMap.put(name, parameter.getValue());
           });
 
       List<String> parameterNames = parameters.stream().map(Parameter::getName).toList();

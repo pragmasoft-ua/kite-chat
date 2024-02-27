@@ -5,25 +5,34 @@ import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement
 import io.smallrye.config.ConfigSourceContext;
 import io.smallrye.config.ConfigSourceFactory;
 import java.util.Collections;
-import java.util.List;
 import org.eclipse.microprofile.config.spi.ConfigSource;
 
+/**
+ * Adds custom ConfigSource that retrieves parameters from SSM
+ *
+ * @see SsmConfigSource
+ */
 public class SsmConfigSourceFactory implements ConfigSourceFactory {
 
   private static final String RUNTIME_CLASS = "io.quarkus.deployment.steps.RuntimeConfigSetup";
 
+  /**
+   * Creates {@link SsmConfigSource} and Skip static init phase to prevent unnecessary
+   * initialization
+   */
   @Override
   public Iterable<ConfigSource> getConfigSources(ConfigSourceContext context) {
     if (isRuntimePhase()) {
-      return List.of(
+      return Collections.singleton(
           SsmConfigSource.create(
-              new SsmParameterConfiguration(context),
+              new SsmParameterConfigurationImpl(context),
               AWSSimpleSystemsManagementAsyncClientBuilder.defaultClient()));
     }
 
     return Collections.emptyList();
   }
 
+  /** Check whether it's Runtime phase or not. */
   private boolean isRuntimePhase() {
     try {
       Class.forName(RUNTIME_CLASS);
