@@ -26,7 +26,7 @@ new KiteStack(app, "kite", {
 });
 
 const kiteLocalBuild = new BuildStack(app, "kite-local-build", {
-  gitRepositoryUrl: "https://github.com/Alex21022001/e2e",
+  gitRepositoryUrl: "https://github.com/Alex21022001/ssm-check",
   s3BucketWithState: "my-test-arm-bucket",
   region: "us-west-2",
 });

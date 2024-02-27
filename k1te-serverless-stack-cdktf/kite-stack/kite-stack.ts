@@ -211,7 +211,7 @@ export class KiteStack extends TerraformStack {
     const arr: SsmParameter[] = [];
 
     arr.push(
-      new SsmParameter(this, "telegram.secret", {
+      new SsmParameter(this, "telegram.secret.token", {
         type: "SecureString",
         value: this.telegramSecret,
         description: "Secret token that is used to validate WebHook Updates",
