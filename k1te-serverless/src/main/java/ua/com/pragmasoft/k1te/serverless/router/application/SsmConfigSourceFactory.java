@@ -1,11 +1,11 @@
 /* LGPL 3.0 ©️ Dmytro Zemnytskyi, pragmasoft@gmail.com, 2024 */
 package ua.com.pragmasoft.k1te.serverless.router.application;
 
-import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementAsyncClientBuilder;
 import io.smallrye.config.ConfigSourceContext;
 import io.smallrye.config.ConfigSourceFactory;
 import java.util.Collections;
 import org.eclipse.microprofile.config.spi.ConfigSource;
+import software.amazon.awssdk.services.ssm.SsmClient;
 
 /**
  * Adds custom ConfigSource that retrieves parameters from SSM
@@ -24,9 +24,7 @@ public class SsmConfigSourceFactory implements ConfigSourceFactory {
   public Iterable<ConfigSource> getConfigSources(ConfigSourceContext context) {
     if (isRuntimePhase()) {
       return Collections.singleton(
-          SsmConfigSource.create(
-              new SsmParameterConfigurationImpl(context),
-              AWSSimpleSystemsManagementAsyncClientBuilder.defaultClient()));
+          SsmConfigSource.create(new SsmParameterConfigurationImpl(context), SsmClient.create()));
     }
 
     return Collections.emptyList();

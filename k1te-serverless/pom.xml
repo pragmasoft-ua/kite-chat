@@ -22,9 +22,8 @@
       <artifactId>quarkus-amazon-lambda</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-ssm</artifactId>
-      <version>1.12.649</version>
+      <groupId>io.quarkiverse.amazonservices</groupId>
+      <artifactId>quarkus-amazon-ssm</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
