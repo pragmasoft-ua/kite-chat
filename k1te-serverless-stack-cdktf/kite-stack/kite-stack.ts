@@ -17,6 +17,7 @@ import { Stage } from "./stage";
 import { DataAwsCallerIdentity } from "@cdktf/provider-aws/lib/data-aws-caller-identity";
 import assert = require("assert");
 import { DomainName } from "./domain-name";
+import { SsmParameter } from "./ssm-parameter";
 
 const TAGGING_ASPECT = new TagsAddingAspect({ app: "k1te-chat" });
 export const TELEGRAM_ROUTE = "/tg";
@@ -77,12 +78,19 @@ export class KiteStack extends TerraformStack {
   private readonly restApi: RestApi;
   private readonly wsApi: WebsocketApi;
   private readonly role: Role;
-  private readonly telegramSecretToken: string;
+  private readonly prodStage: boolean;
+  private readonly telegramSecret: string;
+  private readonly telegramDevToken: string;
+  private readonly telegramProdToken: string | undefined;
 
   constructor(scope: Construct, id: string, props: KiteStackProps) {
     super(scope, id);
     this.node.setContext(ALLOW_TAGS, true);
     const { s3BucketWithState, region, domainName, prodStage = false } = props;
+
+    this.prodStage = prodStage;
+    this.telegramSecret = this.getEnvParam("TELEGRAM_SECRET_TOKEN");
+    this.telegramDevToken = this.getEnvParam("TELEGRAM_BOT_TOKEN");
 
     new S3Backend(this, {
       bucket: s3BucketWithState,
@@ -96,11 +104,6 @@ export class KiteStack extends TerraformStack {
     const handlerArn =
       `arn:aws:lambda:${region}:${callerIdentity.accountId}:function:` +
       "$${stageVariables.function}";
-    this.telegramSecretToken = process.env.TELEGRAM_SECRET_TOKEN!;
-    assert(
-      this.telegramSecretToken,
-      "You need to specify TELEGRAM_SECRET_TOKEN for telegram-authorizer",
-    );
 
     this.role = new Role(this, "lambda-execution-role", {
       forService: LAMBDA_SERVICE_PRINCIPAL,
@@ -132,15 +135,14 @@ export class KiteStack extends TerraformStack {
       this.restApi.getTargetDomainName(),
     );
 
-    const telegramDevToken = process.env.TELEGRAM_BOT_TOKEN;
-    assert(telegramDevToken, "You need to specify TELEGRAM_BOT_TOKEN");
-    this.createStage("dev", telegramDevToken, props);
+    this.createStage("dev", this.telegramDevToken, props);
 
     if (prodStage) {
-      const telegramProdToken = process.env.TELEGRAM_PROD_BOT_TOKEN;
-      assert(telegramProdToken, "You need to specify TELEGRAM_PROD_BOT_TOKEN");
-      this.createStage("prod", telegramProdToken, props);
+      this.telegramProdToken = this.getEnvParam("TELEGRAM_PROD_BOT_TOKEN");
+      this.createStage("prod", this.telegramProdToken, props);
     }
+
+    this.addSsmParameters();
 
     Aspects.of(this).add(TAGGING_ASPECT);
   }
@@ -165,7 +167,7 @@ export class KiteStack extends TerraformStack {
       restApi: this.restApi,
       wsApi: this.wsApi,
       telegramToken,
-      telegramSecretToken: this.telegramSecretToken,
+      telegramSecretToken: this.telegramSecret,
       mainLambdaProps: {
         runtime,
         handler,
@@ -194,8 +196,48 @@ export class KiteStack extends TerraformStack {
       runtime: "nodejs18.x",
       architecture: "arm64",
       environment: {
-        TELEGRAM_SECRET_TOKEN: this.telegramSecretToken,
+        TELEGRAM_SECRET_TOKEN: this.telegramSecret,
       },
     });
+  }
+
+  getEnvParam(name: string): string {
+    const param = process.env[name];
+    assert(param, `You need to specify ${name} in .env file`);
+    return param;
+  }
+
+  addSsmParameters() {
+    const arr: SsmParameter[] = [];
+
+    arr.push(
+      new SsmParameter(this, "telegram.secret.token", {
+        type: "SecureString",
+        value: this.telegramSecret,
+        description: "Secret token that is used to validate WebHook Updates",
+      }),
+    );
+
+    arr.push(
+      new SsmParameter(this, "dev-telegram.bot.token", {
+        type: "SecureString",
+        value: this.telegramDevToken,
+        description:
+          "dev telegram bot token that is used to communicate with bot in dev env",
+      }),
+    );
+
+    if (this.prodStage) {
+      arr.push(
+        new SsmParameter(this, "prod-telegram.bot.token", {
+          type: "SecureString",
+          value: this.telegramProdToken!,
+          description:
+            "prod telegram bot token that is used to communicate with bot in prod env",
+        }),
+      );
+    }
+
+    arr.forEach((param) => param.allowGetRequest(this.role));
   }
 }

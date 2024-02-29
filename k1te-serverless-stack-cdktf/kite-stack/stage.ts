@@ -38,6 +38,7 @@ type LifecycleLambdaProps = {
 };
 
 export class Stage extends Construct {
+  private readonly env: "dev" | "prod";
   private readonly role: Role;
   private readonly telegramToken: string;
   private readonly telegramSecretToken: string;
@@ -61,6 +62,7 @@ export class Stage extends Construct {
       mainLambdaProps,
       lifecycleLambdaProps,
     } = props;
+    this.env = id;
     this.role = role;
     this.telegramToken = telegramToken;
     this.telegramSecretToken = telegramSecretToken;
@@ -104,14 +106,13 @@ export class Stage extends Construct {
       environment: {
         SERVERLESS_ENVIRONMENT: this.node.id,
         WS_API_EXECUTION_ENDPOINT: this.wsApiStage.invokeUrl,
-        TELEGRAM_BOT_TOKEN: this.telegramToken,
-        TELEGRAM_SECRET_TOKEN: this.telegramSecretToken,
         TELEGRAM_WEBHOOK_ENDPOINT: `${this.restApiStage.invokeUrl}${TELEGRAM_ROUTE}`,
         BUCKET_NAME: this.objectStore.bucket.bucket,
         DISABLE_SIGNAL_HANDLERS: "true",
         QUARKUS_LOG_CATEGORY__UA_COM_PRAGMASOFT__LEVEL: isProd
           ? "INFO"
           : "DEBUG",
+        QUARKUS_PROFILE: this.env,
       },
       architecture,
       memorySize,
